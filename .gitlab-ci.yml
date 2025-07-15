@@ -1,4 +1,7 @@
-image: registry.gitlab.com/gitlab-org/ci-cd/images/cmake:latest
+image: gcc:latest
+
+before_script:
+  - apt update && apt install -y cmake ninja-build
 
 stages:
   - build
