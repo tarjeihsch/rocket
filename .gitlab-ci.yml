@@ -2,12 +2,13 @@ image: gitlab.bitmaskentertainment.com/bitmask-entertainment/rocket/rocket:lates
 
 before_script:
   - apt update && apt install -y cmake ninja-build
-
 stages:
   - build
 
 build:
   stage: build
+  tags:
+  - rocket
   script: 
     - cmake --preset gcc-debug
     - cmake --build --preset gcc-debug
