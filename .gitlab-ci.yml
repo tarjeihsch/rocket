@@ -1,4 +1,4 @@
-image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/rocket/rocket:latest
+image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/rocket:latest
 
 before_script:
   - apt update && apt install -y cmake ninja-build
