@@ -1,13 +1,14 @@
 stages:
   - build
 
-build-gcc:
+build-all:
   stage: build
   image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/rocket:latest
   parallel:
     matrix:
       - PRESET: gcc-debug
       - PRESET: clang-debug
+      - PRESET: mingw-debug
   script:
     - cmake --preset $PRESET
     - cmake --build --preset $PRESET
