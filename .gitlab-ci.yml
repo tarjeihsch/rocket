@@ -3,8 +3,7 @@ stages:
 
 build-gcc:
   stage: build
-  image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/default:latest
-  tags: ["default"]
+  image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/rocket:latest
   parallel:
     matrix:
       - PRESET: gcc-debug
