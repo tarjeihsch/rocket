@@ -1,14 +1,14 @@
-image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/rocket:latest
-
-before_script:
-  - apt update && apt install -y cmake ninja-build
 stages:
   - build
 
-build:
+build-gcc:
   stage: build
-  tags:
-  - rocket
-  script: 
-    - cmake --preset gcc-debug
-    - cmake --build --preset gcc-debug
+  image: gitlab.bitmaskentertainment.com:5050/bitmask-entertainment/default:latest
+  tags: ["default"]
+  parallel:
+    matrix:
+      - PRESET: gcc-debug
+      - PRESET: clang-debug
+  script:
+    - cmake --preset $PRESET
+    - cmake --build --preset $PRESET
