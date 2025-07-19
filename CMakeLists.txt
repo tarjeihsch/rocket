@@ -193,16 +193,12 @@ target_precompile_headers(Rocket PRIVATE
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_LINUX)
-    target_include_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/include)
-    target_link_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/lib)
-    target_link_libraries(Rocket PRIVATE libvulkan.so)
+    target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_WINDOWS)
-    target_include_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/Include)
-    target_link_directories(Rocket PRIVATE $ENV{VULKAN_SDK}/Lib)
-    target_link_libraries(Rocket PRIVATE vulkan-1)
+    target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

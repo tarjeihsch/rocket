@@ -30,16 +30,16 @@ void FVulkanDevice::Initialize()
     std::vector<VkQueueFamilyProperties> QueueFamiliesProperties(QueueFamilyCount);
     VulkanRHI::vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamiliesProperties.data());
 
-	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
-	for (int Index = 0; Index < QueueFamilyCount; Index++)
+	std::vector<float> QueuePriorities(QueueFamilyCount, 1.0f);
+	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos(QueueFamilyCount);
+	for (uint32_t Index = 0; Index < QueueFamilyCount; Index++)
 	{
-		float QueuePriority = 1.0f;
 		VkDeviceQueueCreateInfo QueueFamilyCreateInfo = {};
 		QueueFamilyCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		QueueFamilyCreateInfo.queueCount = 1;
 		QueueFamilyCreateInfo.queueFamilyIndex = Index;
-		QueueFamilyCreateInfo.pQueuePriorities = &QueuePriority;
-		QueueCreateInfos.push_back(QueueFamilyCreateInfo);
+		QueueFamilyCreateInfo.pQueuePriorities = &QueuePriorities[Index];
+		QueueCreateInfos[Index] = QueueFamilyCreateInfo;
 	}
 
 	// Vulkan 1.3 features
@@ -83,6 +83,8 @@ void FVulkanDevice::Initialize()
 	VkResult Result = VulkanRHI::vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
+    LoadVulkanDeviceFunc(GetVkDevice());
+
     VmaVulkanFunctions VmaFuncs = CreateVmaFuncTable();
 	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
 	AllocatorCreateInfo.physicalDevice = PhysicalDevice;
@@ -110,7 +112,7 @@ void FVulkanDevice::Shutdown()
 	Queues.clear();
 
 	vmaDestroyAllocator(Allocator);
-	vkDestroyDevice(Device, nullptr);
+    VulkanRHI::vkDestroyDevice(Device, nullptr);
 }
 
 FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags QueueFlags) const

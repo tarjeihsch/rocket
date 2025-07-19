@@ -23,7 +23,7 @@ void LoadVulkanLibrary()
 {
 #if RK_PLATFORM_WINDOWS
     Vk::Library = LoadLibraryA("vulkan-1.dll");
-    Vk::GetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(static_cast<HMODULE>(Vk::Library), "vkGetInstanceProcAddr"));
+    Vk::GetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(static_cast<HMODULE>(VulkanRHI::Library), "vkGetInstanceProcAddr"));
 #endif
 
 #if RK_PLATFORM_LINUX
@@ -34,8 +34,6 @@ void LoadVulkanLibrary()
 
 void LoadVulkanGlobalFunc()
 {
-    assert(VulkanRHI::vkGetDeviceProcAddr);
-
     #define LOAD_GLOBAL_FN(Name) VulkanRHI::Name = reinterpret_cast<PFN_##Name>(VulkanRHI::vkGetInstanceProcAddr(nullptr, #Name));
     VULKAN_GLOBAL_FUNCTIONS(LOAD_GLOBAL_FN)
     #undef LOAD_GLOBAL_FN
@@ -43,7 +41,7 @@ void LoadVulkanGlobalFunc()
 
 void LoadVulkanInstanceFunc(VkInstance Instance)
 {
-    assert(VulkanRHI::vkGetDeviceProcAddr);
+    assert(VulkanRHI::vkGetInstanceProcAddr);
 
     #define LOAD_INSTANCE_FN(Name) VulkanRHI::Name = reinterpret_cast<PFN_##Name>(VulkanRHI::vkGetInstanceProcAddr(Instance, #Name));
     VULKAN_INSTANCE_FUNCTIONS(LOAD_INSTANCE_FN);
@@ -66,6 +64,15 @@ VmaVulkanFunctions CreateVmaFuncTable()
     #define ASSIGN_VMA(name) Funcs.name = VulkanRHI::name;
     VMA_BASE_FUNCTIONS(ASSIGN_VMA)
     #undef ASSIGN_VMA
+
+    Funcs.vkGetBufferMemoryRequirements2KHR = VulkanRHI::vkGetBufferMemoryRequirements2;
+    Funcs.vkGetImageMemoryRequirements2KHR = VulkanRHI::vkGetImageMemoryRequirements2;
+    Funcs.vkBindBufferMemory2KHR = VulkanRHI::vkBindBufferMemory2;
+    Funcs.vkBindImageMemory2KHR = VulkanRHI::vkBindImageMemory2;
+    Funcs.vkGetPhysicalDeviceMemoryProperties2KHR = VulkanRHI::vkGetPhysicalDeviceMemoryProperties2;
+    Funcs.vkGetDeviceBufferMemoryRequirements = VulkanRHI::vkGetDeviceBufferMemoryRequirements;
+    Funcs.vkGetDeviceImageMemoryRequirements = VulkanRHI::vkGetDeviceImageMemoryRequirements;
+
 
     return Funcs;
 }

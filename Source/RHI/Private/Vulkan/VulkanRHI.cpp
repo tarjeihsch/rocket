@@ -21,6 +21,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSever
 void CVulkanRHI::Init()
 {
     LoadVulkanLibrary();
+    LoadVulkanGlobalFunc();
 
     GDebugCallback.Bind([](auto Severity, auto, const auto* Data)
     {
@@ -67,6 +68,8 @@ void CVulkanRHI::Init()
 
     VkResult Result = VulkanRHI::vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
+
+    LoadVulkanInstanceFunc(RHIGetVkInstance());
 
     uint32_t DeviceCount = 0;
     VulkanRHI::vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
