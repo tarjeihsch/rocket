@@ -1,161 +1,209 @@
-cmake_minimum_required(VERSION 3.16)
-project(Rocket)
+cmake_minimum_required(VERSION 3.22)
+project(Rocket LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+include(FetchContent)
+
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Use only Debug, Release, and Dist configurations
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Dist" CACHE STRING "" FORCE)
-
-# This makes sure that CMake generates the appropriate files for VSCode
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-include(CMakeToolsHelpers OPTIONAL)
 
-# Output directories
-set(OUTPUT_DIR ${CMAKE_BINARY_DIR}/Binaries)
-set(INTERMEDIATE_DIR ${CMAKE_BINARY_DIR}/Intermediate)
-
-# Specify the paths to the GLM and spdlog headers
-set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glm")
-set(SPDLOG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/spdlog")
-set(VMA_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VulkanMemoryAllocator")
-set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/glfw")
-set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui")
-set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/entt")
-set(TINYGLTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/tinygltf")
-set(RAPIDJSON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/rapidjson")
-set(SPIRVCROSS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/SPIRV-Cross")
-
-# Collect ImGui source files
-set(IMGUI_SRC
-    ${IMGUI_INCLUDE_DIR}/imgui.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_draw.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_tables.cpp
-    ${IMGUI_INCLUDE_DIR}/imgui_widgets.cpp
-    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_glfw.cpp
-    ${IMGUI_INCLUDE_DIR}/backends/imgui_impl_vulkan.cpp
+file(GLOB_RECURSE ROCKET_PUBLIC_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.hpp
 )
 
-# Collect all source files for the Engine project
-file(GLOB_RECURSE ENGINE_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/*.h
-)
-# Collect all HLSL and GLSL files for the Engine project
-file(GLOB_RECURSE ENGINE_SHADER_FILES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Shaders/*.hlsl
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Shaders/*.glsl
+file(GLOB_RECURSE ROCKET_PRIVATE_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.hpp
 )
 
-# Define source groups for Engine
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source PREFIX "Source" FILES ${ENGINE_FILES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Shaders PREFIX "Shaders" FILES ${ENGINE_SHADER_FILES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui PREFIX "Third Party\\ImGui" FILES ${IMGUI_SRC})
-
-# Vulkan SDK
-find_package(Vulkan REQUIRED)
-
-# Add GLFW as a subdirectory to be compiled alongside this project
-add_subdirectory(Vendor/glfw)
-
-# Target Engine project
-add_library(Engine STATIC 
-    ${ENGINE_FILES}
-    ${IMGUI_SRC}  # Add ImGui source files to the Engine target
+file(GLOB_RECURSE ROCKET_PRIVATE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.cpp
 )
 
-set_source_files_properties(${ENGINE_SHADER_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
-target_sources(Engine PRIVATE ${ENGINE_SHADER_FILES})
+FetchContent_Declare(glfw_src)
+FetchContent_Declare(imgui_src)
+FetchContent_Declare(glm_src)
+FetchContent_Declare(entt_src)
+FetchContent_Declare(vma_src)
+FetchContent_Declare(spdlog_src)
 
-target_include_directories(Engine PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source
-    ${GLM_INCLUDE_DIR}
-    ${SPDLOG_INCLUDE_DIR}/include
-    ${VMA_INCLUDE_DIR}/include
-    ${GLFW_INCLUDE_DIR}/include
-    ${IMGUI_INCLUDE_DIR}
-    ${IMGUI_INCLUDE_DIR}/backends
-    ${ENTT_INCLUDE_DIR}/src
-    ${TINYGLTF_INCLUDE_DIR}
-    ${RAPIDJSON_INCLUDE_DIR}/include
-)
+FetchContent_GetProperties(glfw_src)
+FetchContent_GetProperties(imgui_src)
+FetchContent_GetProperties(glm_src)
+FetchContent_GetProperties(entt_src)
+FetchContent_GetProperties(vma_src)
+FetchContent_GetProperties(spdlog_src)
 
-target_precompile_headers(Engine PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Engine/Source/EnginePCH.h)
-
-if(UNIX AND NOT APPLE)
-    target_link_libraries(Engine PUBLIC
-        glfw
-        Vulkan::Vulkan
-        X11
-        X11-xcb
-        spirv-cross-c 
-        spirv-cross-core
-    )
-else()
-    target_link_libraries(Engine PRIVATE
-        glfw
-        Vulkan::Vulkan
+if(NOT glfw_src_POPULATED)
+    FetchContent_Populate(glfw_src
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG        3.4
     )
 endif()
 
-target_compile_definitions(Engine PRIVATE
-    _CRT_SECURE_NO_WARNINGS
-    GLFW_INCLUDE_VULKAN
+if(NOT imgui_src_POPULATED)
+    FetchContent_Populate(imgui_src
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG        v1.90.1
+    )
+endif()
+
+if(NOT vma_src_POPULATED)
+    FetchContent_Populate(vma_src
+        GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+        GIT_TAG        v3.3.0
+    )
+endif()
+
+if(NOT glm_src_POPULATED)
+    FetchContent_Populate(glm_src
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG        1.0.1
+    )
+endif()
+
+if(NOT entt_src_POPULATED)
+    FetchContent_Populate(entt_src
+        GIT_REPOSITORY https://github.com/skypjack/entt.git
+        GIT_TAG        v3.15.0
+    )
+endif()
+
+if(NOT spdlog_src_POPULATED)
+    FetchContent_Populate(spdlog_src
+        GIT_REPOSITORY https://github.com/gabime/spdlog
+        GIT_TAG        v1.15.3
+    )
+endif()
+
+add_library(glfw STATIC)
+add_library(imgui STATIC)
+add_library(vma::vma INTERFACE IMPORTED GLOBAL)
+add_library(glm::glm INTERFACE IMPORTED GLOBAL)
+add_library(entt::entt INTERFACE IMPORTED GLOBAL)
+add_library(spdlog::spdlog INTERFACE IMPORTED GLOBAL)
+add_executable(Rocket)
+
+target_sources(glfw PRIVATE
+    ${glfw_src_SOURCE_DIR}/src/context.c
+    ${glfw_src_SOURCE_DIR}/src/init.c
+    ${glfw_src_SOURCE_DIR}/src/input.c
+    ${glfw_src_SOURCE_DIR}/src/monitor.c
+    ${glfw_src_SOURCE_DIR}/src/platform.c
+    ${glfw_src_SOURCE_DIR}/src/vulkan.c
+    ${glfw_src_SOURCE_DIR}/src/window.c
+    ${glfw_src_SOURCE_DIR}/src/egl_context.c
+    ${glfw_src_SOURCE_DIR}/src/osmesa_context.c
+
+    $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:
+    ${glfw_src_SOURCE_DIR}/src/win32_init.c
+    ${glfw_src_SOURCE_DIR}/src/win32_monitor.c
+    ${glfw_src_SOURCE_DIR}/src/win32_module.c
+    ${glfw_src_SOURCE_DIR}/src/win32_joystick.c
+    ${glfw_src_SOURCE_DIR}/src/win32_time.c
+    ${glfw_src_SOURCE_DIR}/src/win32_thread.c
+    ${glfw_src_SOURCE_DIR}/src/win32_window.c
+    ${glfw_src_SOURCE_DIR}/src/wgl_context.c
+    >
+
+    $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Linux>:
+    ${glfw_src_SOURCE_DIR}/src/posix_module.c
+    ${glfw_src_SOURCE_DIR}/src/posix_poll.c
+    ${glfw_src_SOURCE_DIR}/src/posix_time.c
+    ${glfw_src_SOURCE_DIR}/src/posix_thread.c
+    ${glfw_src_SOURCE_DIR}/src/linux_joystick.c
+    ${glfw_src_SOURCE_DIR}/src/xkb_unicode.c
+    ${glfw_src_SOURCE_DIR}/src/x11_init.c
+    ${glfw_src_SOURCE_DIR}/src/x11_monitor.c
+    ${glfw_src_SOURCE_DIR}/src/x11_window.c
+    ${glfw_src_SOURCE_DIR}/src/glx_context.c
+    >
+
+    # “Null” stub backend (required by platform.c)
+    ${glfw_src_SOURCE_DIR}/src/null_init.c 
+    ${glfw_src_SOURCE_DIR}/src/null_monitor.c
+    ${glfw_src_SOURCE_DIR}/src/null_window.c
+    ${glfw_src_SOURCE_DIR}/src/null_joystick.c
 )
 
-# Platform-specific settings
-if(MSVC)
-    add_compile_options(/MP)
-    target_compile_options(Engine PRIVATE /std:c++20)
+target_sources(imgui PRIVATE
+    ${imgui_src_SOURCE_DIR}/imgui.cpp
+    ${imgui_src_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_src_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_src_SOURCE_DIR}/imgui_widgets.cpp
+)
 
-    set(CMAKE_CXX_FLAGS_DEBUG "/D_DEBUG /MDd /Zi /Ob0 /Od /RTC1")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Ob2 /DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DIST "/MD /O2 /Ob2 /DNDEBUG")
+target_sources(Rocket PRIVATE
+    ${ROCKET_PRIVATE_SOURCES}
+    ${ROCKET_PRIVATE_HEADERS}
+    ${ROCKET_PUBLIC_HEADERS}
+)
 
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "")
-    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
+set_target_properties(glfw PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${glfw_src_SOURCE_DIR}/include"
+)
+set_target_properties(imgui PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${imgui_src_SOURCE_DIR}"
+)
+set_target_properties(vma::vma PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${vma_src_SOURCE_DIR}/include"
+)
+set_target_properties(glm::glm PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${glm_src_SOURCE_DIR}"
+)
+set_target_properties(entt::entt PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${entt_src_SOURCE_DIR}/single_include"
+)
+set_target_properties(spdlog::spdlog PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${spdlog_src_SOURCE_DIR}/include"
+)
 
-    target_compile_definitions(Engine PRIVATE
-        RK_PLATFORM_WINDOWS
-        RK_BUILD_DLL
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
-else()
-    # Non-MSVC compilers (GCC, Clang)
-    target_compile_options(Engine PRIVATE -std=c++20)
+target_include_directories(Rocket
+    PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime
+)
 
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DIST "-O2 -DNDEBUG")
+target_compile_definitions(Rocket PRIVATE
+    RK_ROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"
+    RK_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\"
+)
 
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "")
-    set(CMAKE_EXE_LINKER_FLAGS_DIST "")
+target_link_libraries(Rocket PRIVATE 
+    glfw 
+    imgui 
+    vma::vma
+    glm::glm 
+    entt::entt 
+    spdlog::spdlog
+)
 
-    target_compile_definitions(Engine PRIVATE
-        RK_PLATFORM_LINUX
-        RK_BUILD_DLL
-        RK_ENGINE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/Engine\"
-    )
+target_precompile_headers(Rocket PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/RocketPCH.h
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(glfw PRIVATE _GLFW_X11=1)
+    target_compile_definitions(Rocket PRIVATE RK_PLATFORM_LINUX)
+    target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Required MS extension for compiling dxcapi and suppress nullability. Enables time-trace to track compilation timers.
-    target_compile_options(Engine PRIVATE -fms-extensions -Wno-nullability-completeness -ftime-trace)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_compile_definitions(glfw PRIVATE _GLFW_WIN32)
+    target_compile_definitions(Rocket PRIVATE RK_PLATFORM_WINDOWS)
+    target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
-# Configuration-specific defines
-foreach(CONFIG_TYPE IN ITEMS Debug Release Dist)
-    string(TOUPPER ${CONFIG_TYPE} CONFIG_NAME_UPPER)
-    if(${CONFIG_TYPE} STREQUAL "Debug")
-        target_compile_definitions(Engine PRIVATE RK_DEBUG)
-    elseif(${CONFIG_TYPE} STREQUAL "Release")
-        target_compile_definitions(Engine PRIVATE RK_RELEASE)
-    elseif(${CONFIG_TYPE} STREQUAL "Dist")
-        target_compile_definitions(Engine PRIVATE RK_DIST)
-    endif()
-endforeach()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(Rocket PRIVATE RK_DEBUG)
+endif()
 
-message("[ROCKET] Using ${CMAKE_CXX_COMPILER_ID} as CMake compiler")
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_definitions(Rocket PRIVATE RK_RELEASE)
+endif()
+
+add_custom_command(
+    TARGET Rocket POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+)
