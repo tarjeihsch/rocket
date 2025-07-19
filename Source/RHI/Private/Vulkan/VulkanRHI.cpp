@@ -1,14 +1,15 @@
 #include "RocketPCH.h"
 #include "VulkanRHI.h"
 
-#include "VulkanRenderGraph.h"
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 #include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
 #include "RHI/Private/Vulkan/VulkanCommandList.h"
 #include "RHI/Private/Vulkan/VulkanQueue.h"
 #include "RHI/Private/Vulkan/VulkanDevice.h"
 #include "RHI/Private/Vulkan/VulkanViewport.h"
 #include "RHI/Private/Vulkan/VulkanCommandBufferContext.h"
+#include "RHI/Private/Vulkan/VulkanRenderGraph.h"
 
 static TDelegate<VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT*> GDebugCallback;
 static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
@@ -19,6 +20,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSever
 
 void CVulkanRHI::Init()
 {
+    LoadVulkanLibrary();
+
     GDebugCallback.Bind([](auto Severity, auto, const auto* Data)
     {
         switch(Severity)
@@ -62,14 +65,14 @@ void CVulkanRHI::Init()
     InstanceCreateInfo.ppEnabledLayerNames = ValidationLayerExtensions.data();
     InstanceCreateInfo.pNext = &DebugUtilsMessengerCreateInfo ;
 
-    VkResult Result = vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
+    VkResult Result = VulkanRHI::vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
 
     uint32_t DeviceCount = 0;
-    vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
+    VulkanRHI::vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
 
     std::vector<VkPhysicalDevice> AllPhysicalDevices(DeviceCount);
-    vkEnumeratePhysicalDevices(Instance, &DeviceCount, AllPhysicalDevices.data());
+    VulkanRHI::vkEnumeratePhysicalDevices(Instance, &DeviceCount, AllPhysicalDevices.data());
 
     std::vector<VkPhysicalDevice> DiscreteDevices;
     std::vector<VkPhysicalDevice> IntegratedDevices;
@@ -78,7 +81,7 @@ void CVulkanRHI::Init()
     for (VkPhysicalDevice PhysicalDevice : AllPhysicalDevices)
     {
         VkPhysicalDeviceProperties GPUProperties;
-        vkGetPhysicalDeviceProperties(PhysicalDevice, &GPUProperties);
+        VulkanRHI::vkGetPhysicalDeviceProperties(PhysicalDevice, &GPUProperties);
 
         if (GPUProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) DiscreteDevices.push_back(PhysicalDevice);
         if (GPUProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) IntegratedDevices.push_back(PhysicalDevice);
@@ -93,10 +96,10 @@ void CVulkanRHI::Init()
     for (VkPhysicalDevice CurrentPhysicalDevice : AvailablePhysicalDevices)
     {
         uint32_t ExtensionCount;
-        vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, nullptr);
+        VulkanRHI::vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, nullptr);
 
         std::vector<VkExtensionProperties> AvailableExtensions(ExtensionCount);
-        vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
+        VulkanRHI::vkEnumerateDeviceExtensionProperties(CurrentPhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
 
         std::unordered_set<std::string_view> Filter;
         Filter.insert(PhysicalDeviceExtensions.begin(), PhysicalDeviceExtensions.end());
@@ -133,7 +136,7 @@ void CVulkanRHI::Shutdown()
     Viewport = nullptr;
     Device = nullptr;
 
-    vkDestroyInstance(Instance, nullptr);
+    VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
 void CVulkanRHI::Tick(float DeltaTime)
@@ -198,7 +201,7 @@ IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
 
 void CVulkanRHI::RHIWaitUntilIdle() const
 {
-    vkDeviceWaitIdle(Device->GetVkDevice());
+    Device->WaitUntilIdle();
 }
 
 VkInstance CVulkanRHI::RHIGetVkInstance() const

@@ -1,3 +1,4 @@
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 #include "RocketPCH.h"
 #include "RHI/Private/Vulkan/VulkanQueue.h"
 
@@ -78,7 +79,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
         SubmitInfo.commandBufferInfoCount = CommandBufferSubmitInfos.size();
         SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
 
-        VkResult Result = vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
+        VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
         RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
         SubmissionQueue.push(Payload);
@@ -100,7 +101,7 @@ void FVulkanQueue::Await()
     SemaphoreWaitInfo.semaphoreCount = 1;
     SemaphoreWaitInfo.pSemaphores    = &TimelineSemaphore;
     SemaphoreWaitInfo.pValues        = &Payload->TimelineSemaphoreValue;
-    vkWaitSemaphores(GetVulkanRHIMinimal()->RHIGetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX);
+    VulkanRHI::vkWaitSemaphores(GetVulkanRHIMinimal()->RHIGetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX);
 
     for (FVulkanCommandBuffer* CB : Payload->CommandBuffers)
     {
@@ -114,7 +115,7 @@ void FVulkanQueue::Await()
 
 void FVulkanQueue::Init()
 {
-    vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
+    VulkanRHI::vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
 
     VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
     TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -124,7 +125,7 @@ void FVulkanQueue::Init()
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
     SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     SemaphoreCreateInfo.pNext = &TimelineSemaphoreCreateInfo;
-    vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
+    VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
 
     CommandBufferPool = std::make_unique<FVulkanCommandBufferPool>(Device, *this);
 }
@@ -140,5 +141,5 @@ void FVulkanQueue::Shutdown()
 
     CommandBufferPool = nullptr;
 
-    vkDestroySemaphore(Device.GetVkDevice(), TimelineSemaphore, nullptr);
+    VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), TimelineSemaphore, nullptr);
 }

@@ -1,6 +1,8 @@
 #include "RocketPCH.h"
-#include "RHI/Private/Vulkan/VulkanDevice.h"
+#include "VulkanDevice.h"
 
+#include "RHI/Private/Vulkan/VulkanRHI.h"
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 #include "RHI/Private/Vulkan/VulkanQueue.h"
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
 
@@ -17,16 +19,16 @@ FVulkanDevice::~FVulkanDevice()
 
 void FVulkanDevice::WaitUntilIdle() const
 {
-	vkDeviceWaitIdle(Device);
+    VulkanRHI::vkDeviceWaitIdle(Device);
 }
 
 void FVulkanDevice::Initialize()
 {
     uint32_t QueueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
+    VulkanRHI::vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> QueueFamiliesProperties(QueueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamiliesProperties.data());
+    VulkanRHI::vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, QueueFamiliesProperties.data());
 
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
 	for (int Index = 0; Index < QueueFamilyCount; Index++)
@@ -77,14 +79,18 @@ void FVulkanDevice::Initialize()
 	DeviceCreateInfo.ppEnabledExtensionNames = GetVulkanRHIMinimal()->GetPhysicalDeviceExtensions().data();
 	DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetVulkanRHIMinimal()->GetValidationExtensions().size());
 	DeviceCreateInfo.ppEnabledLayerNames = GetVulkanRHIMinimal()->GetValidationExtensions().data();
-	VkResult Result = vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
+
+	VkResult Result = VulkanRHI::vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
+    VmaVulkanFunctions VmaFuncs = CreateVmaFuncTable();
 	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
 	AllocatorCreateInfo.physicalDevice = PhysicalDevice;
 	AllocatorCreateInfo.device = Device;
 	AllocatorCreateInfo.instance = GetVulkanRHIMinimal()->RHIGetVkInstance();
 	AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    AllocatorCreateInfo.pVulkanFunctions = &VmaFuncs;
+
 	Result = vmaCreateAllocator(&AllocatorCreateInfo, &Allocator);
 	RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize memory allocator.");
 

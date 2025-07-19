@@ -1,8 +1,9 @@
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 #include "RocketPCH.h"
 #include "RHI/Private/Vulkan/VulkanRenderGraph.h"
 
-#include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
+#include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
+#include "RHI/Private/Vulkan/VulkanCommandList.h"
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
 
 void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorType Type, VkDeviceSize Size)
@@ -10,7 +11,7 @@ void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorT
     VkResult Result = VK_SUCCESS;
 
     VkPhysicalDeviceMemoryProperties MemoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), &MemoryProperties);
+    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), &MemoryProperties);
 
     // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
     // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
@@ -33,7 +34,7 @@ void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorT
     AllocInfo.allocationSize = Size;
     AllocInfo.memoryTypeIndex = TypeIndex;
 
-    Result = vkAllocateMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), &AllocInfo, nullptr, &OutPoolAllocator.PhysicalMemory);
+    Result = VulkanRHI::vkAllocateMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), &AllocInfo, nullptr, &OutPoolAllocator.PhysicalMemory);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
@@ -46,7 +47,7 @@ void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorT
 
 void DestroyPoolAllocator(FVulkanPoolAllocator& PoolAllocator)
 {
-    vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PoolAllocator.PhysicalMemory, nullptr);
+    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PoolAllocator.PhysicalMemory, nullptr);
     vmaClearVirtualBlock(PoolAllocator.VirtualMemory);
     vmaDestroyVirtualBlock(PoolAllocator.VirtualMemory);
 }
@@ -84,11 +85,11 @@ FRGResourceHandle FVulkanRGBuilder::CreateTexture(const FRGTextureDesc& D)
     ImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     ImageCreateInfo.usage = D.UsageFlags;
 
-    VkResult Result = vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &R.Image);
+    VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &R.Image);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create transient image.");
 
     VkMemoryRequirements MemoryRequirements;
-    vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, &MemoryRequirements);
+    VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -99,7 +100,7 @@ FRGResourceHandle FVulkanRGBuilder::CreateTexture(const FRGTextureDesc& D)
     Result = vmaVirtualAllocate(RenderGraph.ImagePoolAllocator->VirtualMemory, &AllocInfo, &Allocation, &Offset);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
 
-    vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, RenderGraph.ImagePoolAllocator->PhysicalMemory, Offset);
+    VulkanRHI::vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, RenderGraph.ImagePoolAllocator->PhysicalMemory, Offset);
 
     VkImageViewCreateInfo ImageViewCreateInfo = {};
     ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -116,7 +117,7 @@ FRGResourceHandle FVulkanRGBuilder::CreateTexture(const FRGTextureDesc& D)
     ImageViewCreateInfo.subresourceRange.layerCount = 1;
     ImageViewCreateInfo.subresourceRange.aspectMask = D.AspectFlags;
 
-    Result = vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &R.ImageView);
+    Result = VulkanRHI::vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &R.ImageView);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 
     RenderGraph.Resources.push_back(R);
@@ -150,8 +151,8 @@ FVulkanRenderGraph::~FVulkanRenderGraph()
 
     for (FRGResource& Resource : Resources)
     {
-        vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.Image, nullptr);
-        vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.ImageView, nullptr);
+        VulkanRHI::vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.Image, nullptr);
+        VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.ImageView, nullptr);
     }
 }
 
@@ -170,8 +171,8 @@ void FVulkanRenderGraph::End()
 //    Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
     for (FRGResource resource : Resources)
     {
-        vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.Image, nullptr);
-        vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.ImageView, nullptr);
+        VulkanRHI::vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.Image, nullptr);
+        VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.ImageView, nullptr);
     }
 
     Passes.clear();
@@ -290,7 +291,7 @@ void FVulkanRenderGraph::Compile()
                             // Create a new binary semaphore
                             VkSemaphoreCreateInfo CI{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
                             VkSemaphore Sem;
-                            vkCreateSemaphore(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CI, nullptr, &Sem);
+                            VulkanRHI::vkCreateSemaphore(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CI, nullptr, &Sem);
 
 //                            VkSemaphore xferSem = AcquireTempSemaphore();
                             VkSemaphore xferSem = Sem;

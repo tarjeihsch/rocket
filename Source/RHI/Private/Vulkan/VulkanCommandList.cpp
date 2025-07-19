@@ -1,8 +1,8 @@
 #include "RocketPCH.h"
-#include "RHI/Private/Vulkan/VulkanCommandList.h"
+#include "VulkanCommandList.h"
 
 #include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "VulkanCommandList.h"
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 
 void FVulkanCommandListContext::RHISetScissorRect(uint32_t X, uint32_t Y)
 {
@@ -27,12 +27,12 @@ void FVulkanCommandListContext::RHIBeginRendering(VkImageView ImageView)
     RenderingInfo.renderArea.extent.width  = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
     RenderingInfo.renderArea.extent.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
 
-    vkCmdBeginRendering(CommandBuffer, &RenderingInfo);
+    VulkanRHI::vkCmdBeginRendering(CommandBuffer, &RenderingInfo);
 }
 
 void FVulkanCommandListContext::RHIEndRendering()
 {
-    vkCmdEndRendering(CommandBuffer);
+    VulkanRHI::vkCmdEndRendering(CommandBuffer);
 }
 
 void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout)
@@ -52,5 +52,5 @@ void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout
     ImageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     ImageMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     
-    vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
+    VulkanRHI::vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
 }

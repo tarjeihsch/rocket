@@ -1,3 +1,4 @@
+#include "RHI/Private/Vulkan/VulkanLoader.h"
 #include "RocketPCH.h"
 #include "RHI/Private/Vulkan/VulkanViewport.h"
 
@@ -18,13 +19,13 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
+    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
 
     std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
     if (SurfaceFormatCount)
     {
         SurfaceFormats.resize(SurfaceFormatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
+        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
     }
 
     for (const auto& Element : SurfaceFormats)
@@ -36,13 +37,13 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     }
 
     uint32_t PresentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
+    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
 
     std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
     if (PresentModeCount)
     {
         PresentModes.resize(PresentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
+        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
     }
 
     for (const auto& Element : PresentModes)
@@ -60,13 +61,13 @@ FVulkanViewport::~FVulkanViewport()
 {
     DestroySwapchain();
 
-    vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
+    VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
 void FVulkanViewport::CreateSwapchain()
 {
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
+	VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
     int32_t Width, Height;
     glfwGetFramebufferSize((GLFWwindow*)GetWindow()->GetNativeWindow(), &Width, &Height);
@@ -117,15 +118,15 @@ void FVulkanViewport::CreateSwapchain()
         SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-    VkResult Result = vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
+    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain.");
 
     RK_LOG_DEBUG("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
 
-    vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
+    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
     Images.resize(ImageCount);
     Views.resize(ImageCount);
-    vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
+    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
 
     for (uint32_t Index = 0; Index < ImageCount; ++Index)
     {
@@ -144,7 +145,7 @@ void FVulkanViewport::CreateSwapchain()
         ImageViewCreateInfo.subresourceRange.layerCount = 1;
         ImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-        VkResult Result = vkCreateImageView(Device.GetVkDevice(), &ImageViewCreateInfo, nullptr, &Views[Index]);
+        VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &ImageViewCreateInfo, nullptr, &Views[Index]);
         RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
     }
     
@@ -156,12 +157,12 @@ void FVulkanViewport::CreateSwapchain()
 
     for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
     {
-        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
     }
 
     for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
     {
-        vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
     }
 }
 
@@ -169,7 +170,7 @@ bool FVulkanViewport::Acquire()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
-    VkResult Result = vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex], VK_NULL_HANDLE, &CurrentImageIndex);
+    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex], VK_NULL_HANDLE, &CurrentImageIndex);
 
     if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
     {
@@ -193,7 +194,7 @@ void FVulkanViewport::Present()
     PresentInfo.waitSemaphoreCount = 1;
     PresentInfo.pImageIndices = &CurrentImageIndex;
 
-    vkQueuePresentKHR(GetVulkanRHIMinimal()->RHIGetPresentVkQueue(), &PresentInfo);
+    VulkanRHI::vkQueuePresentKHR(GetVulkanRHIMinimal()->RHIGetPresentVkQueue(), &PresentInfo);
 
     ++NumPresentCalls;
 }
@@ -204,20 +205,20 @@ void FVulkanViewport::DestroySwapchain()
 
     for (auto& Semaphore : ImageAcquiredSemaphores)
     {
-        vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
     }
 
     for (auto& Semaphore : RenderFinishedSemaphores)
     {
-        vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
     }
 
     for (auto& view : Views)
     {
-        vkDestroyImageView(Device.GetVkDevice(), view, nullptr);
+        VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), view, nullptr);
     }
 
-    vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
+    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
 
     Views.clear();
     Images.clear();
