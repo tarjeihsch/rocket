@@ -11,7 +11,7 @@ build-all:
       - PRESET: mingw-debug
   before_script:
     - apt-get update
-    - apt-get install -y --no-install-recommends libxcursor-dev
+    - apt-get install -y --no-install-recommends libxcursor-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxxf86vm-dev libxkbcommon-dev mesa-common-dev libgl1-mesa-dev libwayland-dev wayland-protocols
 
   script:
     - cmake --preset $PRESET
