@@ -3,31 +3,23 @@ project(Rocket LANGUAGES C CXX)
 
 include(FetchContent)
 
-if (_LINUX)
-    set(SURFACE_BACKEND_MACRO _GLFW_X11=1)
-endif()
-
-if (_WIN32)
-    set(SURFACE_BACKEND_MACRO _GLFW_WIN32)
-endif()
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 file(GLOB_RECURSE ROCKET_PUBLIC_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.hpp
 )
 
 file(GLOB_RECURSE ROCKET_PRIVATE_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.hpp
 )
 
 file(GLOB_RECURSE ROCKET_PRIVATE_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/*.cpp
 )
 
 FetchContent_Declare(glfw_src)
@@ -169,8 +161,8 @@ set_target_properties(spdlog::spdlog PROPERTIES
 )
 
 target_include_directories(Rocket
-    PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/Source
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime
 )
 
 target_compile_definitions(Rocket PRIVATE
@@ -188,19 +180,17 @@ target_link_libraries(Rocket PRIVATE
 )
 
 target_precompile_headers(Rocket PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Source/RocketPCH.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Runtime/RocketPCH.h
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(glfw PRIVATE _GLFW_X11=1)
-
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_LINUX)
     target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_definitions(glfw PRIVATE _GLFW_WIN32)
-
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_WINDOWS)
     target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
@@ -215,7 +205,5 @@ endif()
 
 add_custom_command(
     TARGET Rocket POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_BINARY_DIR}/compile_commands.json
-        ${CMAKE_BINARY_DIR}/../compile_commands.json
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
 )
