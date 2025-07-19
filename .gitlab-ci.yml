@@ -9,6 +9,10 @@ build-all:
       - PRESET: gcc-debug
       - PRESET: clang-debug
       - PRESET: mingw-debug
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends libxcursor-dev
+
   script:
     - cmake --preset $PRESET
     - cmake --build --preset $PRESET
