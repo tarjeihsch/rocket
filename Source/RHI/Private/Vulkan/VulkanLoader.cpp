@@ -22,8 +22,8 @@ namespace VulkanRHI
 void LoadVulkanLibrary()
 {
 #if RK_PLATFORM_WINDOWS
-    Vk::Library = LoadLibraryA("vulkan-1.dll");
-    Vk::GetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(static_cast<HMODULE>(VulkanRHI::Library), "vkGetInstanceProcAddr"));
+    VulkanRHI::Library = LoadLibraryA("vulkan-1.dll");
+    VulkanRHI::vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(static_cast<HMODULE>(VulkanRHI::Library), "vkGetInstanceProcAddr"));
 #endif
 
 #if RK_PLATFORM_LINUX

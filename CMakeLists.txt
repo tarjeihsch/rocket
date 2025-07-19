@@ -3,17 +3,13 @@ project(Rocket LANGUAGES C CXX)
 
 include(FetchContent)
 
-if (DEFINED ENV{DISPLAY})
+if (_LINUX)
     set(SURFACE_BACKEND_MACRO _GLFW_X11=1)
-    set(SURFACE_BACKEND_LIBS ${X11_LIBRARIES} dl m)
-    set(SURFACE_BACKEND_INCLUDES ${X11_INCLUDE_DIRS})
 endif()
 
-#if (DEFINED ENV{WAYLAND_DISPLAY})
-#    set(SURFACE_BACKEND_MACRO _GLFW_WAYLAND=1)
-#    set(SURFACE_BACKEND_LIBS ${WAYLAND_LIBRARIES} dl m)
-#    set(SURFACE_BACKEND_INCLUDES ${WAYLAND_INCLUDE_DIRS})
-#endif()
+if (_WIN32)
+    set(SURFACE_BACKEND_MACRO _GLFW_WIN32)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -103,26 +99,35 @@ target_sources(glfw PRIVATE
     ${glfw_src_SOURCE_DIR}/src/init.c
     ${glfw_src_SOURCE_DIR}/src/input.c
     ${glfw_src_SOURCE_DIR}/src/monitor.c
-    ${glfw_src_SOURCE_DIR}/src/platform.c 
-    ${glfw_src_SOURCE_DIR}/src/posix_module.c
-    ${glfw_src_SOURCE_DIR}/src/posix_poll.c
+    ${glfw_src_SOURCE_DIR}/src/platform.c
     ${glfw_src_SOURCE_DIR}/src/vulkan.c
     ${glfw_src_SOURCE_DIR}/src/window.c
+    ${glfw_src_SOURCE_DIR}/src/egl_context.c
+    ${glfw_src_SOURCE_DIR}/src/osmesa_context.c
 
+    $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:
+    ${glfw_src_SOURCE_DIR}/src/win32_init.c
+    ${glfw_src_SOURCE_DIR}/src/win32_monitor.c
+    ${glfw_src_SOURCE_DIR}/src/win32_module.c
+    ${glfw_src_SOURCE_DIR}/src/win32_joystick.c
+    ${glfw_src_SOURCE_DIR}/src/win32_time.c
+    ${glfw_src_SOURCE_DIR}/src/win32_thread.c
+    ${glfw_src_SOURCE_DIR}/src/win32_window.c
+    ${glfw_src_SOURCE_DIR}/src/wgl_context.c
+    >
+
+    $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Linux>:
+    ${glfw_src_SOURCE_DIR}/src/posix_module.c
+    ${glfw_src_SOURCE_DIR}/src/posix_poll.c
     ${glfw_src_SOURCE_DIR}/src/posix_time.c
     ${glfw_src_SOURCE_DIR}/src/posix_thread.c
-    ${glfw_src_SOURCE_DIR}/src/egl_context.c
     ${glfw_src_SOURCE_DIR}/src/linux_joystick.c
+    ${glfw_src_SOURCE_DIR}/src/xkb_unicode.c
     ${glfw_src_SOURCE_DIR}/src/x11_init.c
     ${glfw_src_SOURCE_DIR}/src/x11_monitor.c
     ${glfw_src_SOURCE_DIR}/src/x11_window.c
-    ${glfw_src_SOURCE_DIR}/src/xkb_unicode.c
     ${glfw_src_SOURCE_DIR}/src/glx_context.c
-    ${glfw_src_SOURCE_DIR}/src/osmesa_context.c
-
-    ${glfw_src_SOURCE_DIR}/src/wl_init.c
-    ${glfw_src_SOURCE_DIR}/src/wl_monitor.c
-    ${glfw_src_SOURCE_DIR}/src/wl_window.c
+    >
 
     # “Null” stub backend (required by platform.c)
     ${glfw_src_SOURCE_DIR}/src/null_init.c 
@@ -163,11 +168,6 @@ set_target_properties(spdlog::spdlog PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${spdlog_src_SOURCE_DIR}/include"
 )
 
-target_compile_definitions(glfw PRIVATE 
-    _CRT_SECURE_NO_WARNINGS
-    ${SURFACE_BACKEND_MACRO}
-)
-
 target_include_directories(Rocket
     PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/Source
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source
@@ -192,11 +192,15 @@ target_precompile_headers(Rocket PRIVATE
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(glfw PRIVATE _GLFW_X11=1)
+
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_LINUX)
     target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_compile_definitions(glfw PRIVATE _GLFW_WIN32)
+
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_WINDOWS)
     target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
