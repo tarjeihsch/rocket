@@ -30,6 +30,8 @@ void LoadVulkanLibrary()
     VulkanRHI::Library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
     VulkanRHI::vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(VulkanRHI::Library, "vkGetInstanceProcAddr"));
 #endif
+
+    assert(VulkanRHI::Library && "Unable to find and load Vulkan dynamic library.");
 }
 
 void LoadVulkanGlobalFunc()

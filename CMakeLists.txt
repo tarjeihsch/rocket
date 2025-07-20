@@ -190,17 +190,21 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_compile_definitions(glfw PRIVATE _GLFW_WIN32)
+    target_compile_definitions(glfw PRIVATE _GLFW_WIN32=1)
     target_compile_definitions(Rocket PRIVATE RK_PLATFORM_WINDOWS)
     target_include_directories(Rocket PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source/ThirdParty/Vulkan/include)
 endif()
 
+if (MINGW)
+    target_link_options(Rocket PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(Rocket PRIVATE RK_DEBUG)
+    target_compile_definitions(Rocket PRIVATE RK_DEBUG=1)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_definitions(Rocket PRIVATE RK_RELEASE)
+    target_compile_definitions(Rocket PRIVATE RK_RELEASE=1)
 endif()
 
 add_custom_command(
