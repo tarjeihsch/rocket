@@ -75,7 +75,6 @@ VmaVulkanFunctions CreateVmaFuncTable()
     Funcs.vkGetDeviceBufferMemoryRequirements = VulkanRHI::vkGetDeviceBufferMemoryRequirements;
     Funcs.vkGetDeviceImageMemoryRequirements = VulkanRHI::vkGetDeviceImageMemoryRequirements;
 
-
     return Funcs;
 }
 

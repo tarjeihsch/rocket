@@ -1,7 +1,5 @@
 #pragma once
 
-#define SPDLOG_USE_STD_FORMAT
- 
 enum ELogCategory
 {
 	LOG_TRACE,
