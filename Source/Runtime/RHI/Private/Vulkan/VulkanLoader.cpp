@@ -1,4 +1,15 @@
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "VulkanLoader.h"
+
+#include <assert.h>
 
 #ifdef RK_PLATFORM_WINDOWS
     #include <windows.h>
@@ -30,6 +41,8 @@ void LoadVulkanLibrary()
     VulkanRHI::Library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
     VulkanRHI::vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(VulkanRHI::Library, "vkGetInstanceProcAddr"));
 #endif
+
+    assert(VulkanRHI::Library && "Unable to find and load Vulkan dynamic library.");
 }
 
 void LoadVulkanGlobalFunc()
@@ -72,7 +85,6 @@ VmaVulkanFunctions CreateVmaFuncTable()
     Funcs.vkGetPhysicalDeviceMemoryProperties2KHR = VulkanRHI::vkGetPhysicalDeviceMemoryProperties2;
     Funcs.vkGetDeviceBufferMemoryRequirements = VulkanRHI::vkGetDeviceBufferMemoryRequirements;
     Funcs.vkGetDeviceImageMemoryRequirements = VulkanRHI::vkGetDeviceImageMemoryRequirements;
-
 
     return Funcs;
 }

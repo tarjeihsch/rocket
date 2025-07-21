@@ -1,10 +1,8 @@
-#include "RocketPCH.h"
 #include "VulkanDevice.h"
-
-#include "RHI/Private/Vulkan/VulkanRHI.h"
-#include "RHI/Private/Vulkan/VulkanLoader.h"
-#include "RHI/Private/Vulkan/VulkanQueue.h"
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
+#include "VulkanQueue.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "Assert.h"
 
 FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
     : PhysicalDevice(InPhysicalDevice)

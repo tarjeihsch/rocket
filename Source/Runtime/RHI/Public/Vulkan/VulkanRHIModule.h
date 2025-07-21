@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RHI/Public/Common/RHI.h"
+#include "Common/RHI.h"
 
 class FVulkanRHIModule : public IRHIModule
 {

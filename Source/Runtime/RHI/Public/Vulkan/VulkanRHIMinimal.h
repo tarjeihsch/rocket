@@ -1,6 +1,10 @@
 #pragma once
 
-#include "RHI/Public/Common/RHI.h"
+#include "Common/RHI.h"
+
+#include <vulkan/vulkan_core.h>
+#include <span>
+#include <assert.h>
 
 class IVulkanRHIMinimal : public IRHI
 {

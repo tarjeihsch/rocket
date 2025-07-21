@@ -1,15 +1,21 @@
-#include "RocketPCH.h"
 #include "VulkanRHI.h"
 
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "RHI/Private/Vulkan/VulkanLoader.h"
-#include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
-#include "RHI/Private/Vulkan/VulkanCommandList.h"
-#include "RHI/Private/Vulkan/VulkanQueue.h"
-#include "RHI/Private/Vulkan/VulkanDevice.h"
-#include "RHI/Private/Vulkan/VulkanViewport.h"
-#include "RHI/Private/Vulkan/VulkanCommandBufferContext.h"
-#include "RHI/Private/Vulkan/VulkanRenderGraph.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandList.h"
+#include "VulkanQueue.h"
+#include "VulkanDevice.h"
+#include "VulkanViewport.h"
+#include "VulkanCommandBufferContext.h"
+#include "VulkanRenderGraph.h"
+#include "Logger.h"
+#include "Assert.h"
+#include <GLFW/glfw3.h>
+
+#if RK_PLATFORM_WINDOWS
+#include <libloaderapi.h>
+#endif
 
 static TDelegate<VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT*> GDebugCallback;
 static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
@@ -20,6 +26,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSever
 
 void CVulkanRHI::Init()
 {
+    bool bDebug = true;
+
+#if RK_PLATFORM_WINDOWS
+    HMODULE NTDLL = GetModuleHandleA("ntdll.dll");
+    bDebug = !GetProcAddress(NTDLL, "wine_get_version");
+#endif
+
     LoadVulkanLibrary();
     LoadVulkanGlobalFunc();
 
@@ -38,10 +51,14 @@ void CVulkanRHI::Init()
     uint32_t GlfwExtensionCount = 0;
     const char** GlfwExtensions = glfwGetRequiredInstanceExtensions(&GlfwExtensionCount);
     InstanceExtensions.insert(InstanceExtensions.end(), GlfwExtensions, GlfwExtensions + GlfwExtensionCount);
-    InstanceExtensions.push_back("VK_EXT_debug_utils");
     InstanceExtensions.push_back("VK_EXT_swapchain_colorspace");
     PhysicalDeviceExtensions.push_back("VK_KHR_swapchain");
-    ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
+
+    if (bDebug) 
+    {
+        InstanceExtensions.push_back("VK_EXT_debug_utils");
+        ValidationLayerExtensions.push_back("VK_LAYER_KHRONOS_validation");
+    }
 
     VkApplicationInfo ApplicationInfo = {};
     ApplicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -64,7 +81,7 @@ void CVulkanRHI::Init()
     InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
     InstanceCreateInfo.enabledLayerCount = ValidationLayerExtensions.size();
     InstanceCreateInfo.ppEnabledLayerNames = ValidationLayerExtensions.data();
-    InstanceCreateInfo.pNext = &DebugUtilsMessengerCreateInfo ;
+    InstanceCreateInfo.pNext = &DebugUtilsMessengerCreateInfo;
 
     VkResult Result = VulkanRHI::vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");

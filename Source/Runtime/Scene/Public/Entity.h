@@ -1,10 +1,15 @@
 #pragma once
 
-#include "Scene/Public/Scene.h"
+#include "Scene.h"
 
 class FEntity
 {
 public:
+    FEntity(PRegistry& InRegistry)
+        : Registry(InRegistry)
+    {
+    }
+
     template<typename TComponent, typename... TArgs>
     TComponent& AddComponent(TArgs&&... Args) const;
 
@@ -24,6 +29,7 @@ public:
 
 private:
     FEntityID EntityID;
+    PRegistry& Registry;
 
     friend class PRegistry;
 };
@@ -31,26 +37,25 @@ private:
 template<typename TComponent, typename... TArgs>
 TComponent& FEntity::AddComponent(TArgs&&... Args) const
 {
-    TComponent& Component = GetScene()->GetRegistry()->AddComponent<TComponent>(EntityID, std::forward<TArgs>(Args)...);
+    TComponent& Component = Registry.AddComponent<TComponent>(EntityID, std::forward<TArgs>(Args)...);
     return Component;
 }
 
 template<typename TComponent>
 TComponent& FEntity::GetComponent() const
 {
-    TComponent& Component = GetScene()->GetRegistry()->GetComponent<TComponent>(EntityID);
+    TComponent& Component = Registry.GetComponent<TComponent>(EntityID);
     return Component;
 }
 
 template<typename TComponent>
 bool FEntity::HasComponent() const
 {
-    return GetScene()->GetRegistry()->HasComponent<TComponent>(EntityID);
+    return Registry.HasComponent<TComponent>(EntityID);
 }
 
 template<typename TComponent>
 void FEntity::RemoveComponent()
 {
-    GetScene()->GetRegistry()->RemoveComponent<TComponent>(EntityID);
+    Registry.RemoveComponent<TComponent>(EntityID);
 }
-

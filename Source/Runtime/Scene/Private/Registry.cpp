@@ -1,10 +1,11 @@
-#include "RocketPCH.h"
-#include "Scene/Public/Component.h"
-#include "Scene/Public/Registry.h"
+#include "Registry.h"
+
+#include "Component.h"
+#include "Entity.h"
 
 FEntity PRegistry::CreateEntity()
 {
-    FEntity Entity{};
+    FEntity Entity = {*this};
     Entity.EntityID = Registry.create();
     Entity.AddComponent<FUUIDComponent>();
     return Entity;

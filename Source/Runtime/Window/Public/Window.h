@@ -1,0 +1,68 @@
+#pragma once
+
+#include <cstdint>
+
+#include "Delegate.h"
+
+struct SWindowSpecification
+{
+	const char* Name;
+
+	uint32_t Width;
+	uint32_t Height;
+
+	uint32_t PositionX;
+	uint32_t PositionY;
+};
+
+class IWindow
+{
+public:
+    static IWindow* Get();
+
+	TDelegate<uint32_t> OnWindowFocusDelegate;
+
+	IWindow(const SWindowSpecification& InWindowSpecification)
+		: WindowSpecification(InWindowSpecification)
+	{
+	}
+
+	virtual ~IWindow() = default;
+
+	virtual void CreateNativeWindow() = 0;
+	virtual void DestroyNativeWindow() = 0;
+	virtual void Poll() = 0;
+	virtual bool ShouldClose() const = 0;
+	virtual bool IsMinimized() const = 0;
+	virtual bool IsFocused() const = 0;
+	virtual void SetIsMinimized(bool bMinimized) = 0;
+	virtual void SetIsFocused(bool bFocused) = 0;
+	virtual void WaitEventOrTimeout(float TimeoutSeconds) = 0;
+
+	inline void* GetNativeWindow() const;
+	inline SWindowSpecification& GetWindowSpecification();
+	inline float GetAspectRatio() const;
+
+protected:
+	SWindowSpecification WindowSpecification;
+
+	void* NativeWindow = nullptr;
+
+	bool bIsMinimized = false;
+	bool bIsFocused = false;
+};
+
+inline void* IWindow::GetNativeWindow() const
+{
+	return NativeWindow;
+}
+
+inline SWindowSpecification& IWindow::GetWindowSpecification()
+{
+	return WindowSpecification;
+}
+
+inline float IWindow::GetAspectRatio() const
+{
+	return static_cast<float>(WindowSpecification.Width) / static_cast<float>(WindowSpecification.Height);
+}

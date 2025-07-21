@@ -1,5 +1,9 @@
 #pragma once
 
+#include <vulkan/vulkan_core.h>
+#include <vma/vk_mem_alloc.h>
+
+#include <memory>
 #include <vector>
 
 class FVulkanQueue;

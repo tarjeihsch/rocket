@@ -18,3 +18,4 @@
 !CMakeLists.txt
 !CMakePresets.json
 !.clangd
+!Dockerfile

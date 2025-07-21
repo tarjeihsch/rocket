@@ -1,6 +1,8 @@
 #pragma once
 
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+
+#include "vector"
 
 class FVulkanDevice;
 class FVulkanViewport;
