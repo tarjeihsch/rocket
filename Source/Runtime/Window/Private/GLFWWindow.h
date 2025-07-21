@@ -1,9 +1,10 @@
 #pragma once
 
-#include "IO/Public/Window.h"
+#include "Window.h"
 
-#ifndef _GLFW_WAYLAND
-	#define _GLFW_WAYLAND
+#if defined(_WIN32)
+#include <windows.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 
 class CGLFWWindow : public IWindow

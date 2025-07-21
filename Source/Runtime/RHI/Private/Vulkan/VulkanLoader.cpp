@@ -1,4 +1,15 @@
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "VulkanLoader.h"
+
+#include <assert.h>
 
 #ifdef RK_PLATFORM_WINDOWS
     #include <windows.h>

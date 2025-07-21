@@ -1,8 +1,12 @@
 #pragma once
 
-#include "RHI/Private/Vulkan/VulkanCommandBufferContext.h"
-#include "RHI/Private/Vulkan/VulkanQueue.h"
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+
+#include <string>
+#include <vector>
+#include <functional>
+
+#include <vma/vk_mem_alloc.h>
 
 class IRHICommandListContext;
 class FVulkanCommandBufferContext;

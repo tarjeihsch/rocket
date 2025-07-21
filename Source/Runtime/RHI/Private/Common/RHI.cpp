@@ -1,5 +1,6 @@
-#include "RocketPCH.h"
-#include "RHI/Public/Common/RHI.h"
+#include "Common/RHI.h"
+
+#include "Assert.h"
 
 IRHI* GRHI = nullptr;
 IRHIModule* GRHIModule = nullptr;
@@ -22,6 +23,10 @@ void SetRHIModule(ERHIInterfaceType InInterfaceType)
     switch (InInterfaceType)
     {
         case ERHIInterfaceType::Vulkan: GRHIModule = CreateVulkanRHIModule(); break;
+        case ERHIInterfaceType::D3D12: RK_ASSERT("Missing API backend"); break;
+        case ERHIInterfaceType::Metal: RK_ASSERT("Missing API backend"); break;
+        case ERHIInterfaceType::WebGL: RK_ASSERT("Missing API backend"); break;
+        case ERHIInterfaceType::None: RK_ASSERT("Missing API backend"); break;
     }
 
     GRHI = GRHIModule->CreateRHI();

@@ -1,8 +1,9 @@
-#include "RocketPCH.h"
-#include "Core/Public/Engine.h"
+#include "Engine.h"
 
-#include "IO/Public/GLFWWindow.h"
-#include "RHI/Public/Common/RHI.h"
+#include "Common/RHI.h"
+#include "Window.h"
+#include "Logger.h"
+#include "Scene.h"
 
 CEngine* CEngine::GEngine = nullptr;
 
@@ -15,22 +16,21 @@ void CEngine::Start()
 	FLogger::Init();
 
 	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
-	
-	Window = new CGLFWWindow(WindowSpecification);
+
 	Scene = new PScene();
 
 	SetRHIModule(ERHIInterfaceType::Vulkan);
 
-	Window->CreateNativeWindow();
+    IWindow::Get()->CreateNativeWindow();
     GRHI->Init();
 	Scene->Init();
 }
 
 void CEngine::Run()
 {
-	while (!Window->ShouldClose())
+	while (!IWindow::Get()->ShouldClose())
 	{
-		Window->Poll();
+		IWindow::Get()->Poll();
 
         GRHI->Tick(0.0f);
 	}
@@ -40,10 +40,9 @@ void CEngine::Stop()
 {
     GRHI->Shutdown();
 	Scene->Cleanup();
-	Window->DestroyNativeWindow();
+	IWindow::Get()->DestroyNativeWindow();
 
 	delete Scene;
-	delete Window;
 
 	GEngine = nullptr;
 }

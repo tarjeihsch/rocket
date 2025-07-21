@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(imgui LANGUAGES CXX)
 
 add_library(imgui STATIC)
-add_library(Rocket::imgui ALIAS imgui)
+add_library(imgui::imgui ALIAS imgui)
 
 target_sources(imgui PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/imgui.cpp

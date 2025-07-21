@@ -1,6 +1,8 @@
 #pragma once
 
 #include <queue>
+#include <memory>
+#include <vulkan/vulkan_core.h>
 
 class FVulkanDevice;
 class FVulkanCommandBufferPayload;

@@ -1,8 +1,8 @@
-#include "Core/Public/Engine.h"
+#include "Engine.h"
 
 int main()
 {
-    CEngine* Engine = new CEngine();
+    const auto Engine = new CEngine();
 
     Engine->Start();
 

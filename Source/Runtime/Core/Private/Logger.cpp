@@ -1,5 +1,4 @@
-#include "RocketPCH.h"
-#include "IO/Public/Logger.h"
+#include "Logger.h"
 // Ignores all warnings raised inside external header files
 #pragma warning(push, 0)
 #include <spdlog/spdlog.h>

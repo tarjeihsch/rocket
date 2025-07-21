@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Core/Public/Assert.h"
+#include "Assert.h"
+
+#include <entt/entt.hpp>
 
 using SRegistry = entt::registry;
 using FEntityID = entt::entity;

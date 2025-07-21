@@ -1,34 +1,20 @@
-#include "RocketPCH.h"
-#include "Core/Public/Camera.h"
-#include "IO/Public/Window.h"
-
-void PCamera::OnImGuiRender()
-{
-    const char* ProjectionModeEnumerateNames[2] = { "Perspective", "Orthographic" };
-
-    ImGui::Begin("Camera Settings");
-    ImGui::Combo("Projection Mode", reinterpret_cast<int*>(&Settings.ProjectionMode), ProjectionModeEnumerateNames, IM_ARRAYSIZE(ProjectionModeEnumerateNames));
-    ImGui::DragFloat("Field of View", &Settings.FoVY, 1.0f, 30.0f, 145.0f);
-    ImGui::DragFloat("Z Near", &Settings.ZNear, 1.0f, 0.1f, 10000.0f);
-    ImGui::DragFloat("Z Far", &Settings.ZFar, 1.0f, 0.1f, 10000.0f);
-    ImGui::DragFloat("Film Grain", &Settings.FilmGrainIntensity, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Chromatic Aberration", &Settings.ChromaticAberration, 0.1f, 0.0f, 5.0f);
-    ImGui::End();
-
-    ApplySettings();
-}
+#include "Camera.h"
 
 void PCamera::SetOrthographicProjection(float Zoom, float AspectRatio, float ZNear, float ZFar)
 {
     Projection = glm::ortho(-AspectRatio * Zoom, AspectRatio * Zoom, -1.0f * Zoom, 1.0f * Zoom, ZNear, ZFar);
     Projection[1][1] *= -1.0f; // Invert Y-Axis Screen Space Scaling
     Projection[3][1] *= -1.0f; // Invert Y-Axis Translation
+
+    Settings.AspectRatio = AspectRatio;
 }
 
 void PCamera::SetPerspectiveProjection(float FovY, float AspectRatio, float ZNear, float ZFar)
 {
     Projection = glm::perspective(FovY, AspectRatio, ZNear, ZFar);
     Projection[1][1] *= -1.0f; // Invert Y-Axis Screen Space Scaling
+
+    Settings.AspectRatio = AspectRatio;
 }
 
 void PCamera::CalculateViewMatrix(const glm::vec3& NewPosition, const glm::vec3& NewRotation)
@@ -47,7 +33,7 @@ void PCamera::ApplySettings()
 {
     switch (Settings.ProjectionMode)
     {
-        case ECameraProjectionMode::Orthographic: SetOrthographicProjection(glm::radians(Settings.FoVY), GetWindow()->GetAspectRatio(), Settings.ZNear, Settings.ZFar); break;
-        case ECameraProjectionMode::Perspective: SetPerspectiveProjection(glm::radians(Settings.FoVY), GetWindow()->GetAspectRatio(), Settings.ZNear, Settings.ZFar); break;
+        case ECameraProjectionMode::Orthographic: SetOrthographicProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
+        case ECameraProjectionMode::Perspective: SetPerspectiveProjection(glm::radians(Settings.FoVY), Settings.AspectRatio, Settings.ZNear, Settings.ZFar); break;
     }
 }

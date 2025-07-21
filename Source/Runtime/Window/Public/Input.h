@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-#include "Core/Public/KeyCode.h"
+#include <cstdint>
+#include <utility>
 
 class PInput
 {

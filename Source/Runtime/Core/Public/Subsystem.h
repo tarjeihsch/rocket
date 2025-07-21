@@ -2,6 +2,8 @@
 
 #include <vector>
 
+// TODO: Use macros SUBSYSTEM_INIT_ENTRYPOINT() and SUBSYSTEM_EXIT_ENTRYPOINT() over the current solution
+
 class ISubsystem 
 {
 public:

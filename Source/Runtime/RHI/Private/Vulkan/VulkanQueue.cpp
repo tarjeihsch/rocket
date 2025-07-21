@@ -1,11 +1,11 @@
-#include "RHI/Private/Vulkan/VulkanLoader.h"
-#include "RocketPCH.h"
-#include "RHI/Private/Vulkan/VulkanQueue.h"
+#include "VulkanQueue.h"
 
-#include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
-#include "RHI/Private/Vulkan/VulkanCommandBufferContext.h"
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "RHI/Private/Vulkan/VulkanDevice.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandBufferContext.h"
+#include "VulkanDevice.h"
+#include "Assert.h"
 
 FVulkanQueue::FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex)
     : Device(InDevice),

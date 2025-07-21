@@ -1,6 +1,8 @@
 #pragma once
 
-#include "RHI/Public/Common/RHICommandList.h"
+#include "Common/RHICommandList.h"
+
+#include <vulkan/vulkan_core.h>
 
 class FVulkanCommandListContext final : public IRHICommandListContext
 {

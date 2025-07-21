@@ -1,8 +1,7 @@
-#include "RocketPCH.h"
 #include "VulkanCommandList.h"
 
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "RHI/Private/Vulkan/VulkanLoader.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
 
 void FVulkanCommandListContext::RHISetScissorRect(uint32_t X, uint32_t Y)
 {

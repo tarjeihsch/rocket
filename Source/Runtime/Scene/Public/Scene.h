@@ -1,9 +1,7 @@
 #pragma once 
 
-#include "Core/Public/Camera.h"
-#include "Core/Public/Engine.h"
-#include "Scene/Public/Component.h"
-#include "Scene/Public/Registry.h"
+#include "Camera.h"
+#include "Registry.h"
 
 class PScene
 {
@@ -12,15 +10,6 @@ public:
 	{
 		Camera = new PCamera();
 		Registry = new PRegistry();
-
-#if RK_DEBUG
-//		GOverlay->OnRender.Bind(this, &PScene::OnImGuiRender);
-#endif
-	}
-
-	void Update()
-	{
-
 	}
 
 	void Cleanup() 
@@ -43,11 +32,5 @@ public:
 
 private:
 	PCamera* Camera;
-
 	PRegistry* Registry;
 };
-
-inline static PScene* GetScene()
-{
-	return GetEngine()->GetScene();
-}

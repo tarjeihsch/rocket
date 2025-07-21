@@ -1,15 +1,17 @@
-#include "RocketPCH.h"
 #include "VulkanRHI.h"
 
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "RHI/Private/Vulkan/VulkanLoader.h"
-#include "RHI/Private/Vulkan/VulkanCommandBuffer.h"
-#include "RHI/Private/Vulkan/VulkanCommandList.h"
-#include "RHI/Private/Vulkan/VulkanQueue.h"
-#include "RHI/Private/Vulkan/VulkanDevice.h"
-#include "RHI/Private/Vulkan/VulkanViewport.h"
-#include "RHI/Private/Vulkan/VulkanCommandBufferContext.h"
-#include "RHI/Private/Vulkan/VulkanRenderGraph.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandList.h"
+#include "VulkanQueue.h"
+#include "VulkanDevice.h"
+#include "VulkanViewport.h"
+#include "VulkanCommandBufferContext.h"
+#include "VulkanRenderGraph.h"
+#include "Logger.h"
+#include "Assert.h"
+#include <GLFW/glfw3.h>
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>

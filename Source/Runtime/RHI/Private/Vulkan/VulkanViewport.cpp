@@ -1,10 +1,11 @@
-#include "RHI/Private/Vulkan/VulkanLoader.h"
-#include "RocketPCH.h"
-#include "RHI/Private/Vulkan/VulkanViewport.h"
+#include "VulkanViewport.h"
 
-#include "RHI/Public/Vulkan/VulkanRHIMinimal.h"
-#include "RHI/Private/Vulkan/VulkanDevice.h"
-#include <cstdio>
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanLoader.h"
+#include "VulkanDevice.h"
+#include "Assert.h"
+#include <GLFW/glfw3.h>
+#include "Window.h"
 
 FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     : Device(InDevice),
@@ -15,7 +16,7 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     NumAcquireCalls(0),
     NumPresentCalls(0)
 {
-    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GetWindow()->GetNativeWindow()), nullptr, &Surface);
+    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(IWindow::Get()->GetNativeWindow()), nullptr, &Surface);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
@@ -70,7 +71,7 @@ void FVulkanViewport::CreateSwapchain()
 	VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
     int32_t Width, Height;
-    glfwGetFramebufferSize((GLFWwindow*)GetWindow()->GetNativeWindow(), &Width, &Height);
+    glfwGetFramebufferSize((GLFWwindow*)IWindow::Get()->GetNativeWindow(), &Width, &Height);
 
     Extent = { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) };
     Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);

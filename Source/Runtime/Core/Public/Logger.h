@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <format>
+
 enum ELogCategory
 {
 	LOG_TRACE,

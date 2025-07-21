@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+
+class ICamera;
+
 struct IComponent {};
 
 struct FUUIDComponent : IComponent

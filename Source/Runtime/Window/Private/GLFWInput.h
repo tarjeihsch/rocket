@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IO/Public/Input.h"
+#include "Input.h"
 
-class PGenericInput : public PInput 
+class CGLFWInput : public PInput
 {
 protected:
     virtual bool GetKeyPressedImpl(int32_t KeyCode) override;

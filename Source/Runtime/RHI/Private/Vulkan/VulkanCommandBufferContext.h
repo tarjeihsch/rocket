@@ -1,6 +1,10 @@
 #pragma once
 
-#include "Core/Public/Delegate.h"
+#include "Delegate.h"
+
+#include <span>
+
+#include <vulkan/vulkan_core.h>
 
 class FVulkanDevice;
 struct FVulkanCommandBuffer;

@@ -26,20 +26,11 @@ public:
 		Settings.ChromaticAberration = 0.0f;
 		
 		ApplySettings();
-
-#if RK_DEBUG
-//		GOverlay->OnRender.Bind(this, &PCamera::OnImGuiRender);
-#endif
 	}
 
-	void OnImGuiRender();
-
 	void SetOrthographicProjection(float Zoom, float AspectRatio, float ZNear, float ZFar);
-
 	void SetPerspectiveProjection(float FovY, float AspectRatio, float ZNear, float ZFar);
-
 	void CalculateViewMatrix(const glm::vec3& Position, const glm::vec3& Rotation);
-
 	void ApplySettings();
 
 	inline const glm::mat4& GetViewMatrix() const
@@ -70,6 +61,7 @@ public:
 		float ZFar;
 		float FilmGrainIntensity;
 		float ChromaticAberration;
+		float AspectRatio;
 	} Settings;
 
 private:
