@@ -18,4 +18,5 @@
 !CMakeLists.txt
 !CMakePresets.json
 !.clangd
+!.clang-format
 !Dockerfile

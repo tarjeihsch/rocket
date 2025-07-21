@@ -1,0 +1,20 @@
+BasedOnStyle: LLVM
+
+# Indentation
+IndentWidth: 4
+UseTab: Never
+
+# Braces style
+BreakBeforeBraces: Allman
+
+# Allow long lines
+ColumnLimit: 480
+
+# Keep parameters on same line if they fit
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: true
+BinPackArguments: true
+
+# Optional: Avoid breaking after return types
+AlwaysBreakAfterReturnType: None
+AccessModifierOffset: -4
