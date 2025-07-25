@@ -11,7 +11,24 @@
 #include "VulkanRenderGraph.h"
 #include "Logger.h"
 #include "Assert.h"
+#include "VulkanPipeline.h"
+#include "VulkanDescriptorManager.h"
+#include "VulkanResourceManager.h"
+#include "MeshAsset.h"
 #include <GLFW/glfw3.h>
+
+
+// TEMPORARY: Testing
+#include <ShaderAsset.h>
+AssetManager* m_AssetManager = new AssetManager();
+AssetHandle<ShaderAsset> m_VertexShaderAsset;
+AssetHandle<ShaderAsset> m_FragmentShaderAsset;
+VulkanShader* m_VertexShader;
+VulkanShader* m_FragmentShader;
+BufferHandle m_VertexBuffer;
+BufferHandle m_IndexBuffer;
+BufferHandle m_StagingBuffer;
+AssetHandle<MeshAsset> m_MeshAsset;
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -141,7 +158,50 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
-    RenderGraph = new FVulkanRenderGraph();
+    RenderGraph = new FVulkanRenderGraph(*Device);
+
+
+
+    {
+        m_VertexShaderAsset = m_AssetManager->Load<ShaderAsset>(AssetLoaderRequest { GAME_SRC "/Shader/VertexShader.hlsl" }, ShaderAssetOptions { "main", "vs_6_6" } );
+        m_FragmentShaderAsset = m_AssetManager->Load<ShaderAsset>(AssetLoaderRequest { GAME_SRC "/Shader/FragmentShader.hlsl" }, ShaderAssetOptions { "main", "ps_6_6" } );
+
+        auto VertexShaderAsset = m_AssetManager->Get(m_VertexShaderAsset);
+        m_VertexShader = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT);
+        m_VertexShader->Create(VertexShaderAsset->Data, VertexShaderAsset->WordCount);
+
+        auto FragmentShaderAsset = m_AssetManager->Get(m_FragmentShaderAsset);
+        m_FragmentShader = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+        m_FragmentShader->Create(FragmentShaderAsset->Data, FragmentShaderAsset->WordCount);
+
+        BufferDesc VertexBufferDesc;
+        VertexBufferDesc.Persistent = true;
+        VertexBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VertexBufferDesc.UsageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        VertexBufferDesc.Size = 64ull * 1024 * 1024;
+        VertexBufferDesc.Persistent = true;
+        m_VertexBuffer = Device->GetResourceManager()->AddBuffer(VertexBufferDesc);
+
+        BufferDesc IndexBufferDesc;
+        IndexBufferDesc.Persistent = true;
+        IndexBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
+        IndexBufferDesc.UsageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        IndexBufferDesc.Size = 8ull * 1024 * 1024;
+        IndexBufferDesc.Persistent = true;
+        m_IndexBuffer = Device->GetResourceManager()->AddBuffer(IndexBufferDesc);
+
+        BufferDesc StagingBufferDesc;
+        StagingBufferDesc.Persistent = true;
+        StagingBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        StagingBufferDesc.UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        StagingBufferDesc.Size = 256ull * 1024 * 1024;
+        StagingBufferDesc.Persistent = true;
+        m_StagingBuffer = Device->GetResourceManager()->AddBuffer(StagingBufferDesc);
+
+        m_MeshAsset = m_AssetManager->Load<MeshAsset>(AssetLoaderRequest { GAME_CONTENT "/Cube_Sphere.glb" }, MeshAssetOptions {});
+
+        Device->GetResourceManager()->MapBuffer(m_StagingBuffer, m_AssetManager->Get(m_MeshAsset)->Node.Primitives[0].Vertices.data(), m_AssetManager->Get(m_MeshAsset)->Node.Primitives[0].Vertices.size(), 0);
+    }
 }
 
 void CVulkanRHI::Shutdown()
@@ -163,40 +223,73 @@ void CVulkanRHI::Tick(float DeltaTime)
 {
     GetDevice()->GetGraphicsQueue()->Await();
 
-    if (Viewport->Acquire())
+    Device->GetResourceManager()->GC();
+
+    if (!Viewport->Acquire())
     {
-        RenderGraph->End();
-
-        FVulkanRGBuilder Builder = RenderGraph->GetMutableBuilder();
-        auto Color = Builder.CreateTexture({1024, 1024, VK_FORMAT_B8G8R8A8_UNORM, "RT", VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT });
-
-        const FRGResourceAccess Writes[] = { WriteImage(Color) };
-        const FRGResourceAccess Reads[] = { ReadImage(Color) };
-
-        Builder.AddPass("GBuffer", EVulkanQueueType::Graphics, {}, Writes, [&](FRHICommandList& RHICmdList)
-        {
-            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
-            RHICmdList.Enqueue<FVulkanCommandEndRendering>();
-        });
-
-        Builder.AddPass("Present", EVulkanQueueType::Graphics, Reads , {}, [&](FRHICommandList& RHICmdList)
-        {
-            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        });     
-
-        RenderGraph->Compile();
-
-        FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
-        FVulkanCommandBufferContext Ctx(*CommandBufferPool);
-
-        Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
-        RenderGraph->Execute(Ctx);
-        Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
-
-        GetDevice()->GetGraphicsQueue()->Submit(Ctx);
-        Viewport->Present();
+        RK_LOG_ERROR("Failed to acquire a new swapchain image.");
+        return;
     }
+
+    RenderGraph->Reset();
+
+    ImageDesc Desc;
+    Desc.Extent = { 1024, 1024, 1 };
+    Desc.Format = VK_FORMAT_B8G8R8A8_UNORM;
+    Desc.UsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    Desc.AspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+    Desc.Persistent = false;
+    Desc.MipLevels = 1;
+    auto TextureHandle = Device->GetResourceManager()->AddImage(Desc);
+
+    FVulkanRGBuilder Builder = RenderGraph->GetMutableBuilder();
+    Builder.Import(TextureHandle);
+
+    const FRGResourceAccess GBufferWrites[] = { WriteImage(TextureHandle) };
+    const FRGResourceAccess PresentReads[] = { ReadImage(TextureHandle) };
+
+    VkPipelineLayout PipelineLayout = Device->GetDescriptorManager()->GetPipelineLayout();
+    VkDescriptorSet DescriptorSet = Device->GetDescriptorManager()->GetDescriptorSet();
+    VulkanPipelineSpecification Spec = Device->GetPipelineManager()->MakeSpecification(PipelineLayout, m_VertexShader, m_FragmentShader);
+    VkPipeline Pipeline = Device->GetPipelineManager()->GetPipeline(Spec);
+
+    Builder.AddPass("Copy", EVulkanQueueType::Transfer, {}, {}, [&](FRHICommandList& RHICmdList)
+    {
+        //RHICmdList.Enqueue<VulkanCommandCopyBuffer>(Device->GetResourceManager()->GetBuffer(m_StagingBuffer), Device->GetResourceManager()->GetBuffer(m_VertexBuffer));
+    });
+
+    Builder.AddPass("GBuffer", EVulkanQueueType::Graphics, {}, GBufferWrites, [&](FRHICommandList& RHICmdList)
+    {
+        RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
+        RHICmdList.Enqueue<VulkanCommandSetViewport>(GetViewport()->GetExtent().width, GetViewport()->GetExtent().height, 0.0f, 1.0f);
+        RHICmdList.Enqueue<VulkanCommandSetScissor>(0, 0, GetViewport()->GetExtent().width, GetViewport()->GetExtent().height);
+        RHICmdList.Enqueue<VulkanCommandBindPipeline>(VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+        RHICmdList.Enqueue<VulkanCommandBindDescriptorSets>(VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, &DescriptorSet);
+        //RHICmdList.Enqueue<VulkanCommandBindVertexBuffer>(); // incomplete
+        //RHICmdList.Enqueue<VulkanCommandBindIndexBuffer>(); // incomplete
+        RHICmdList.Enqueue<FVulkanCommandEndRendering>();
+    });
+
+    Builder.AddPass("Present", EVulkanQueueType::Graphics, PresentReads , {}, [&](FRHICommandList& RHICmdList)
+    {
+        RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    });
+
+    RenderGraph->Compile();
+
+    FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
+    FVulkanCommandBufferContext Ctx(*CommandBufferPool);
+
+    Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
+    RenderGraph->Execute(Ctx);
+    Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
+
+    Device->GetDescriptorManager()->Flush();
+
+    GetDevice()->GetGraphicsQueue()->Submit(Ctx);
+
+    Viewport->Present();
 }
 
 const char* CVulkanRHI::GetName() const

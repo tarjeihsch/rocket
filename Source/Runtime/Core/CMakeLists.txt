@@ -28,5 +28,8 @@ target_include_directories(Core
 )
 
 target_link_libraries(Core
+    PUBLIC Rocket::Asset
     PRIVATE spdlog::spdlog
 )
+
+set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

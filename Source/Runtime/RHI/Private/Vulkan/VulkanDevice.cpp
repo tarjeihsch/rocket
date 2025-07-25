@@ -1,6 +1,9 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
+#include "VulkanPipeline.h"
+#include "VulkanDescriptorManager.h"
+#include "VulkanResourceManager.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "Assert.h"
 
@@ -58,6 +61,7 @@ void FVulkanDevice::Initialize()
 	Features_1_2.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	Features_1_2.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
 	Features_1_2.timelineSemaphore = VK_TRUE;
+    Features_1_2.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
 
 	// Chain the features together
 	Features_1_3.pNext = &Features_1_2;
@@ -103,10 +107,18 @@ void FVulkanDevice::Initialize()
 
         Queues.push_back(std::make_unique<FVulkanQueue>(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
     }
+
+    PipelineManager = new VulkanPipelineManager(*this);
+    DescriptorManager = new VulkanDescriptorManager(*this);
+	ResourceManager = new VulkanResourceManager(*this);
 }
 
 void FVulkanDevice::Shutdown()
 {
+    delete PipelineManager;
+    delete DescriptorManager;
+    delete ResourceManager;
+
 	Queues.clear();
 
 	vmaDestroyAllocator(Allocator);

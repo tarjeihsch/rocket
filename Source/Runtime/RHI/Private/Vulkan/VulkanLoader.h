@@ -93,6 +93,24 @@
     X(vkAcquireNextImageKHR) \
     X(vkGetDeviceBufferMemoryRequirements) \
     X(vkGetDeviceImageMemoryRequirements) \
+    X(vkCreateShaderModule) \
+    X(vkDestroyShaderModule) \
+    X(vkCreateGraphicsPipelines) \
+    X(vkDestroyPipeline) \
+    X(vkCmdBindPipeline) \
+    X(vkCmdBindDescriptorSets) \
+    X(vkCmdBindVertexBuffers) \
+    X(vkCreateDescriptorSetLayout) \
+    X(vkCreateDescriptorPool) \
+    X(vkAllocateDescriptorSets) \
+    X(vkUpdateDescriptorSets) \
+    X(vkCmdBindIndexBuffer) \
+    X(vkDestroyDescriptorPool) \
+    X(vkDestroyDescriptorSetLayout)\
+    X(vkCreatePipelineLayout) \
+    X(vkDestroyPipelineLayout) \
+    X(vkCmdSetViewport) \
+    X(vkCmdSetScissor) \
     X(vkCmdCopyBuffer) \
     X(vkCmdPipelineBarrier) \
     X(vkCmdBeginRendering) \

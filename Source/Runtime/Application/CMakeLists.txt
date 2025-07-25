@@ -29,9 +29,12 @@ target_include_directories(Application
 
 target_link_libraries(Application
     PUBLIC Rocket::Engine
+    PRIVATE "LINKER:--whole-archive"
+    PRIVATE ${PRIMARY_MODULE_NAME}
+    PRIVATE "LINKER:--no-whole-archive"
 )
 
 add_custom_command(
-        TARGET Application POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+    TARGET Application POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
 )

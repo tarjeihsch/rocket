@@ -33,3 +33,5 @@ target_link_libraries(Engine
     PUBLIC Rocket::Scene
     PRIVATE Rocket::RHI
 )
+
+set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

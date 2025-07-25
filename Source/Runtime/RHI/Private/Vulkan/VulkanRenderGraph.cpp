@@ -6,58 +6,8 @@
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "Assert.h"
 #include "VulkanCommandBufferContext.h"
-
-void CreatePoolAllocator(FVulkanPoolAllocator& OutPoolAllocator, EPoolAllocatorType Type, VkDeviceSize Size)
-{
-    VkResult Result = VK_SUCCESS;
-
-    VkPhysicalDeviceMemoryProperties MemoryProperties;
-    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), &MemoryProperties);
-
-    // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
-    // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
-    uint32_t MemoryTypeBits = 0xFFFFFFFF;
-    uint32_t TypeIndex = UINT32_MAX;
-
-    for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
-    {
-        if ((MemoryTypeBits & (1 << Index)) && (MemoryProperties.memoryTypes[Index].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
-        {
-            TypeIndex = Index;
-            break;
-        }
-    }
-
-    RK_ASSERT(TypeIndex != UINT32_MAX);
-
-    VkMemoryAllocateInfo AllocInfo = {};
-    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    AllocInfo.allocationSize = Size;
-    AllocInfo.memoryTypeIndex = TypeIndex;
-
-    Result = VulkanRHI::vkAllocateMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), &AllocInfo, nullptr, &OutPoolAllocator.PhysicalMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
-
-    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
-    BlockCreateInfo.size = VK_WHOLE_SIZE;
-    BlockCreateInfo.flags = 0;
-
-    Result = vmaCreateVirtualBlock(&BlockCreateInfo, &OutPoolAllocator.VirtualMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create virtual block.");
-}
-
-void DestroyPoolAllocator(FVulkanPoolAllocator& PoolAllocator)
-{
-    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PoolAllocator.PhysicalMemory, nullptr);
-    vmaClearVirtualBlock(PoolAllocator.VirtualMemory);
-    vmaDestroyVirtualBlock(PoolAllocator.VirtualMemory);
-}
-
-void ResetPoolAllocator(FVulkanPoolAllocator &PoolAllocator)
-{
-    vmaClearVirtualBlock(PoolAllocator.VirtualMemory);
-    PoolAllocator.Offset = 0;
-}
+#include "VulkanResourceManager.h"
+#include "VulkanDevice.h"
 
 void FVulkanRGBuilder::AddPass(std::string Name, EVulkanQueueType Queue, std::span<const FRGResourceAccess> Reads, std::span<const FRGResourceAccess> Writes, std::function<void(FRHICommandList&)>&& Lambda)
 {
@@ -70,91 +20,18 @@ void FVulkanRGBuilder::AddPass(std::string Name, EVulkanQueueType Queue, std::sp
     RenderGraph.Passes.push_back(Pass);
 }
 
-FRGResourceHandle FVulkanRGBuilder::CreateTexture(const FRGTextureDesc& D)
+void FVulkanRGBuilder::Import(ResourceHandle p_Handle)
 {
-    FRGResource R{};
-    R.InitialLayout = D.InitialLayout;
-
-    VkImageCreateInfo ImageCreateInfo = {};
-    ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    ImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    ImageCreateInfo.format = D.Fmt;
-    ImageCreateInfo.extent = VkExtent3D(D.W, D.H, 1);
-    ImageCreateInfo.mipLevels = 1;
-    ImageCreateInfo.arrayLayers = 1;
-    ImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    ImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ImageCreateInfo.usage = D.UsageFlags;
-
-    VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &R.Image);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create transient image.");
-
-    VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, &MemoryRequirements);
-
-    VmaVirtualAllocationCreateInfo AllocInfo = {};
-    AllocInfo.size = MemoryRequirements.size;
-    AllocInfo.alignment = MemoryRequirements.alignment;
-    VmaVirtualAllocation Allocation;
-    VkDeviceSize Offset;
-
-    Result = vmaVirtualAllocate(RenderGraph.ImagePoolAllocator->VirtualMemory, &AllocInfo, &Allocation, &Offset);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
-
-    VulkanRHI::vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), R.Image, RenderGraph.ImagePoolAllocator->PhysicalMemory, Offset);
-
-    VkImageViewCreateInfo ImageViewCreateInfo = {};
-    ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    ImageViewCreateInfo.image = R.Image;
-    ImageViewCreateInfo.format = D.Fmt;
-    ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-    ImageViewCreateInfo.subresourceRange.levelCount = 1;
-    ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    ImageViewCreateInfo.subresourceRange.layerCount = 1;
-    ImageViewCreateInfo.subresourceRange.aspectMask = D.AspectFlags;
-
-    Result = VulkanRHI::vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &R.ImageView);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
-
-    RenderGraph.Resources.push_back(R);
-
-    FRGResourceHandle Handle;
-    Handle.Index = GCounter++;
-    Handle.Type = ERGResourceType::Image;
-    return Handle;
-}
-FRGResourceHandle FVulkanRGBuilder::CreateBuffer(const FRGBufferDesc&  D)
-{
-    FRGResourceHandle Handle;
-    Handle.Index = GCounter++;
-    Handle.Type = ERGResourceType::Buffer;
-    return Handle;
+    RenderGraph.Resources.push_back(p_Handle);
 }
 
-FVulkanRenderGraph::FVulkanRenderGraph()
-    : Builder(*this)
+FVulkanRenderGraph::FVulkanRenderGraph(FVulkanDevice& p_Device)
+    : m_Device(p_Device), Builder(*this)
 {
-    ImagePoolAllocator = new FVulkanPoolAllocator();
-
-    CreatePoolAllocator(*ImagePoolAllocator, EPoolAllocatorType::Image, 128 * 1024 * 1024);
 }
 
 FVulkanRenderGraph::~FVulkanRenderGraph()
 {
-    DestroyPoolAllocator(*ImagePoolAllocator);
-
-    delete ImagePoolAllocator;
-
-    for (FRGResource& Resource : Resources)
-    {
-        VulkanRHI::vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.Image, nullptr);
-        VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Resource.ImageView, nullptr);
-    }
 }
 
 FVulkanRGBuilder &FVulkanRenderGraph::GetMutableBuilder()
@@ -167,22 +44,13 @@ void FVulkanRenderGraph::Begin()
 //    Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
 }
 
-void FVulkanRenderGraph::End()
+void FVulkanRenderGraph::Reset()
 {
 //    Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
-    for (FRGResource resource : Resources)
-    {
-        VulkanRHI::vkDestroyImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.Image, nullptr);
-        VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), resource.ImageView, nullptr);
-    }
 
     Passes.clear();
     Resources.clear();
     CompiledPayloads.clear();
-
-    ResetPoolAllocator(*ImagePoolAllocator);
-
-    GCounter = 0;
 }
 
 void FVulkanRenderGraph::Compile()
@@ -218,15 +86,16 @@ void FVulkanRenderGraph::Compile()
         //------------------------------------------------------------------
         auto HandleAccess = [&](const FRGResourceAccess& A, bool bIsWrite)
         {
-            if (A.Resource.Type != ERGResourceType::Image)
+            if (A.Handle.Type != ResourceType::Image)
                 return;   // buffer support can be added later
 
-            auto& ImgState = ImageStates[A.Resource.Index];
-            const VkImage imgHandle = Resources[A.Resource.Index].Image;
+            auto& ImgState = ImageStates[A.Handle.Index];
+            const VkImage imgHandle = m_Device.GetResourceManager()->GetImage(Resources[A.Handle.Index]);
 
             if (ImgState.FirstUse && ImgState.CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED)
             {
-                ImgState.CurrentLayout = Resources[A.Resource.Index].InitialLayout;
+                //ImgState.CurrentLayout = Resources[A.Handle.Index].InitialLayout;
+                ImgState.CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             }
 
 

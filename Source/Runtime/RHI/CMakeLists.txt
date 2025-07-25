@@ -30,6 +30,9 @@ target_include_directories(RHI
 target_link_libraries(RHI
     PUBLIC Rocket::Core
     PRIVATE Rocket::Window
+    PRIVATE Rocket::Asset
     PRIVATE vulkan::vulkan
     PRIVATE glfw
 )
+
+set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -37,15 +37,25 @@ if (MINGW)
     add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
-add_subdirectory(Source/Runtime/Core)
-add_subdirectory(Source/Runtime/Engine)
-add_subdirectory(Source/Runtime/RHI)
-add_subdirectory(Source/Runtime/Window)
-add_subdirectory(Source/Runtime/Scene)
-add_subdirectory(Source/Runtime/Application)
+# Third Party modules
 add_subdirectory(Source/ThirdParty/glfw)
 add_subdirectory(Source/ThirdParty/vulkan)
 add_subdirectory(Source/ThirdParty/imgui)
 add_subdirectory(Source/ThirdParty/glm)
 add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
+add_subdirectory(Source/ThirdParty/fastgltf)
+
+# Rocket modules
+add_subdirectory(Source/Runtime/Core)
+add_subdirectory(Source/Runtime/Engine)
+add_subdirectory(Source/Runtime/RHI)
+add_subdirectory(Source/Runtime/Window)
+add_subdirectory(Source/Runtime/Scene)
+add_subdirectory(Source/Runtime/Asset)
+add_subdirectory(Source/Runtime/Application)
+
+# Game entrypoint module
+if (DEFINED PRIMARY_MODULE)
+    add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_DIR}")
+endif()

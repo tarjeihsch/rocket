@@ -7,6 +7,9 @@
 #include <vector>
 
 class FVulkanQueue;
+class VulkanPipelineManager;
+class VulkanDescriptorManager;
+class VulkanResourceManager;
 
 class FVulkanDevice
 {
@@ -30,6 +33,10 @@ public:
     inline VmaAllocator GetVmaAllocator() const;
     inline VkDebugUtilsMessengerEXT GetVkDebugUtilsMessenger() const;
 
+    inline VulkanPipelineManager* GetPipelineManager() const;
+    inline VulkanDescriptorManager* GetDescriptorManager() const;
+    inline VulkanResourceManager* GetResourceManager() const;
+
 private:
     void Initialize();
     void Shutdown();
@@ -39,6 +46,10 @@ private:
     VmaAllocator Allocator;
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
     std::vector<std::unique_ptr<FVulkanQueue>> Queues;
+
+    VulkanPipelineManager* PipelineManager;
+    VulkanDescriptorManager* DescriptorManager;
+    VulkanResourceManager* ResourceManager;
 };
 
 inline VkDevice FVulkanDevice::GetVkDevice() const
@@ -59,4 +70,19 @@ inline VmaAllocator FVulkanDevice::GetVmaAllocator() const
 inline VkDebugUtilsMessengerEXT FVulkanDevice::GetVkDebugUtilsMessenger() const
 {
     return DebugUtilsMessenger;
+}
+
+inline VulkanPipelineManager *FVulkanDevice::GetPipelineManager() const
+{
+    return PipelineManager;
+}
+
+inline VulkanDescriptorManager *FVulkanDevice::GetDescriptorManager() const
+{
+    return DescriptorManager;
+}
+
+inline VulkanResourceManager *FVulkanDevice::GetResourceManager() const
+{
+    return ResourceManager;
 }

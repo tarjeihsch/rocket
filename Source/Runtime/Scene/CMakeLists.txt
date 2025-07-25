@@ -32,3 +32,5 @@ target_link_libraries(Scene
     PUBLIC EnTT::EnTT
     PUBLIC glm::glm
 )
+
+set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

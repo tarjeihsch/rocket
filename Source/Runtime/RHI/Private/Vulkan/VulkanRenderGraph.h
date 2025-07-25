@@ -1,34 +1,16 @@
 #pragma once
 
 #include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanResourceManager.h"
 
 #include <string>
 #include <vector>
 #include <functional>
 
-#include <vma/vk_mem_alloc.h>
-
 class IRHICommandListContext;
 class FVulkanCommandBufferContext;
 
-enum class ERGResourceType { Image, Buffer };
-
-struct FRGResourceHandle
-{
-    ERGResourceType Type;
-    uint32_t Index;
-};
-
-enum class EVulkanQueueType { Graphics, Compute };
-
-struct FRGResource
-{
-    VkImage Image;
-    VkImageView ImageView;
-    VkImageLayout      InitialLayout    = VK_IMAGE_LAYOUT_UNDEFINED;
-    // or
-    VkBuffer Buffer;
-};
+enum class EVulkanQueueType { Graphics, Compute, Transfer };
 
 enum class ERGAccessType
 {
@@ -38,7 +20,7 @@ enum class ERGAccessType
 
 struct FRGResourceAccess
 {
-    FRGResourceHandle Resource;           // Image or Buffer, with index
+    ResourceHandle Handle;           // Image or Buffer, with index
     ERGAccessType     Access;             // Read or Write
     VkPipelineStageFlags2 StageMask;      // Optional: VK_PIPELINE_STAGE_*
     VkAccessFlags2         AccessMask;    // Optional: VK_ACCESS_*
@@ -77,10 +59,10 @@ struct FRGCompiledPayload
     std::vector<VkSemaphore> Signal;            // cross-queue/frame signals
 };
 
-inline FRGResourceAccess WriteImage(FRGResourceHandle h, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+inline FRGResourceAccess WriteImage(ResourceHandle h, VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 {
     FRGResourceAccess a{};
-    a.Resource    = h;
+    a.Handle        = h;
     a.Access      = ERGAccessType::Write;
     a.StageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     a.AccessMask  = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -88,18 +70,16 @@ inline FRGResourceAccess WriteImage(FRGResourceHandle h, VkImageLayout layout = 
     return a;
 }
 
-inline FRGResourceAccess ReadImage(FRGResourceHandle h, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+inline FRGResourceAccess ReadImage(ResourceHandle h, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 {
     FRGResourceAccess a{};
-    a.Resource    = h;
+    a.Handle        = h;
     a.Access      = ERGAccessType::Read;
     a.StageMask   = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     a.AccessMask  = VK_ACCESS_SHADER_READ_BIT;
     a.Layout      = layout;
     return a;
 }
-
-inline uint32_t GCounter = 0;
 
 struct FVulkanRGBuilder
 {
@@ -113,40 +93,29 @@ public:
 
     void AddPass(std::string Name, EVulkanQueueType Queue, std::span<const FRGResourceAccess> Reads, std::span<const FRGResourceAccess> Writes, std::function<void(FRHICommandList&)>&& Lambda);
 
-    FRGResourceHandle CreateTexture(const FRGTextureDesc& D);
-    FRGResourceHandle CreateBuffer (const FRGBufferDesc&  D);
+    void Import(ResourceHandle p_Handle);
 };
+class FVulkanDevice;
 
-struct FVulkanPoolAllocator
-{
-    VmaVirtualBlock VirtualMemory = nullptr;
-    VkDeviceMemory PhysicalMemory = nullptr;
-    VkDeviceSize Offset = 0;
-};
-
-enum class EPoolAllocatorType { Image, Buffer };
-
-class FVulkanRenderGraph
+class FVulkanRenderGraph // todo: rename to VulkanFrameGraph
 {
 public:
-    FVulkanRenderGraph();
+    FVulkanDevice& m_Device;
+
+    FVulkanRenderGraph(FVulkanDevice& p_Device);
     ~FVulkanRenderGraph();
 
     FVulkanRGBuilder& GetMutableBuilder();
 
     void Begin();
-    void End();
+    void Reset();
 
     void Compile();
     void Execute(FVulkanCommandBufferContext& FrameCtx);
 
     std::vector<FRGPass> Passes;
-    std::vector<FRGResource> Resources;
+    std::vector<ResourceHandle> Resources;
     std::vector<FRGCompiledPayload> CompiledPayloads;
-
-    // todo: one allocator per FIF - must not be shared between frames, as we are currently doing.
-    FVulkanPoolAllocator* ImagePoolAllocator;
-    FVulkanPoolAllocator* BufferPoolAllocator;
 
     FVulkanRGBuilder Builder;
 };
