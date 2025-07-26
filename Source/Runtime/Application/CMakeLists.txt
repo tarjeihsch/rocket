@@ -27,12 +27,12 @@ target_include_directories(Application
     PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
 )
 
+target_link_options(Application PRIVATE "LINKER:--whole-archive")
 target_link_libraries(Application
     PUBLIC Rocket::Engine
-    PRIVATE "LINKER:--whole-archive"
     PRIVATE ${PRIMARY_MODULE_NAME}
-    PRIVATE "LINKER:--no-whole-archive"
 )
+target_link_options(Application PRIVATE "LINKER:--no-whole-archive")
 
 add_custom_command(
     TARGET Application POST_BUILD

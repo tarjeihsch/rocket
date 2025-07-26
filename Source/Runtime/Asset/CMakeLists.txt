@@ -29,9 +29,9 @@ target_include_directories(Asset
 
 target_link_libraries(Asset
     PUBLIC Rocket::Core
+    PUBLIC glm::glm
     PRIVATE vulkan::vulkan
     PRIVATE fastgltf::fastgltf
-    PRIVATE glm::glm
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)
