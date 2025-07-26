@@ -10,7 +10,7 @@
 
 ShaderAsset AssetLoader<ShaderAsset>::Load(const AssetLoaderRequest &pRequest, const ShaderAssetOptions& pOptions)
 {
-    void* DxcLibHandle = dlopen("/opt/vulkansdk-linux-x86_64-1.4.313.0/x86_64/lib/libdxcompiler.so", RTLD_LAZY);
+    void* DxcLibHandle = dlopen(ROCKET_BINARIES "/ThirdParty/Vulkan/lib/libdxcompiler.so", RTLD_LAZY);
     RK_ASSERT(DxcLibHandle, "Failed to dynamically load DXC library (Ensure DXC is installed and environment is set).");
 
     using DxcCreateInstanceProc = HRESULT(__stdcall*)(const IID&, const IID&, void**);

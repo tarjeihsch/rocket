@@ -4,11 +4,13 @@
 # Do not ignore git files in the root of the repo.
 !/.git*
 
+!/Binaries/
 !/Config/
 !/Source/
 !/Plugins/
 
 # Do not ignore source, config and plugins dirs.
+!/Binaries/**
 !/Config/**
 !/Source/**
 !/Plugins/**

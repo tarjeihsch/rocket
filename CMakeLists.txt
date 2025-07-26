@@ -37,6 +37,10 @@ if (MINGW)
     add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
+add_compile_definitions(ROCKET_BINARIES="${CMAKE_CURRENT_SOURCE_DIR}/Binaries")
+add_compile_definitions(ROCKET_SRC="${CMAKE_CURRENT_SOURCE_DIR}/Source")
+add_compile_definitions(ROCKET_CONTENT="${CMAKE_CURRENT_SOURCE_DIR}/Content")
+
 # Third Party modules
 add_subdirectory(Source/ThirdParty/glfw)
 add_subdirectory(Source/ThirdParty/vulkan)
