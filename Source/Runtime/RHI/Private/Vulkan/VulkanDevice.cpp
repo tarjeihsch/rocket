@@ -125,11 +125,11 @@ void FVulkanDevice::Shutdown()
     VulkanRHI::vkDestroyDevice(Device, nullptr);
 }
 
-FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags QueueFlags) const
+FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const
 {
     for (const std::unique_ptr<FVulkanQueue>& Queue : Queues)
     {
-        if ((Queue->GetQueueFlags() & QueueFlags) == QueueFlags)
+        if ((Queue->GetQueueFlags() & Include) == Include && (Queue->GetQueueFlags() & Exclude) == 0)
         {
             return Queue.get();
         }
@@ -139,20 +139,20 @@ FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags QueueFlags) const
 
 FVulkanQueue* FVulkanDevice::GetGraphicsQueue() const
 {
-    return GetQueue(VK_QUEUE_GRAPHICS_BIT);
+    return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }
 
 FVulkanQueue* FVulkanDevice::GetComputeQueue() const
 {
-    return GetQueue((VK_QUEUE_COMPUTE_BIT) & ~(VK_QUEUE_GRAPHICS_BIT));
+    return GetQueue(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
 FVulkanQueue* FVulkanDevice::GetTransferQueue() const
 {
-    return GetQueue((VK_QUEUE_TRANSFER_BIT) & ~(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT));
+    return GetQueue(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
 FVulkanQueue* FVulkanDevice::GetPresentQueue() const
 {
-    return GetQueue(VK_QUEUE_GRAPHICS_BIT);
+    return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }

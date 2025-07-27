@@ -1,5 +1,7 @@
 #pragma once
 
+#include "VulkanResourceManager.h"
+
 #include <vulkan/vulkan_core.h>
 
 #include <vector>
@@ -40,13 +42,15 @@ private:
     VkPresentModeKHR PresentMode;
     VkSurfaceFormatKHR SurfaceFormat;
 
+    std::vector<ImageHandle> ImageHandles;
+
     std::vector<VkImage> Images;
     std::vector<VkImageView> Views;
     std::vector<VkSemaphore> ImageAcquiredSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
 
     uint32_t CurrentImageIndex;
-    uint32_t SemaphoreIndex ;
+    uint32_t SemaphoreIndex;
     uint32_t NumAcquireCalls;
     uint32_t NumPresentCalls;
 };

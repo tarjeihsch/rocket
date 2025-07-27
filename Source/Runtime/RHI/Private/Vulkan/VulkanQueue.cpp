@@ -23,6 +23,25 @@ FVulkanQueue::~FVulkanQueue()
     Shutdown();
 }
 
+static VkPipelineStageFlags2 ChooseWaitStage(VkQueueFlags flags)
+{
+    // Graphics queues support every graphics pipeline stage.
+    if (flags & VK_QUEUE_GRAPHICS_BIT)
+    {
+        return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+    }
+
+    // Pure compute queues have no graphics stages, but always support COMPUTE_SHADER.
+    if (flags & VK_QUEUE_COMPUTE_BIT)
+    {
+        return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
+    }
+
+    // Transfer‑only (or “DMA”) queues support no shader stages at all.
+    // TOP_OF_PIPE is valid for every queue family, so it’s the safe fallback.
+    return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR;
+}
+
 void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
 {
     std::vector<FVulkanCommandBufferPayload*> Payloads;
@@ -36,7 +55,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
             VkSemaphoreSubmitInfo WaitSemaphoreSubmitInfo = {};
             WaitSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
             WaitSemaphoreSubmitInfo.semaphore = Semaphore;
-            WaitSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+            WaitSemaphoreSubmitInfo.stageMask = ChooseWaitStage(QueueFlags);
             WaitSemaphoreSubmitInfos.push_back(WaitSemaphoreSubmitInfo);
         }
 
@@ -46,7 +65,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
             VkSemaphoreSubmitInfo ReadySemaphoreSubmitInfo = {};
             ReadySemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
             ReadySemaphoreSubmitInfo.semaphore = Semaphore;
-            ReadySemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            ReadySemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
             SignalSemaphoreSubmitInfos.push_back(ReadySemaphoreSubmitInfo);
         }
 

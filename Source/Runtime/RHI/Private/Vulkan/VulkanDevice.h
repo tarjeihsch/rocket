@@ -22,7 +22,7 @@ public:
 
     void WaitUntilIdle() const;
 
-    FVulkanQueue* GetQueue(VkQueueFlags QueueFlags) const;
+    FVulkanQueue* GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const;
     FVulkanQueue* GetGraphicsQueue() const;
     FVulkanQueue* GetComputeQueue() const;
     FVulkanQueue* GetTransferQueue() const;

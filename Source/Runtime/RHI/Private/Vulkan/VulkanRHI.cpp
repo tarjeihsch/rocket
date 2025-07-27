@@ -8,7 +8,7 @@
 #include "VulkanDevice.h"
 #include "VulkanViewport.h"
 #include "VulkanCommandBufferContext.h"
-#include "VulkanRenderGraph.h"
+#include "VulkanFrameGraph.h"
 #include "Logger.h"
 #include "Assert.h"
 #include "VulkanPipeline.h"
@@ -23,12 +23,12 @@
 AssetManager* m_AssetManager = new AssetManager();
 AssetHandle<ShaderAsset> m_VertexShaderAsset;
 AssetHandle<ShaderAsset> m_FragmentShaderAsset;
+AssetHandle<MeshAsset> m_MeshAsset;
 VulkanShader* m_VertexShader;
 VulkanShader* m_FragmentShader;
 BufferHandle m_VertexBuffer;
 BufferHandle m_IndexBuffer;
 BufferHandle m_StagingBuffer;
-AssetHandle<MeshAsset> m_MeshAsset;
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -158,9 +158,7 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
-    RenderGraph = new FVulkanRenderGraph(*Device);
-
-
+    RenderGraph = new VulkanFrameGraph(*Device);
 
     {
         m_VertexShaderAsset = m_AssetManager->Load<ShaderAsset>(AssetLoaderRequest { GAME_SRC "/Shader/VertexShader.hlsl" }, ShaderAssetOptions { "main", "vs_6_6" } );
@@ -231,8 +229,6 @@ void CVulkanRHI::Tick(float DeltaTime)
         return;
     }
 
-    RenderGraph->Reset();
-
     ImageDesc Desc;
     Desc.Extent = { 1024, 1024, 1 };
     Desc.Format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -240,25 +236,25 @@ void CVulkanRHI::Tick(float DeltaTime)
     Desc.AspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
     Desc.Persistent = false;
     Desc.MipLevels = 1;
+    Desc.SampleCount = VK_SAMPLE_COUNT_1_BIT;
     auto TextureHandle = Device->GetResourceManager()->AddImage(Desc);
 
-    FVulkanRGBuilder Builder = RenderGraph->GetMutableBuilder();
-    Builder.Import(TextureHandle);
+    VulkanFrameGraph FrameGraph(*Device);
 
-    const FRGResourceAccess GBufferWrites[] = { WriteImage(TextureHandle) };
-    const FRGResourceAccess PresentReads[] = { ReadImage(TextureHandle) };
+    const FrameGraphResourceAccess GBufferWrites[] = { WriteImage(TextureHandle) };
+    const FrameGraphResourceAccess PresentReads[] = { ReadImage(TextureHandle) };
 
     VkPipelineLayout PipelineLayout = Device->GetDescriptorManager()->GetPipelineLayout();
     VkDescriptorSet DescriptorSet = Device->GetDescriptorManager()->GetDescriptorSet();
     VulkanPipelineSpecification Spec = Device->GetPipelineManager()->MakeSpecification(PipelineLayout, m_VertexShader, m_FragmentShader);
     VkPipeline Pipeline = Device->GetPipelineManager()->GetPipeline(Spec);
 
-    Builder.AddPass("Copy", EVulkanQueueType::Transfer, {}, {}, [&](FRHICommandList& RHICmdList)
+    FrameGraph.AddPass("Copy", FrameGraphSubmissionQueue::Transfer, {}, {}, [&](FRHICommandList& RHICmdList)
     {
-        //RHICmdList.Enqueue<VulkanCommandCopyBuffer>(Device->GetResourceManager()->GetBuffer(m_StagingBuffer), Device->GetResourceManager()->GetBuffer(m_VertexBuffer));
+        RHICmdList.Enqueue<VulkanCommandCopyBuffer>(Device->GetResourceManager()->GetBuffer(m_StagingBuffer), Device->GetResourceManager()->GetBuffer(m_VertexBuffer));
     });
 
-    Builder.AddPass("GBuffer", EVulkanQueueType::Graphics, {}, GBufferWrites, [&](FRHICommandList& RHICmdList)
+    FrameGraph.AddPass("Draw", FrameGraphSubmissionQueue::Graphics, {}, GBufferWrites, [&](FRHICommandList& RHICmdList)
     {
         RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
@@ -266,29 +262,18 @@ void CVulkanRHI::Tick(float DeltaTime)
         RHICmdList.Enqueue<VulkanCommandSetScissor>(0, 0, GetViewport()->GetExtent().width, GetViewport()->GetExtent().height);
         RHICmdList.Enqueue<VulkanCommandBindPipeline>(VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
         RHICmdList.Enqueue<VulkanCommandBindDescriptorSets>(VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, &DescriptorSet);
-        //RHICmdList.Enqueue<VulkanCommandBindVertexBuffer>(); // incomplete
-        //RHICmdList.Enqueue<VulkanCommandBindIndexBuffer>(); // incomplete
         RHICmdList.Enqueue<FVulkanCommandEndRendering>();
     });
 
-    Builder.AddPass("Present", EVulkanQueueType::Graphics, PresentReads , {}, [&](FRHICommandList& RHICmdList)
+    FrameGraph.AddPass("Present", FrameGraphSubmissionQueue::Graphics, PresentReads , {}, [&](FRHICommandList& RHICmdList)
     {
         RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     });
 
-    RenderGraph->Compile();
-
-    FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
-    FVulkanCommandBufferContext Ctx(*CommandBufferPool);
-
-    Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
-    RenderGraph->Execute(Ctx);
-    Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
+    FrameGraph.Compile();
+    FrameGraph.Execute(Viewport->GetImageAcquiredSemaphore(), Viewport->GetRenderFinishedSemaphore());
 
     Device->GetDescriptorManager()->Flush();
-
-    GetDevice()->GetGraphicsQueue()->Submit(Ctx);
-
     Viewport->Present();
 }
 

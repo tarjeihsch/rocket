@@ -80,14 +80,23 @@ void VulkanResourceManager::Shutdown()
         {
             vmaDestroyBuffer(m_Device.GetVmaAllocator(), Record.m_Buffer, Record.Allocation);
         }
+        else
+        {
+            VulkanRHI::vkDestroyBuffer(m_Device.GetVkDevice(), Record.m_Buffer, nullptr);
+        }
     }
 
     for (auto& Record : m_List_Image)
     {
         if (Record.Persistent)
         {
-            //vmaDestroyImage(m_Device.GetVmaAllocator(), Record.m_Image, Record.Allocation);
-            //VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Record.m_View, nullptr);
+            vmaDestroyImage(m_Device.GetVmaAllocator(), Record.m_Image, Record.Allocation);
+            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
+        }
+        else
+        {
+            VulkanRHI::vkDestroyImage(m_Device.GetVkDevice(), Record.m_Image, nullptr);
+            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
         }
     }
 
@@ -127,16 +136,15 @@ BufferHandle VulkanResourceManager::AddBuffer(BufferDesc &p_Desc)
     else
     {
         // Immediately defer transient resource pending free
-        DestroyBuffer(Handle);
+        MarkPendingFree(Handle);
     }
 
     return Handle;
 }
 
-void VulkanResourceManager::DestroyBuffer(BufferHandle &Handle)
+void VulkanResourceManager::MarkPendingFree(BufferHandle &Handle)
 {
-    PendingFreeDesc Desc = {};
-    Desc.Handle = Handle;
+    PendingFreeDesc Desc = { Handle };
     m_PendingQueue.push_back(Desc);
 }
 
@@ -227,8 +235,8 @@ void VulkanResourceManager::GC()
         else
         {
             auto& Record = m_List_Image[Index];
-            vmaDestroyImage(m_Device.GetVmaAllocator(), Record.m_Image, Record.Allocation);
-            VulkanRHI::vkDestroyImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), Record.m_View, nullptr);
+            VulkanRHI::vkDestroyImage(m_Device.GetVkDevice(), Record.m_Image, nullptr);
+            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
             Record.m_Image = VK_NULL_HANDLE;
             Record.Allocation = nullptr;
             m_FreeList_Image.push_back(Index);
@@ -262,7 +270,7 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
     ImageCreateInfo.extent = p_Desc.Extent;
     ImageCreateInfo.mipLevels = p_Desc.MipLevels;
     ImageCreateInfo.arrayLayers = p_Desc.Layers;
-    ImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    ImageCreateInfo.samples = p_Desc.SampleCount;
     ImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     ImageCreateInfo.usage = p_Desc.UsageFlags;
     ImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -271,15 +279,28 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
     {
         VmaAllocationCreateInfo AllocationCreateInfo = {};
         AllocationCreateInfo.usage = p_Desc.MemoryUsage;
-        AllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &Record.m_Image);
+        VkResult Result = vmaCreateImage(m_Device.GetVmaAllocator(), &ImageCreateInfo, &AllocationCreateInfo, &Record.m_Image, &Record.Allocation, nullptr);
         RK_ASSERT(Result == VK_SUCCESS);
+
+        VkImageViewCreateInfo ImageViewCreateInfo = {};
+        ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ImageViewCreateInfo.image = Record.m_Image;
+        ImageViewCreateInfo.format = p_Desc.Format;
+        ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+        ImageViewCreateInfo.subresourceRange.levelCount = 1;
+        ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        ImageViewCreateInfo.subresourceRange.layerCount = 1;
+        ImageViewCreateInfo.subresourceRange.aspectMask = p_Desc.AspectFlags;
+        Result = VulkanRHI::vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &Record.m_View);
+        RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
     }
     else
     {
-        VmaAllocationCreateInfo AllocationCreateInfo = {};
-        AllocationCreateInfo.usage = p_Desc.MemoryUsage;
-        AllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &Record.m_Image);
         RK_ASSERT(Result == VK_SUCCESS);
 
@@ -316,7 +337,7 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
         RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
 
         // Immediately defer transient resource pending free
-        DestroyBuffer(Handle);
+        MarkPendingFree(Handle);
     }
 
     return Handle;

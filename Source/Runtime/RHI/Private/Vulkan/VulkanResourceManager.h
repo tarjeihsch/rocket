@@ -68,7 +68,7 @@ public:
     ~VulkanResourceManager();
 
     BufferHandle AddBuffer(BufferDesc& Desc);
-    void DestroyBuffer(BufferHandle& p_Handle);
+    void MarkPendingFree(BufferHandle& p_Handle);
     VkBuffer GetBuffer(BufferHandle p_Handle);
     void MapBuffer(BufferHandle p_Handle, void* p_Data, size_t p_Size, size_t p_Offset);
 
@@ -106,7 +106,7 @@ private:
 
     struct PendingFreeDesc
     {
-        uint64_t Fence;
+        //uint64_t Fence;
         BufferHandle Handle;
     };
 
