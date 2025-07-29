@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/RHITexture.h"
+
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
@@ -113,6 +115,7 @@
     X(vkCmdSetScissor) \
     X(vkCmdCopyBuffer) \
     X(vkCmdPipelineBarrier) \
+    X(vkCmdPipelineBarrier2) \
     X(vkCmdBeginRendering) \
     X(vkCmdEndRendering) \
 
@@ -150,6 +153,12 @@ namespace VulkanRHI
     #define DECLARE_PFN(name) extern PFN_##name name;
     VULKAN_ALL_FUNCTIONS(DECLARE_PFN)
     #undef DECLARE_PFN
+
+    VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
+    VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
+
+    VkImageUsageFlags RHITextureUsageToVkImageUsageFlags(ERHITextureUsage Usage);
+    VkImageLayout RHITextureUsageToVkImageLayout(ERHITextureUsage Usage);
 }
 
 void LoadVulkanLibrary();

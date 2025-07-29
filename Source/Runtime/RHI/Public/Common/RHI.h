@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+struct FRHITextureDesc;
+struct FRHITexture;
 class IRHICommandListContext;
 class FRHICommandList;
 
@@ -29,6 +31,8 @@ public:
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
 
     virtual void RHIWaitUntilIdle() const = 0;
+
+    virtual FRHITexture *RHICreateTexture(FRHITextureDesc &Desc) const = 0;
 };
 
 class IRHIModule
@@ -59,4 +63,9 @@ template<typename TRHI>
 inline TRHI* GetRHI()
 {
     return CastRHI<TRHI>(GRHI);
+}
+
+inline IRHI* GetRHI()
+{
+    return GRHI;
 }

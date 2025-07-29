@@ -6,7 +6,7 @@
 
 class FVulkanDevice;
 class FVulkanViewport;
-class VulkanFrameGraph;
+class FFrameGraph;
 
 class CVulkanRHI : public IVulkanRHIMinimal
 {
@@ -22,12 +22,14 @@ public:
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
     virtual void RHIWaitUntilIdle() const override;
+    virtual FRHITexture* RHICreateTexture(FRHITextureDesc& Desc) const override;
 
     // IVulkanRHIMinimal interface
     virtual VkInstance RHIGetVkInstance() const override;
 
     virtual VkDevice RHIGetVkDevice() const override;
     virtual VkPhysicalDevice RHIGetVkPhysicalDevice() const override;
+    virtual VmaAllocator RHIGetVmaAllocator() const override;
 
     virtual VkQueue RHIGetGraphicsVkQueue() const override;
     virtual VkQueue RHIGetComputeVkQueue() const override;
@@ -45,6 +47,9 @@ public:
     virtual VkPresentModeKHR RHIGetSwapchainPresentMode() const override;
     virtual VkSurfaceFormatKHR RHIGetSwapchainSurfaceFormat() const override;
 
+    virtual VkSemaphore GetImageAcquiredSemaphore() const override;
+    virtual VkSemaphore GetRenderFinishedSemaphore() const override;
+
     virtual std::span<const char*> GetValidationExtensions() override;
     virtual std::span<const char*> GetInstanceExtensions() override;
     virtual std::span<const char*> GetPhysicalDeviceExtensions() override;
@@ -58,7 +63,6 @@ private:
 
     FVulkanDevice* Device;
     FVulkanViewport* Viewport;
-    VulkanFrameGraph* RenderGraph; // todo: not to be kept as a persistent object, but local
 
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;

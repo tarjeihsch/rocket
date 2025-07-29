@@ -7,20 +7,24 @@ void FVulkanCommandListContext::RHISetScissorRect(uint32_t X, uint32_t Y)
 {
 }
 
-void FVulkanCommandListContext::RHIBeginRendering(VkImageView ImageView)
+void FVulkanCommandListContext::RHIBeginRendering(std::span<VkImageView> ImageViews)
 {
-    VkRenderingAttachmentInfoKHR ColorAttachmentInfo = {};
-    ColorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    ColorAttachmentInfo.imageView        = ImageView;
-    ColorAttachmentInfo.imageLayout      = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Fixed layout
-    ColorAttachmentInfo.loadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    ColorAttachmentInfo.storeOp          = VK_ATTACHMENT_STORE_OP_STORE;
-    ColorAttachmentInfo.clearValue.color = {{ 1, 1, 0, 1 }};
+    std::vector<VkRenderingAttachmentInfoKHR> ColorAttachmentInfos(ImageViews.size());
+
+    for (uint32_t Index = 0; Index < ImageViews.size(); ++Index)
+    {
+        ColorAttachmentInfos[Index].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        ColorAttachmentInfos[Index].imageView        = ImageViews[Index];
+        ColorAttachmentInfos[Index].imageLayout      = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        ColorAttachmentInfos[Index].loadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        ColorAttachmentInfos[Index].storeOp          = VK_ATTACHMENT_STORE_OP_STORE;
+        ColorAttachmentInfos[Index].clearValue.color = {{ 1, 1, 0, 1 }};
+    }
 
     VkRenderingInfo RenderingInfo = {};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-    RenderingInfo.colorAttachmentCount = 1;
-    RenderingInfo.pColorAttachments    = &ColorAttachmentInfo;
+    RenderingInfo.colorAttachmentCount = ColorAttachmentInfos.size();
+    RenderingInfo.pColorAttachments    = ColorAttachmentInfos.data();
     RenderingInfo.layerCount           = 1;
     RenderingInfo.viewMask             = 0;
     RenderingInfo.renderArea.extent.width  = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
@@ -34,24 +38,24 @@ void FVulkanCommandListContext::RHIEndRendering()
     VulkanRHI::vkCmdEndRendering(CommandBuffer);
 }
 
-void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout)
+void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
 {
     VkImageMemoryBarrier ImageMemoryBarrier = {};
     ImageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     ImageMemoryBarrier.oldLayout = OldLayout;
     ImageMemoryBarrier.newLayout = NewLayout;
-    ImageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    ImageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    ImageMemoryBarrier.srcQueueFamilyIndex = p_SrcQueueFamilyIndex;
+    ImageMemoryBarrier.dstQueueFamilyIndex = p_DstQueueFamilyIndex;
     ImageMemoryBarrier.image = Image;
+    ImageMemoryBarrier.srcAccessMask = p_SrcAccess;
+    ImageMemoryBarrier.dstAccessMask = p_DstAccess;
     ImageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     ImageMemoryBarrier.subresourceRange.baseMipLevel = 0;
     ImageMemoryBarrier.subresourceRange.levelCount = 1;
     ImageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
     ImageMemoryBarrier.subresourceRange.layerCount = 1;
-    ImageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    ImageMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    
-    VulkanRHI::vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
+
+    VulkanRHI::vkCmdPipelineBarrier(CommandBuffer, SrcStage, DstStage, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
 }
 
 void FVulkanCommandListContext::RHIBindPipeline(VkPipelineBindPoint pPipelineBindPoint, VkPipeline pPipeline)

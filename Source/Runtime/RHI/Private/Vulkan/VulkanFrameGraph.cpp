@@ -1,198 +1,316 @@
 #include "VulkanFrameGraph.h"
 
-#include "VulkanLoader.h"
-#include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
-#include "Vulkan/VulkanRHIMinimal.h"
 #include "Assert.h"
+#include "VulkanCommandBuffer.h"
 #include "VulkanCommandBufferContext.h"
-#include "VulkanResourceManager.h"
+#include "VulkanCommandList.h"
 #include "VulkanDevice.h"
+#include "VulkanLoader.h"
 #include "VulkanQueue.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanTexture.h"
 
-void VulkanFrameGraph::AddPass(std::string Name, FrameGraphSubmissionQueue Queue, std::span<const FrameGraphResourceAccess> Reads, std::span<const FrameGraphResourceAccess> Writes, std::function<void(FRHICommandList&)>&& Lambda)
+#include <algorithm>
+#include <cassert>
+
+void SetImageBarrier(
+    VkCommandBuffer CommandBuffer,
+    VkImage Image,
+    VkImageLayout OldLayout,
+    VkImageLayout NewLayout,
+    VkAccessFlags SrcAccess,
+    VkAccessFlags DstAccess,
+    VkPipelineStageFlags SrcStage,
+    VkPipelineStageFlags DstStage,
+    uint32_t SrcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    uint32_t DstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED)
 {
-    FrameGraphPass Pass = {};
-    Pass.Name = Name;
-    Pass.Inputs.assign(Reads.begin(), Reads.end());
-    Pass.Queue = Queue;
-    Pass.Outputs.assign(Writes.begin(), Writes.end());
-    Pass.Callback = std::move(Lambda);
-    Passes.push_back(Pass);
+    VkImageMemoryBarrier2 imageBarrier = {};
+    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    imageBarrier.srcStageMask = SrcStage;
+    imageBarrier.srcAccessMask = SrcAccess;
+    imageBarrier.dstStageMask = DstStage;
+    imageBarrier.dstAccessMask = DstAccess;
+    imageBarrier.oldLayout = OldLayout;
+    imageBarrier.newLayout = NewLayout;
+    imageBarrier.srcQueueFamilyIndex = SrcQueueFamilyIndex;
+    imageBarrier.dstQueueFamilyIndex = DstQueueFamilyIndex;
+    imageBarrier.image = Image;
+
+    imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBarrier.subresourceRange.baseMipLevel = 0;
+    imageBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    imageBarrier.subresourceRange.baseArrayLayer = 0;
+    imageBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    VkDependencyInfo dependencyInfo = {};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &imageBarrier;
+
+    VulkanRHI::vkCmdPipelineBarrier2(CommandBuffer, &dependencyInfo);
 }
 
-VulkanFrameGraph::VulkanFrameGraph(FVulkanDevice& p_Device)
+FFGTextureRef::FFGTextureRef()
+    : Handle(nullptr), CurrentImageLayout(VK_IMAGE_LAYOUT_UNDEFINED), CurrentAccessFlags(VK_ACCESS_NONE), CurrentPipelineStageFlags(VK_PIPELINE_STAGE_NONE)
+{
+}
+
+FFGTextureRef FFrameGraph::CreateTexture(FRHITextureDesc InTextureDesc, FRHITextureViewDesc InTextureViewDesc)
+{
+    InTextureDesc.VirtualMemory = m_Device.GetTextureScratchAllocator()->VirtualMemory;
+
+    FVulkanTexture* Texture = new FVulkanTexture(m_Device, InTextureDesc);
+
+    VkMemoryRequirements MemoryRequirements;
+    VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), Texture->Image, &MemoryRequirements);
+
+    VmaVirtualAllocationCreateInfo AllocInfo = {};
+    AllocInfo.size = MemoryRequirements.size;
+    AllocInfo.alignment = MemoryRequirements.alignment;
+
+    // We can safely throw away the allocation and offset info given by vmaVirtualAllocate, as we are resetting the entire allocator each frame.
+    VmaVirtualAllocation Allocation;
+    VkDeviceSize Offset;
+
+    VkResult Result = vmaVirtualAllocate(m_Device.GetTextureScratchAllocator()->VirtualMemory, &AllocInfo, &Allocation, &Offset);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
+    VulkanRHI::vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), Texture->Image, m_Device.GetTextureScratchAllocator()->PhysicalMemory, Offset);
+
+    FVulkanTextureView* TextureView = new FVulkanTextureView(m_Device, InTextureViewDesc, Texture->Image);
+
+    FFGTextureRef TextureRef;
+    TextureRef.Handle = Texture;;
+    TextureRef.View = TextureView;
+    TextureRef.bTransient = true;
+    TextureRef.ResourceType = EFGResourceType::Texture;
+    return TextureRef;
+}
+
+FFGTextureRef FFrameGraph::ImportTexture(FVulkanTexture *InTexture)
+{
+    FFGTextureRef TextureRef;
+    TextureRef.Handle = InTexture;
+    TextureRef.bTransient = false;
+    TextureRef.ResourceType = EFGResourceType::Texture;
+    return TextureRef;
+}
+
+void FFGPass::AddColorAttachment(FFGResourceRef* Resource)
+{
+    Writes.push_back({ Resource, EFGAccessType::ColorAttachmentWrite });
+
+    Flags = Flags | EFGPassFlags::Dynamic;
+}
+
+void FFGPass::AddInputAttachment(FFGResourceRef *Resource)
+{
+    Reads.push_back({ Resource, EFGAccessType::SampledRead });
+}
+
+void FFGPass::AddSampledTexture(FFGResourceRef *Resource)
+{
+    Reads.push_back({ Resource, EFGAccessType::SampledRead });
+}
+
+void FFGPass::AddDepthAttachment(FFGResourceRef *Resource)
+{
+    Writes.push_back({ Resource, EFGAccessType::DepthStencilWrite });
+}
+
+void FFGPass::AddStorageImage(FFGResourceRef *Resource)
+{
+    Writes.push_back({ Resource, EFGAccessType::StorageWrite });
+}
+
+void FFGPass::AddTransferDst(FFGResourceRef *Resource)
+{
+    Writes.push_back({ Resource, EFGAccessType::TransferWrite });
+}
+
+void FFGPass::AddTransferSrc(FFGResourceRef *Resource)
+{
+    Reads.push_back({ Resource, EFGAccessType::TransferRead });
+}
+
+void FFGPass::AddPresentSrc(FFGResourceRef *Resource)
+{
+    Writes.push_back({Resource, EFGAccessType::Present });
+}
+
+void FFGScratchAllocator::CreateScratchAllocator()
+{
+    VkResult Result = VK_SUCCESS;
+
+    VkPhysicalDeviceMemoryProperties MemoryProperties;
+    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(Device.GetVkPhysicalDevice(), &MemoryProperties);
+
+    // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
+    // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
+    uint32_t MemoryTypeBits = 0xFFFFFFFF;
+    uint32_t TypeIndex = UINT32_MAX;
+
+    for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
+    {
+        if ((MemoryTypeBits & (1 << Index)) && (MemoryProperties.memoryTypes[Index].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+        {
+            TypeIndex = Index;
+            break;
+        }
+    }
+
+    RK_ASSERT(TypeIndex != UINT32_MAX);
+
+    VkMemoryAllocateInfo AllocInfo = {};
+    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    AllocInfo.allocationSize = Size;
+    AllocInfo.memoryTypeIndex = TypeIndex;
+
+    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
+
+    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
+    BlockCreateInfo.size = VK_WHOLE_SIZE;
+    BlockCreateInfo.flags = 0;
+
+    Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to create virtual block.");
+}
+
+void FFGScratchAllocator::DestroyScratchAllocator()
+{
+    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
+    vmaClearVirtualBlock(VirtualMemory);
+    vmaDestroyVirtualBlock(VirtualMemory);
+}
+
+void FFGScratchAllocator::ResetScratchAllocator()
+{
+    vmaClearVirtualBlock(VirtualMemory);
+    Offset = 0;
+}
+
+FFrameGraph::FFrameGraph(FVulkanDevice &p_Device)
     : m_Device(p_Device)
 {
 }
 
-VulkanFrameGraph::~VulkanFrameGraph()
+FFrameGraph::~FFrameGraph()
 {
 }
 
-void VulkanFrameGraph::HandleResourceAccess(const FrameGraphPass& Pass, FrameGraphPayload& Payload, const FrameGraphResourceAccess& ResourceAccess, bool IsWrite)
+FFGPass& FFrameGraph::AddPass(const char* DebugName, std::function<void(FRHICommandList& CmdList)>&& Callback)
 {
-    if (ResourceAccess.Handle.Type == ResourceType::Image)
+    FFGPass Pass = { DebugName };
+    Pass.Callback = Callback;
+    Passes.push_back(Pass);
+    return Passes.back();
+}
+
+void FFrameGraph::Execute()
+{
+    FVulkanCommandBufferContext GraphicsCommandBufferCtx(*m_Device.GetGraphicsQueue()->GetCommandBufferPool());
+
+    for (FFGPass& Pass : Passes)
     {
-        auto& State = m_Compiler.ImageStates[ResourceAccess.Handle.Index];
-        VkImage Image = m_Device.GetResourceManager()->GetImage(ResourceAccess.Handle);
+        VkImageLayout NewLayout;
+        VkAccessFlags NewAccess;
+        VkPipelineStageFlags NewStage;
 
-        if (State.FirstUse)
+        FVulkanCommandBuffer* CommandBuffer = GraphicsCommandBufferCtx.GetCurrentCommandBuffer();
+        FVulkanCommandListContext CommandListCtx(CommandBuffer->GetHandle());
+        FRHICommandList CommandList(CommandListCtx);
+
+        for (FFGResourceUsage& ReadUsage : Pass.Reads)
         {
-            if (State.CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+            if (ReadUsage.Resource->IsTexture())
             {
-                State.CurrentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            }
-
-            if (State.CurrentLayout != ResourceAccess.Layout)
-            {
-                FrameGraphBarrier Barrier;
-                Barrier.Image      = Image;
-                Barrier.OldLayout  = State.CurrentLayout;
-                Barrier.NewLayout  = ResourceAccess.Layout;
-                Barrier.SrcStage   = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                Barrier.DstStage   = ResourceAccess.StageMask;
-                Payload.BeginBarriers.push_back(Barrier);
-            }
-        }
-        else
-        {
-            const bool LayoutDiff = (State.CurrentLayout != ResourceAccess.Layout);
-            const bool QueueDiff  = (State.CurrentQueue  != Pass.Queue);
-
-            if (LayoutDiff || QueueDiff)
-            {
-                FrameGraphBarrier Barrier;
-                Barrier.Image      = Image;
-                Barrier.OldLayout  = State.CurrentLayout;
-                Barrier.NewLayout  = ResourceAccess.Layout;
-                Barrier.SrcStage   = State.CurrentQueue == Pass.Queue
-                               ? ResourceAccess.StageMask        // same queue
-                               : VK_PIPELINE_STAGE_ALL_COMMANDS_BIT; // ownership xfer
-                Barrier.DstStage   = ResourceAccess.StageMask;
-
-                //------------------------------------------------------------------
-                // Decide where to emit the barrier:
-                //   * same payload  ->   begin-barrier inside this payload
-                //   * different payloads -> end-barrier of producer payload
-                //------------------------------------------------------------------
-                if (State.LastPayloadIndex == static_cast<int32_t>(Payloads.size()))
+                switch (ReadUsage.AccessType)
                 {
-                    Payload.BeginBarriers.push_back(Barrier);
+                case EFGAccessType::SampledRead:
+                    NewLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    NewAccess = VK_ACCESS_SHADER_READ_BIT;
+                    NewStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                    break;
+                case EFGAccessType::InputAttachmentRead:
+                    NewLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    NewAccess = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+                    NewStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                    break;
+                case EFGAccessType::TransferRead:
+                    NewLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    NewAccess = VK_ACCESS_TRANSFER_READ_BIT;
+                    NewStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    break;
+                default:
+                    assert(false && "Unhandled EFGAccessType in ReadUsage");
+                    break;
                 }
-                else
+
+                FFGTextureRef* TextureRef = static_cast<FFGTextureRef*>(ReadUsage.Resource);
+
+                if (TextureRef->CurrentImageLayout != NewLayout || TextureRef->CurrentAccessFlags != NewAccess || TextureRef->CurrentPipelineStageFlags != NewStage)
                 {
-                    Payloads[State.LastPayloadIndex].EndBarriers.push_back(Barrier);
+                    SetImageBarrier(CommandBuffer->GetHandle(), TextureRef->Handle->Image, TextureRef->CurrentImageLayout, NewLayout, TextureRef->CurrentAccessFlags, NewAccess, TextureRef->CurrentPipelineStageFlags, NewStage);
 
-                    // Queue ownership transfer ⇒ semaphore
-                    if (QueueDiff)
-                    {
-                        // NOTE: You probably have a semaphore pool already.
-                        //       For now, we just create a new binary semaphore.
-                        VkSemaphoreCreateInfo CI{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-                        VkSemaphore Sem;
-                        VulkanRHI::vkCreateSemaphore(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CI, nullptr, &Sem);
-
-                        VkSemaphore xferSem = Sem;
-
-                        Payloads[State.LastPayloadIndex].Signal.push_back(xferSem);
-                        Payload.Wait.push_back(xferSem);
-                    }
+                    TextureRef->CurrentImageLayout = NewLayout;
+                    TextureRef->CurrentAccessFlags = NewAccess;
+                    TextureRef->CurrentPipelineStageFlags = NewStage;
                 }
             }
         }
 
-        State.CurrentLayout    = ResourceAccess.Layout;
-        State.CurrentQueue     = Pass.Queue;
-        State.LastPayloadIndex = static_cast<int32_t>(Payloads.size());
-        State.FirstUse         = false;
-    }
-}
-
-void VulkanFrameGraph::Compile()
-{
-    Payloads.reserve(Passes.size());
-
-    for (uint32_t PassIndex = 0; PassIndex < Passes.size(); ++PassIndex)
-    {
-        const FrameGraphPass& Pass = Passes[PassIndex];
-
-        FrameGraphPayload Payload;
-        Payload.PassIndices.push_back(PassIndex);
-        Payload.Queue = Pass.Queue;
-
-        for (const FrameGraphResourceAccess& Input : Pass.Inputs)
+        for (FFGResourceUsage& WriteUsage : Pass.Writes)
         {
-            HandleResourceAccess(Pass, Payload, Input, false);
+            if (WriteUsage.Resource->IsTexture())
+            {
+                switch (WriteUsage.AccessType)
+                {
+                case EFGAccessType::ColorAttachmentWrite:
+                    NewLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                    NewAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                    NewStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                    break;
+                case EFGAccessType::DepthStencilWrite:
+                    NewLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+                    NewAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                    NewStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+                    break;
+                case EFGAccessType::StorageWrite:
+                    NewLayout = VK_IMAGE_LAYOUT_GENERAL;
+                    NewAccess = VK_ACCESS_SHADER_WRITE_BIT;
+                    NewStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                    break;
+                case EFGAccessType::TransferWrite:
+                    NewLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    NewAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    NewStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    break;
+                case EFGAccessType::Present:
+                    NewLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    NewAccess = 0;
+                    NewStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                    break;
+                default:
+                    assert(false && "Unhandled EFGAccessType in ReadUsage");
+                    break;
+                }
+
+                FFGTextureRef* TextureRef = static_cast<FFGTextureRef*>(WriteUsage.Resource);
+
+                if (TextureRef->CurrentImageLayout != NewLayout || TextureRef->CurrentAccessFlags != NewAccess || TextureRef->CurrentPipelineStageFlags != NewStage)
+                {
+                    SetImageBarrier(CommandBuffer->GetHandle(), TextureRef->Handle->Image, TextureRef->CurrentImageLayout, NewLayout, TextureRef->CurrentAccessFlags, NewAccess, TextureRef->CurrentPipelineStageFlags, NewStage);
+
+                    TextureRef->CurrentImageLayout = NewLayout;
+                    TextureRef->CurrentAccessFlags = NewAccess;
+                    TextureRef->CurrentPipelineStageFlags = NewStage;
+                }
+            }
         }
 
-        for (const FrameGraphResourceAccess& Output : Pass.Outputs)
-        {
-            HandleResourceAccess(Pass, Payload, Output, true);
-        }
-
-        Payloads.push_back(std::move(Payload));
-    }
-}
-
-void VulkanFrameGraph::Execute(VkSemaphore ImageAcquiredSemaphore, VkSemaphore RenderFinishedSemaphore)
-{
-    FVulkanCommandBufferPool* GraphicsCommandBufferPool = m_Device.GetGraphicsQueue()->GetCommandBufferPool();
-    FVulkanCommandBufferPool* ComputesCommandBufferPool = m_Device.GetComputeQueue()->GetCommandBufferPool();
-    FVulkanCommandBufferPool* TransferCommandBufferPool = m_Device.GetTransferQueue()->GetCommandBufferPool();
-
-    FVulkanCommandBufferContext GfxFrameCtx(*GraphicsCommandBufferPool);
-    FVulkanCommandBufferContext ComputeFrameCtx(*ComputesCommandBufferPool);
-    FVulkanCommandBufferContext TransferFrameCtx(*TransferCommandBufferPool);
-
-    FVulkanCommandBufferContext* CurrentCtx = nullptr;
-
-    GfxFrameCtx.AddWaitSemaphore(ImageAcquiredSemaphore);
-
-    for (FrameGraphPayload& Plan : Payloads)
-    {
-        switch (Plan.Queue)
-        {
-        case FrameGraphSubmissionQueue::Graphics: CurrentCtx = &GfxFrameCtx; break;
-        case FrameGraphSubmissionQueue::Compute: CurrentCtx = &ComputeFrameCtx; break;
-        case FrameGraphSubmissionQueue::Transfer: CurrentCtx = &TransferFrameCtx; break;
-        }
-
-        if (!Plan.Wait.empty())
-        {
-            CurrentCtx->AddWaitSemaphore(std::span<VkSemaphore>(Plan.Wait.data(), Plan.Wait.size()));
-        }
-
-        FVulkanCommandBuffer* CB = CurrentCtx->GetCurrentCommandBuffer();
-        FVulkanCommandListContext CmdCtx(CB->GetHandle());
-        FRHICommandList CmdList(CmdCtx);
-
-        for (const FrameGraphBarrier& B : Plan.BeginBarriers)
-        {
-            CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(B.Image, B.OldLayout, B.NewLayout);
-        }
-
-        for (uint32_t Index = 0; Index < Plan.PassIndices.size(); Index++)
-        {
-            Passes[Plan.PassIndices[Index]].Callback(CmdList);
-        }
-
-        for (const FrameGraphBarrier& B : Plan.EndBarriers)
-        {
-            CmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(B.Image, B.OldLayout, B.NewLayout);
-        }
-
-        if (!Plan.Signal.empty())
-        {
-            CurrentCtx->AddSignalSemaphore(std::span<VkSemaphore>(Plan.Signal.data(), Plan.Signal.size()));
-        }
-
-        FRHICommandListExecutor::Execute(CmdCtx, CmdList.Flush());
+        FRHICommandListExecutor::Execute(CommandListCtx, CommandList.Flush());
     }
 
-    GfxFrameCtx.AddSignalSemaphore(RenderFinishedSemaphore);
-
-    m_Device.GetGraphicsQueue()->Submit(GfxFrameCtx);
-    m_Device.GetComputeQueue()->Submit(ComputeFrameCtx);
-    m_Device.GetTransferQueue()->Submit(TransferFrameCtx);
+    m_Device.GetGraphicsQueue()->Submit(GraphicsCommandBufferCtx);
 }

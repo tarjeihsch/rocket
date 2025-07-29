@@ -19,16 +19,7 @@
 
 
 // TEMPORARY: Testing
-#include <ShaderAsset.h>
-AssetManager* m_AssetManager = new AssetManager();
-AssetHandle<ShaderAsset> m_VertexShaderAsset;
-AssetHandle<ShaderAsset> m_FragmentShaderAsset;
-AssetHandle<MeshAsset> m_MeshAsset;
-VulkanShader* m_VertexShader;
-VulkanShader* m_FragmentShader;
-BufferHandle m_VertexBuffer;
-BufferHandle m_IndexBuffer;
-BufferHandle m_StagingBuffer;
+#include "VulkanTexture.h"
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -158,70 +149,31 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
-    RenderGraph = new VulkanFrameGraph(*Device);
-
-    {
-        m_VertexShaderAsset = m_AssetManager->Load<ShaderAsset>(AssetLoaderRequest { GAME_SRC "/Shader/VertexShader.hlsl" }, ShaderAssetOptions { "main", "vs_6_6" } );
-        m_FragmentShaderAsset = m_AssetManager->Load<ShaderAsset>(AssetLoaderRequest { GAME_SRC "/Shader/FragmentShader.hlsl" }, ShaderAssetOptions { "main", "ps_6_6" } );
-
-        auto VertexShaderAsset = m_AssetManager->Get(m_VertexShaderAsset);
-        m_VertexShader = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT);
-        m_VertexShader->Create(VertexShaderAsset->Data, VertexShaderAsset->WordCount);
-
-        auto FragmentShaderAsset = m_AssetManager->Get(m_FragmentShaderAsset);
-        m_FragmentShader = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
-        m_FragmentShader->Create(FragmentShaderAsset->Data, FragmentShaderAsset->WordCount);
-
-        BufferDesc VertexBufferDesc;
-        VertexBufferDesc.Persistent = true;
-        VertexBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
-        VertexBufferDesc.UsageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        VertexBufferDesc.Size = 64ull * 1024 * 1024;
-        VertexBufferDesc.Persistent = true;
-        m_VertexBuffer = Device->GetResourceManager()->AddBuffer(VertexBufferDesc);
-
-        BufferDesc IndexBufferDesc;
-        IndexBufferDesc.Persistent = true;
-        IndexBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
-        IndexBufferDesc.UsageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        IndexBufferDesc.Size = 8ull * 1024 * 1024;
-        IndexBufferDesc.Persistent = true;
-        m_IndexBuffer = Device->GetResourceManager()->AddBuffer(IndexBufferDesc);
-
-        BufferDesc StagingBufferDesc;
-        StagingBufferDesc.Persistent = true;
-        StagingBufferDesc.MemoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-        StagingBufferDesc.UsageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        StagingBufferDesc.Size = 256ull * 1024 * 1024;
-        StagingBufferDesc.Persistent = true;
-        m_StagingBuffer = Device->GetResourceManager()->AddBuffer(StagingBufferDesc);
-
-        m_MeshAsset = m_AssetManager->Load<MeshAsset>(AssetLoaderRequest { GAME_CONTENT "/Cube_Sphere.glb" }, MeshAssetOptions {});
-
-        Device->GetResourceManager()->MapBuffer(m_StagingBuffer, m_AssetManager->Get(m_MeshAsset)->Node.Primitives[0].Vertices.data(), m_AssetManager->Get(m_MeshAsset)->Node.Primitives[0].Vertices.size(), 0);
-    }
 }
 
 void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
 
-    delete RenderGraph;
     delete Viewport;
     delete Device;
 
-    RenderGraph = nullptr;
     Viewport = nullptr;
     Device = nullptr;
 
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
+// todo: Store FrameGraph as a FRAME object
+// use FrameGraphBuilder to create passes at different places in code.
+// Add each framegraphbuilder to a vector and loop through all the builds at FrameGraph::Execute.
+// This way, we can add a framegraphbuilder that is for Graphics only, or for Present only.
+
 void CVulkanRHI::Tick(float DeltaTime)
 {
     GetDevice()->GetGraphicsQueue()->Await();
 
-    Device->GetResourceManager()->GC();
+    Device->GC();
 
     if (!Viewport->Acquire())
     {
@@ -229,51 +181,25 @@ void CVulkanRHI::Tick(float DeltaTime)
         return;
     }
 
-    ImageDesc Desc;
-    Desc.Extent = { 1024, 1024, 1 };
-    Desc.Format = VK_FORMAT_B8G8R8A8_UNORM;
-    Desc.UsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    Desc.AspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-    Desc.Persistent = false;
-    Desc.MipLevels = 1;
-    Desc.SampleCount = VK_SAMPLE_COUNT_1_BIT;
-    auto TextureHandle = Device->GetResourceManager()->AddImage(Desc);
+    FFrameGraph FrameGraph(*Device);
 
-    VulkanFrameGraph FrameGraph(*Device);
+    FRHITextureDesc RenderTargetDesc = FRHITextureDesc::Create2D(VkExtent3D(1280, 720, 1), VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, ERHITextureFlags::Unmanaged);
+    FRHITextureViewDesc RenderTargetViewDesc = FRHITextureViewDesc::Create2D(VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    const FrameGraphResourceAccess GBufferWrites[] = { WriteImage(TextureHandle) };
-    const FrameGraphResourceAccess PresentReads[] = { ReadImage(TextureHandle) };
+    FFGTextureRef BackBufferRef = FrameGraph.ImportTexture(Viewport->GetBackBufferTexture());
+    FFGTextureRef RenderTargetRef = FrameGraph.CreateTexture(RenderTargetDesc, RenderTargetViewDesc);
 
-    VkPipelineLayout PipelineLayout = Device->GetDescriptorManager()->GetPipelineLayout();
-    VkDescriptorSet DescriptorSet = Device->GetDescriptorManager()->GetDescriptorSet();
-    VulkanPipelineSpecification Spec = Device->GetPipelineManager()->MakeSpecification(PipelineLayout, m_VertexShader, m_FragmentShader);
-    VkPipeline Pipeline = Device->GetPipelineManager()->GetPipeline(Spec);
+    FFGPass& DrawPass = FrameGraph.AddPass("Draw", nullptr);
+    DrawPass.AddColorAttachment(&RenderTargetRef);
 
-    FrameGraph.AddPass("Copy", FrameGraphSubmissionQueue::Transfer, {}, {}, [&](FRHICommandList& RHICmdList)
-    {
-        RHICmdList.Enqueue<VulkanCommandCopyBuffer>(Device->GetResourceManager()->GetBuffer(m_StagingBuffer), Device->GetResourceManager()->GetBuffer(m_VertexBuffer));
-    });
+    FFGPass& PresentPass = FrameGraph.AddPass("Present", nullptr);
+    PresentPass.AddSampledTexture(&RenderTargetRef);
+    PresentPass.AddPresentSrc(&BackBufferRef);
 
-    FrameGraph.AddPass("Draw", FrameGraphSubmissionQueue::Graphics, {}, GBufferWrites, [&](FRHICommandList& RHICmdList)
-    {
-        RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
-        RHICmdList.Enqueue<VulkanCommandSetViewport>(GetViewport()->GetExtent().width, GetViewport()->GetExtent().height, 0.0f, 1.0f);
-        RHICmdList.Enqueue<VulkanCommandSetScissor>(0, 0, GetViewport()->GetExtent().width, GetViewport()->GetExtent().height);
-        RHICmdList.Enqueue<VulkanCommandBindPipeline>(VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-        RHICmdList.Enqueue<VulkanCommandBindDescriptorSets>(VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, &DescriptorSet);
-        RHICmdList.Enqueue<FVulkanCommandEndRendering>();
-    });
-
-    FrameGraph.AddPass("Present", FrameGraphSubmissionQueue::Graphics, PresentReads , {}, [&](FRHICommandList& RHICmdList)
-    {
-        RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    });
-
-    FrameGraph.Compile();
-    FrameGraph.Execute(Viewport->GetImageAcquiredSemaphore(), Viewport->GetRenderFinishedSemaphore());
+    FrameGraph.Execute();
 
     Device->GetDescriptorManager()->Flush();
+
     Viewport->Present();
 }
 
@@ -302,6 +228,11 @@ void CVulkanRHI::RHIWaitUntilIdle() const
     Device->WaitUntilIdle();
 }
 
+FRHITexture * CVulkanRHI::RHICreateTexture(FRHITextureDesc &Desc) const
+{
+    return nullptr;
+}
+
 VkInstance CVulkanRHI::RHIGetVkInstance() const
 {
     return Instance;
@@ -315,6 +246,11 @@ VkDevice CVulkanRHI::RHIGetVkDevice() const
 VkPhysicalDevice CVulkanRHI::RHIGetVkPhysicalDevice() const
 {
     return GetDevice()->GetVkPhysicalDevice();
+}
+
+VmaAllocator CVulkanRHI::RHIGetVmaAllocator() const
+{
+    return GetDevice()->GetVmaAllocator();
 }
 
 VkQueue CVulkanRHI::RHIGetGraphicsVkQueue() const
@@ -382,6 +318,16 @@ VkSurfaceFormatKHR CVulkanRHI::RHIGetSwapchainSurfaceFormat() const
     return Viewport->GetSurfaceFormat();
 }
 
+VkSemaphore CVulkanRHI::GetImageAcquiredSemaphore() const
+{
+    return Viewport->GetImageAcquiredSemaphore();
+}
+
+VkSemaphore CVulkanRHI::GetRenderFinishedSemaphore() const
+{
+    return Viewport->GetRenderFinishedSemaphore();
+}
+
 std::span<const char *> CVulkanRHI::GetValidationExtensions()
 {
     return std::span(ValidationLayerExtensions);
@@ -399,10 +345,14 @@ std::span<const char*> CVulkanRHI::GetPhysicalDeviceExtensions()
 
 FVulkanDevice* CVulkanRHI::GetDevice() const
 {
+    assert(Device != nullptr);
+
     return Device;
 }
 
 FVulkanViewport* CVulkanRHI::GetViewport() const
 {
+    assert(Viewport != nullptr);
+
     return Viewport;
 }

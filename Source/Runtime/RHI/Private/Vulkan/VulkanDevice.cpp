@@ -8,19 +8,25 @@
 #include "Assert.h"
 
 FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
-    : PhysicalDevice(InPhysicalDevice)
+    : PhysicalDevice(InPhysicalDevice), TextureScratchAllocator(*this, 32ull * 1024 * 1024), BufferScratchAllocator(*this, 32ull * 1024 * 1024)
 {
-	Initialize();
+    Initialize();
 }
 
 FVulkanDevice::~FVulkanDevice()
 {
-	Shutdown();
+    Shutdown();
 }
 
 void FVulkanDevice::WaitUntilIdle() const
 {
     VulkanRHI::vkDeviceWaitIdle(Device);
+}
+
+void FVulkanDevice::GC()
+{
+    GetTextureScratchAllocator()->ResetScratchAllocator();
+    GetBufferScratchAllocator()->ResetScratchAllocator();
 }
 
 void FVulkanDevice::Initialize()
@@ -110,7 +116,10 @@ void FVulkanDevice::Initialize()
 
     PipelineManager = new VulkanPipelineManager(*this);
     DescriptorManager = new VulkanDescriptorManager(*this);
-	ResourceManager = new VulkanResourceManager(*this);
+    ResourceManager = new VulkanResourceManager(*this);
+
+    TextureScratchAllocator.CreateScratchAllocator();
+    BufferScratchAllocator.CreateScratchAllocator();
 }
 
 void FVulkanDevice::Shutdown()

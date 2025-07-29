@@ -49,23 +49,38 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
 
     for (FVulkanCommandBufferPayload* Payload : Payloads)
     {
+        bool bIsFirst = (Payload == Payloads.front());
+        bool bIsLast  = (Payload == Payloads.back());
+
+        if (bIsFirst)
+        {
+            Payload->WaitSemaphores.push_back(GetVulkanRHIMinimal()->GetImageAcquiredSemaphore());
+            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR);
+        }
+
+        if (bIsLast)
+        {
+            Payload->SignalSemaphores.push_back(GetVulkanRHIMinimal()->GetRenderFinishedSemaphore());
+            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR);
+        }
+
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;
-        for (VkSemaphore Semaphore : Payload->WaitSemaphores)
+        for (uint32_t Index = 0; Index < Payload->WaitSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo WaitSemaphoreSubmitInfo = {};
             WaitSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            WaitSemaphoreSubmitInfo.semaphore = Semaphore;
-            WaitSemaphoreSubmitInfo.stageMask = ChooseWaitStage(QueueFlags);
+            WaitSemaphoreSubmitInfo.semaphore = Payload->WaitSemaphores[Index];
+            WaitSemaphoreSubmitInfo.stageMask = Payload->WaitStageMasks[Index];
             WaitSemaphoreSubmitInfos.push_back(WaitSemaphoreSubmitInfo);
         }
 
         std::vector<VkSemaphoreSubmitInfo> SignalSemaphoreSubmitInfos;
-        for (VkSemaphore Semaphore : Payload->SignalSemaphores)
+        for (uint32_t Index = 0; Index < Payload->SignalSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo ReadySemaphoreSubmitInfo = {};
             ReadySemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            ReadySemaphoreSubmitInfo.semaphore = Semaphore;
-            ReadySemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+            ReadySemaphoreSubmitInfo.semaphore = Payload->SignalSemaphores[Index];
+            ReadySemaphoreSubmitInfo.stageMask = Payload->SignalStageMasks[Index];
             SignalSemaphoreSubmitInfos.push_back(ReadySemaphoreSubmitInfo);
         }
 

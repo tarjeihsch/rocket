@@ -1,5 +1,7 @@
 #pragma once
 
+#include "VulkanFrameGraph.h"
+
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
@@ -37,6 +39,11 @@ public:
     inline VulkanDescriptorManager* GetDescriptorManager() const;
     inline VulkanResourceManager* GetResourceManager() const;
 
+    inline FFGScratchAllocator *GetTextureScratchAllocator();
+    inline FFGScratchAllocator *GetBufferScratchAllocator();
+
+    void GC();
+
 private:
     void Initialize();
     void Shutdown();
@@ -46,6 +53,9 @@ private:
     VmaAllocator Allocator;
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
     std::vector<std::unique_ptr<FVulkanQueue>> Queues;
+
+    FFGScratchAllocator TextureScratchAllocator;
+    FFGScratchAllocator BufferScratchAllocator;
 
     VulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
@@ -85,4 +95,14 @@ inline VulkanDescriptorManager *FVulkanDevice::GetDescriptorManager() const
 inline VulkanResourceManager *FVulkanDevice::GetResourceManager() const
 {
     return ResourceManager;
+}
+
+inline FFGScratchAllocator *FVulkanDevice::GetTextureScratchAllocator()
+{
+    return &TextureScratchAllocator;
+}
+
+inline FFGScratchAllocator *FVulkanDevice::GetBufferScratchAllocator()
+{
+    return &BufferScratchAllocator;
 }

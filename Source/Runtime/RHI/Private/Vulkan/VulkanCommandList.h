@@ -2,6 +2,7 @@
 
 #include "Common/RHICommandList.h"
 
+#include <span>
 #include <vulkan/vulkan_core.h>
 
 class FVulkanCommandListContext final : public IRHICommandListContext
@@ -14,9 +15,9 @@ public:
 
     virtual void RHISetScissorRect(uint32_t X, uint32_t Y) override;
 
-    void RHIBeginRendering(VkImageView ImageView);
+    void RHIBeginRendering(std::span<VkImageView> ImageViews);
     void RHIEndRendering();
-    void RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout);
+    void RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex);
     void RHICopyBuffer(VkBuffer p_StagingBuffer, VkBuffer p_Buffer);
     void RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth);
     void RHISetScissor(int32_t p_OffsetX, int32_t p_OffsetY, uint32_t p_ExtentWidth, uint32_t p_ExtentHeight);
@@ -51,32 +52,38 @@ struct FVulkanCommandSetMemoryBarrier : TRHICommand<FVulkanCommandSetMemoryBarri
     VkImage Image;
     VkImageLayout OldLayout;
     VkImageLayout NewLayout;
+    VkAccessFlags SrcAccess;
+    VkAccessFlags DstAccess;
+    VkPipelineStageFlags2 SrcStage;
+    VkPipelineStageFlags2 DstStage;
+    uint32_t SrcQueueFamilyIndex;
+    uint32_t DstQueueFamilyIndex;
 
-    FVulkanCommandSetMemoryBarrier(VkImage InImage, VkImageLayout InOldLayout, VkImageLayout InNewLayout)
-        : Image(InImage), OldLayout(InOldLayout), NewLayout(InNewLayout)
+    FVulkanCommandSetMemoryBarrier(VkImage InImage, VkImageLayout InOldLayout, VkImageLayout InNewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess, VkPipelineStageFlags2 p_SrcStage, VkPipelineStageFlags2 p_DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
+        : Image(InImage), OldLayout(InOldLayout), NewLayout(InNewLayout), SrcAccess(p_SrcAccess), DstAccess(p_DstAccess), SrcStage(p_SrcStage), DstStage(p_DstStage), SrcQueueFamilyIndex(p_SrcQueueFamilyIndex), DstQueueFamilyIndex(p_DstQueueFamilyIndex)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
         auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
-        Ctx.RHISetMemoryBarrier(Image, OldLayout, NewLayout);
+        Ctx.RHISetMemoryBarrier(Image, OldLayout, NewLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
     }
 };
 
 struct FVulkanCommandBeginRendering : TRHICommand<FVulkanCommandBeginRendering>
 {
-    VkImageView ImageView;
+    std::span<VkImageView> ImageViews;
 
-    FVulkanCommandBeginRendering(VkImageView InView)
-        : ImageView(InView)
+    FVulkanCommandBeginRendering(std::span<VkImageView> InViews)
+        : ImageViews(InViews)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
         auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
-        Ctx.RHIBeginRendering(ImageView);
+        Ctx.RHIBeginRendering(ImageViews);
     }
 };
 

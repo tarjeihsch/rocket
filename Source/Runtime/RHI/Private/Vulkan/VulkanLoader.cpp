@@ -9,6 +9,8 @@
 
 #include "VulkanLoader.h"
 
+#include "Vulkan/VulkanRHIMinimal.h"
+
 #include <assert.h>
 
 #ifdef RK_PLATFORM_WINDOWS
@@ -29,6 +31,128 @@ namespace VulkanRHI
     VULKAN_ALL_FUNCTIONS(DEFINE_PFN)
     #undef DEFINE_PFN
 };
+
+VkImageCreateInfo VulkanRHI::GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags)
+{
+    VkImageCreateInfo ImageCreateInfo = {};
+    ImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    ImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    ImageCreateInfo.extent = Extent;
+    ImageCreateInfo.format = Format;
+    ImageCreateInfo.mipLevels = 1;
+    ImageCreateInfo.arrayLayers = 1;
+    ImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    ImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ImageCreateInfo.usage = UsageFlags;
+    ImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    return ImageCreateInfo;
+}
+
+VkImageViewCreateInfo VulkanRHI::GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags)
+{
+    VkImageViewCreateInfo ImageViewCreateInfo = {};
+    ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    ImageViewCreateInfo.image = Image;
+    ImageViewCreateInfo.format = Format;
+    ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+    ImageViewCreateInfo.subresourceRange.levelCount = 1;
+    ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+    ImageViewCreateInfo.subresourceRange.layerCount = 1;
+    ImageViewCreateInfo.subresourceRange.aspectMask = AspectFlags; // VK_IMAGE_ASPECT_COLOR_BIT
+
+    return ImageViewCreateInfo;
+}
+
+VkImageUsageFlags VulkanRHI::RHITextureUsageToVkImageUsageFlags(ERHITextureUsage Usage)
+{
+    VkImageUsageFlags Flags = 0;
+
+    if ((Usage & ERHITextureUsage::Color) == ERHITextureUsage::Color)
+    {
+        Flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+
+    if ((Usage & ERHITextureUsage::Depth) == ERHITextureUsage::Depth || (Usage & ERHITextureUsage::Stencil) == ERHITextureUsage::Stencil)
+    {
+        Flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if ((Usage & ERHITextureUsage::CopySrc) == ERHITextureUsage::CopySrc)
+    {
+        Flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if ((Usage & ERHITextureUsage::CopyDst) == ERHITextureUsage::CopyDst)
+    {
+        Flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if ((Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
+    {
+        Flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+
+    if ((Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
+    {
+        Flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    // Swapchain images (Present) are not user-created, but we include this for completeness.
+    if ((Usage & ERHITextureUsage::Present) == ERHITextureUsage::Present)
+    {
+        // Swapchain images usually come with COLOR_ATTACHMENT | TRANSFER_DST
+        Flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        Flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    return Flags;
+}
+
+VkImageLayout VulkanRHI::RHITextureUsageToVkImageLayout(ERHITextureUsage Usage)
+{
+    if ((Usage & ERHITextureUsage::Present) == ERHITextureUsage::Present)
+    {
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    }
+
+    if ((Usage & ERHITextureUsage::Color) == ERHITextureUsage::Color)
+    {
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+
+    if ((Usage & ERHITextureUsage::Depth) == ERHITextureUsage::Depth || (Usage & ERHITextureUsage::Stencil) == ERHITextureUsage::Stencil)
+    {
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    if ((Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
+    {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    if ((Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
+    {
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    if ((Usage & ERHITextureUsage::CopyDst) == ERHITextureUsage::CopyDst)
+    {
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    }
+
+    if ((Usage & ERHITextureUsage::CopySrc) == ERHITextureUsage::CopySrc)
+    {
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    }
+
+    return VK_IMAGE_LAYOUT_UNDEFINED; // Fallback or initialization
+}
 
 void LoadVulkanLibrary()
 {

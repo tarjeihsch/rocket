@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/RHI.h"
+#include "vma/vk_mem_alloc.h"
 
 #include <vulkan/vulkan_core.h>
 #include <span>
@@ -15,6 +16,7 @@ public:
 
     virtual VkDevice RHIGetVkDevice() const = 0;
     virtual VkPhysicalDevice RHIGetVkPhysicalDevice() const = 0;
+    virtual VmaAllocator RHIGetVmaAllocator() const = 0;
 
     virtual VkQueue RHIGetGraphicsVkQueue() const = 0;
     virtual VkQueue RHIGetComputeVkQueue() const = 0;
@@ -31,6 +33,9 @@ public:
     virtual VkExtent2D RHIGetSwapchainExtent() const = 0;
     virtual VkPresentModeKHR RHIGetSwapchainPresentMode() const = 0;
     virtual VkSurfaceFormatKHR RHIGetSwapchainSurfaceFormat() const = 0;
+
+    virtual VkSemaphore GetImageAcquiredSemaphore() const = 0;
+    virtual VkSemaphore GetRenderFinishedSemaphore() const = 0;
 
     virtual std::span<const char*> GetValidationExtensions() = 0;
     virtual std::span<const char*> GetInstanceExtensions() = 0;

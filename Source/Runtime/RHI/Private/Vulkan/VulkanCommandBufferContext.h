@@ -12,10 +12,10 @@ struct FVulkanCommandBufferPool;
 
 struct FVulkanCommandBufferPayload
 {
-    VkPipelineStageFlags2 PipelineStage = VK_PIPELINE_STAGE_2_NONE_KHR;
-
     std::vector<VkSemaphore> WaitSemaphores;
     std::vector<VkSemaphore> SignalSemaphores;
+    std::vector<VkPipelineStageFlags2> WaitStageMasks;
+    std::vector<VkPipelineStageFlags2> SignalStageMasks;
     std::vector<FVulkanCommandBuffer*> CommandBuffers;
     uint64_t TimelineSemaphoreValue;
 
@@ -53,10 +53,10 @@ public:
     void EndPayload();
     void Finalize(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
 
-    void AddWaitSemaphore(VkSemaphore WaitSemaphore);
-    void AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores);
-    void AddSignalSemaphore(VkSemaphore ReadySemaphore);
-    void AddSignalSemaphore(std::span<VkSemaphore> ReadySemaphores);
+    void AddWaitSemaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
+    void AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);
+    void AddSignalSemaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask);
+    void AddSignalSemaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMasks);
 
 private:
     std::vector<FVulkanCommandBufferPayload*> Payloads; // todo: std_shared_ptr for memory leak
