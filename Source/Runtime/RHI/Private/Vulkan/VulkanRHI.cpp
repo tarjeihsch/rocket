@@ -190,7 +190,12 @@ void CVulkanRHI::Tick(float DeltaTime)
     FFGTextureRef RenderTargetRef = FrameGraph.CreateTexture(RenderTargetDesc, RenderTargetViewDesc);
 
     FFGPass& DrawPass = FrameGraph.AddPass("Draw", nullptr);
+    DrawPass.Flags = EFGPassFlags::Graphics;
     DrawPass.AddColorAttachment(&RenderTargetRef);
+    DrawPass.Callback = [&](FRHICommandList& CmdList)
+    {
+
+    };
 
     FFGPass& PresentPass = FrameGraph.AddPass("Present", nullptr);
     PresentPass.AddSampledTexture(&RenderTargetRef);

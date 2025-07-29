@@ -199,12 +199,17 @@ FFrameGraph::~FFrameGraph()
 {
 }
 
-FFGPass& FFrameGraph::AddPass(const char* DebugName, std::function<void(FRHICommandList& CmdList)>&& Callback)
+FFGPass &FFrameGraph::AddPass(const char *DebugName, std::function<void(FRHICommandList &CmdList)> &&Callback)
 {
-    FFGPass Pass = { DebugName };
+    FFGPass Pass = {DebugName};
     Pass.Callback = Callback;
     Passes.push_back(Pass);
     return Passes.back();
+}
+
+void FFrameGraph::Analyze()
+{
+
 }
 
 void FFrameGraph::Execute()
@@ -260,6 +265,8 @@ void FFrameGraph::Execute()
             }
         }
 
+        std::vector<VkImageView> ImageViews;
+
         for (FFGResourceUsage& WriteUsage : Pass.Writes)
         {
             if (WriteUsage.Resource->IsTexture())
@@ -306,6 +313,26 @@ void FFrameGraph::Execute()
                     TextureRef->CurrentAccessFlags = NewAccess;
                     TextureRef->CurrentPipelineStageFlags = NewStage;
                 }
+
+                if (NewAccess == VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT || NewAccess == VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+                {
+                    ImageViews.push_back(TextureRef->View->View);
+                }
+            }
+
+            if ((Pass.Flags & EFGPassFlags::Graphics) == EFGPassFlags::Graphics)
+            {
+                CommandList.Enqueue<FVulkanCommandBeginRendering>(ImageViews);
+            }
+
+            if (Pass.Callback)
+            {
+                Pass.Callback(CommandList);
+            }
+
+            if ((Pass.Flags & EFGPassFlags::Graphics) == EFGPassFlags::Graphics)
+            {
+                CommandList.Enqueue<FVulkanCommandEndRendering>();
             }
         }
 

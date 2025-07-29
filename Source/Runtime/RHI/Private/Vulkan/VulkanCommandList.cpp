@@ -18,7 +18,7 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<VkImageView> ImageVi
         ColorAttachmentInfos[Index].imageLayout      = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         ColorAttachmentInfos[Index].loadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
         ColorAttachmentInfos[Index].storeOp          = VK_ATTACHMENT_STORE_OP_STORE;
-        ColorAttachmentInfos[Index].clearValue.color = {{ 1, 1, 0, 1 }};
+        ColorAttachmentInfos[Index].clearValue.color = {{ 0, 0, 0, 1 }};
     }
 
     VkRenderingInfo RenderingInfo = {};
@@ -30,7 +30,21 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<VkImageView> ImageVi
     RenderingInfo.renderArea.extent.width  = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
     RenderingInfo.renderArea.extent.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
 
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
+    viewport.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = {};
+    scissor.offset = { 0, 0 };
+    scissor.extent = GetVulkanRHIMinimal()->RHIGetSwapchainExtent();
+
     VulkanRHI::vkCmdBeginRendering(CommandBuffer, &RenderingInfo);
+    VulkanRHI::vkCmdSetViewport(CommandBuffer, 0, 1, &viewport);
+    VulkanRHI::vkCmdSetScissor(CommandBuffer, 0, 1, &scissor);
 }
 
 void FVulkanCommandListContext::RHIEndRendering()

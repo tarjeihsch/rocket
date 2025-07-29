@@ -158,6 +158,8 @@ public:
     ~FFrameGraph();
 
     FFGPass& AddPass(const char* DebugName, std::function<void(FRHICommandList& CmdList)>&& Callback);
+
+    void Analyze();
     void Execute();
 
     FFGTextureRef CreateTexture(FRHITextureDesc InTextureDesc, FRHITextureViewDesc InTextureViewDesc);
@@ -168,6 +170,7 @@ public:
 
 private:
     std::vector<FFGPass> Passes;
+    std::vector<FVulkanTextureView> TextureViews;
 
 private:
     FVulkanDevice& m_Device;
