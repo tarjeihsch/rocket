@@ -183,22 +183,19 @@ void CVulkanRHI::Tick(float DeltaTime)
 
     FFrameGraph FrameGraph(*Device);
 
-    FRHITextureDesc RenderTargetDesc = FRHITextureDesc::Create2D(VkExtent3D(1280, 720, 1), VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, ERHITextureFlags::Unmanaged);
+    FRHITextureDesc RenderTargetDesc = FRHITextureDesc::Create2D(VkExtent3D(1280, 720, 1), VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, ERHITextureFlags::Transient);
     FRHITextureViewDesc RenderTargetViewDesc = FRHITextureViewDesc::Create2D(VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
     FFGTextureRef BackBufferRef = FrameGraph.ImportTexture(Viewport->GetBackBufferTexture());
     FFGTextureRef RenderTargetRef = FrameGraph.CreateTexture(RenderTargetDesc, RenderTargetViewDesc);
 
     FFGPass& DrawPass = FrameGraph.AddPass("Draw", nullptr);
-    DrawPass.Flags = EFGPassFlags::Graphics;
-    DrawPass.AddColorAttachment(&RenderTargetRef);
     DrawPass.Callback = [&](FRHICommandList& CmdList)
     {
 
     };
 
     FFGPass& PresentPass = FrameGraph.AddPass("Present", nullptr);
-    PresentPass.AddSampledTexture(&RenderTargetRef);
     PresentPass.AddPresentSrc(&BackBufferRef);
 
     FrameGraph.Execute();

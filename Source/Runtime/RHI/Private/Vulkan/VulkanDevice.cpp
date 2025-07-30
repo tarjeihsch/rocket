@@ -7,8 +7,61 @@
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "Assert.h"
 
+void FFGScratchAllocator::CreateScratchAllocator()
+{
+    VkResult Result = VK_SUCCESS;
+
+    VkPhysicalDeviceMemoryProperties MemoryProperties;
+    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(Device.GetVkPhysicalDevice(), &MemoryProperties);
+
+    // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
+    // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
+    uint32_t MemoryTypeBits = 0xFFFFFFFF;
+    uint32_t TypeIndex = UINT32_MAX;
+
+    for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
+    {
+        if ((MemoryTypeBits & (1 << Index)) && (MemoryProperties.memoryTypes[Index].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+        {
+            TypeIndex = Index;
+            break;
+        }
+    }
+
+    RK_ASSERT(TypeIndex != UINT32_MAX);
+
+    VkMemoryAllocateInfo AllocInfo = {};
+    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    AllocInfo.allocationSize = Size;
+    AllocInfo.memoryTypeIndex = TypeIndex;
+
+    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
+
+    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
+    BlockCreateInfo.size = VK_WHOLE_SIZE;
+    BlockCreateInfo.flags = 0;
+
+    Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to create virtual block.");
+}
+
+void FFGScratchAllocator::DestroyScratchAllocator()
+{
+    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
+    vmaClearVirtualBlock(VirtualMemory);
+    vmaDestroyVirtualBlock(VirtualMemory);
+}
+
+void FFGScratchAllocator::ResetScratchAllocator()
+{
+    vmaClearVirtualBlock(VirtualMemory);
+    Offset = 0;
+}
+
+
 FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
-    : PhysicalDevice(InPhysicalDevice), TextureScratchAllocator(*this, 32ull * 1024 * 1024), BufferScratchAllocator(*this, 32ull * 1024 * 1024)
+    : PhysicalDevice(InPhysicalDevice)
 {
     Initialize();
 }
@@ -25,8 +78,8 @@ void FVulkanDevice::WaitUntilIdle() const
 
 void FVulkanDevice::GC()
 {
-    GetTextureScratchAllocator()->ResetScratchAllocator();
-    GetBufferScratchAllocator()->ResetScratchAllocator();
+    TextureScratchAllocator->ResetScratchAllocator();
+    BufferScratchAllocator->ResetScratchAllocator();
 }
 
 void FVulkanDevice::Initialize()
@@ -94,11 +147,11 @@ void FVulkanDevice::Initialize()
     LoadVulkanDeviceFunc(GetVkDevice());
 
     VmaVulkanFunctions VmaFuncs = CreateVmaFuncTable();
-	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
-	AllocatorCreateInfo.physicalDevice = PhysicalDevice;
-	AllocatorCreateInfo.device = Device;
-	AllocatorCreateInfo.instance = GetVulkanRHIMinimal()->RHIGetVkInstance();
-	AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    VmaAllocatorCreateInfo AllocatorCreateInfo = {};
+    AllocatorCreateInfo.physicalDevice = PhysicalDevice;
+    AllocatorCreateInfo.device = Device;
+    AllocatorCreateInfo.instance = GetVulkanRHIMinimal()->RHIGetVkInstance();
+    AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     AllocatorCreateInfo.pVulkanFunctions = &VmaFuncs;
 
 	Result = vmaCreateAllocator(&AllocatorCreateInfo, &Allocator);
@@ -118,8 +171,11 @@ void FVulkanDevice::Initialize()
     DescriptorManager = new VulkanDescriptorManager(*this);
     ResourceManager = new VulkanResourceManager(*this);
 
-    TextureScratchAllocator.CreateScratchAllocator();
-    BufferScratchAllocator.CreateScratchAllocator();
+    TextureScratchAllocator = new FFGScratchAllocator(*this, 32ull * 1024 * 1024);
+    BufferScratchAllocator = new FFGScratchAllocator(*this, 32ull * 1024 * 1024);
+
+    TextureScratchAllocator->CreateScratchAllocator();
+    BufferScratchAllocator->CreateScratchAllocator();
 }
 
 void FVulkanDevice::Shutdown()
@@ -128,9 +184,12 @@ void FVulkanDevice::Shutdown()
     delete DescriptorManager;
     delete ResourceManager;
 
-	Queues.clear();
+    Queues.clear();
 
-	vmaDestroyAllocator(Allocator);
+    TextureScratchAllocator->DestroyScratchAllocator();
+    BufferScratchAllocator->DestroyScratchAllocator();
+
+    vmaDestroyAllocator(Allocator);
     VulkanRHI::vkDestroyDevice(Device, nullptr);
 }
 

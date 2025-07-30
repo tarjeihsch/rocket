@@ -13,6 +13,25 @@ class VulkanPipelineManager;
 class VulkanDescriptorManager;
 class VulkanResourceManager;
 
+struct FFGScratchAllocator
+{
+    FVulkanDevice& Device;
+
+    FFGScratchAllocator(FVulkanDevice& InDevice, VkDeviceSize InSize)
+        : Device(InDevice), Size(InSize)
+    {
+    }
+
+    VmaVirtualBlock VirtualMemory = nullptr;
+    VkDeviceMemory PhysicalMemory = nullptr;
+    VkDeviceSize Offset = 0;
+    VkDeviceSize Size = 0;
+
+    void CreateScratchAllocator();
+    void DestroyScratchAllocator();
+    void ResetScratchAllocator();
+};
+
 class FVulkanDevice
 {
 private:
@@ -39,8 +58,8 @@ public:
     inline VulkanDescriptorManager* GetDescriptorManager() const;
     inline VulkanResourceManager* GetResourceManager() const;
 
-    inline FFGScratchAllocator *GetTextureScratchAllocator();
-    inline FFGScratchAllocator *GetBufferScratchAllocator();
+    inline FFGScratchAllocator *GetTextureScratchAllocator() const;
+    inline FFGScratchAllocator *GetBufferScratchAllocator() const;
 
     void GC();
 
@@ -54,8 +73,8 @@ private:
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
     std::vector<std::unique_ptr<FVulkanQueue>> Queues;
 
-    FFGScratchAllocator TextureScratchAllocator;
-    FFGScratchAllocator BufferScratchAllocator;
+    FFGScratchAllocator* TextureScratchAllocator;
+    FFGScratchAllocator* BufferScratchAllocator;
 
     VulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
@@ -97,12 +116,12 @@ inline VulkanResourceManager *FVulkanDevice::GetResourceManager() const
     return ResourceManager;
 }
 
-inline FFGScratchAllocator *FVulkanDevice::GetTextureScratchAllocator()
+inline FFGScratchAllocator *FVulkanDevice::GetTextureScratchAllocator() const
 {
-    return &TextureScratchAllocator;
+    return TextureScratchAllocator;
 }
 
-inline FFGScratchAllocator *FVulkanDevice::GetBufferScratchAllocator()
+inline FFGScratchAllocator *FVulkanDevice::GetBufferScratchAllocator() const
 {
-    return &BufferScratchAllocator;
+    return BufferScratchAllocator;
 }

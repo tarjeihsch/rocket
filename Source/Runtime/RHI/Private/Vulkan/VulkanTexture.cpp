@@ -17,6 +17,7 @@ FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc)
 FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc, VkImage InImage)
     : Device(InDevice), Desc(InDesc), Image(InImage), Allocation(nullptr)
 {
+    assert(Desc.Flags != ERHITextureFlags::Unknown);
 }
 
 FVulkanTexture::~FVulkanTexture()
@@ -33,41 +34,30 @@ void FVulkanTexture::Alloc()
 {
     VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(Desc.Extent, Desc.Format, Desc.Usage);
 
-    VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
-    RK_ASSERT(Result == VK_SUCCESS);
-
-    if ((Desc.Flags & ERHITextureFlags::Unmanaged) == ERHITextureFlags::Unmanaged)
+    if ((Desc.Flags & ERHITextureFlags::Transient) == ERHITextureFlags::Transient)
     {
-        VkMemoryRequirements MemoryRequirements;
-        VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), Image, &MemoryRequirements);
-
-        VmaVirtualAllocationCreateInfo AllocInfo = {};
-        AllocInfo.size = MemoryRequirements.size;
-        AllocInfo.alignment = MemoryRequirements.alignment;
-
-        VmaVirtualAllocation Allocation;
-        VkDeviceSize Offset;
-        Result = vmaVirtualAllocate(Desc.VirtualMemory, &AllocInfo, &Allocation, &Offset);
+        VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
+        RK_ASSERT(Result == VK_SUCCESS);
     }
-    else
+    else if ((Desc.Flags & ERHITextureFlags::Persistent) == ERHITextureFlags::Persistent)
     {
         // We own the allocation, allocate a persistent image
         VmaAllocationCreateInfo AllocationCreateInfo = {};
         AllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-        Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
+        VkResult Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
         RK_ASSERT(Result == VK_SUCCESS);
     }
 }
 
 void FVulkanTexture::Free()
 {
-    if ((Desc.Flags & ERHITextureFlags::Unmanaged) == ERHITextureFlags::Unmanaged)
+    if ((Desc.Flags & ERHITextureFlags::Transient) == ERHITextureFlags::Transient)
     {
         // Only destroy handle, memory will be freed externally
         VulkanRHI::vkDestroyImage(Device.GetVkDevice(), Image, nullptr);
     }
-    else
+    else if ((Desc.Flags & ERHITextureFlags::Persistent) == ERHITextureFlags::Persistent)
     {
         // We own the allocation, free memory
         vmaDestroyImage(Device.GetVmaAllocator(), Image, Allocation);

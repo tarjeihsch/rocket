@@ -132,25 +132,6 @@ struct FFGPass
     void AddPresentSrc(FFGResourceRef* Resource);
 };
 
-struct FFGScratchAllocator
-{
-    FVulkanDevice& Device;
-
-    FFGScratchAllocator(FVulkanDevice& InDevice, VkDeviceSize InSize)
-        : Device(InDevice), Size(InSize)
-    {
-    }
-
-    VmaVirtualBlock VirtualMemory = nullptr;
-    VkDeviceMemory PhysicalMemory = nullptr;
-    VkDeviceSize Offset = 0;
-    VkDeviceSize Size = 0;
-
-    void CreateScratchAllocator();
-    void DestroyScratchAllocator();
-    void ResetScratchAllocator();
-};
-
 class FFrameGraph
 {
 public:

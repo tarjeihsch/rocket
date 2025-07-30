@@ -58,8 +58,6 @@ FFGTextureRef::FFGTextureRef()
 
 FFGTextureRef FFrameGraph::CreateTexture(FRHITextureDesc InTextureDesc, FRHITextureViewDesc InTextureViewDesc)
 {
-    InTextureDesc.VirtualMemory = m_Device.GetTextureScratchAllocator()->VirtualMemory;
-
     FVulkanTexture* Texture = new FVulkanTexture(m_Device, InTextureDesc);
 
     VkMemoryRequirements MemoryRequirements;
@@ -136,58 +134,6 @@ void FFGPass::AddTransferSrc(FFGResourceRef *Resource)
 void FFGPass::AddPresentSrc(FFGResourceRef *Resource)
 {
     Writes.push_back({Resource, EFGAccessType::Present });
-}
-
-void FFGScratchAllocator::CreateScratchAllocator()
-{
-    VkResult Result = VK_SUCCESS;
-
-    VkPhysicalDeviceMemoryProperties MemoryProperties;
-    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(Device.GetVkPhysicalDevice(), &MemoryProperties);
-
-    // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
-    // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
-    uint32_t MemoryTypeBits = 0xFFFFFFFF;
-    uint32_t TypeIndex = UINT32_MAX;
-
-    for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
-    {
-        if ((MemoryTypeBits & (1 << Index)) && (MemoryProperties.memoryTypes[Index].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
-        {
-            TypeIndex = Index;
-            break;
-        }
-    }
-
-    RK_ASSERT(TypeIndex != UINT32_MAX);
-
-    VkMemoryAllocateInfo AllocInfo = {};
-    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    AllocInfo.allocationSize = Size;
-    AllocInfo.memoryTypeIndex = TypeIndex;
-
-    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
-
-    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
-    BlockCreateInfo.size = VK_WHOLE_SIZE;
-    BlockCreateInfo.flags = 0;
-
-    Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create virtual block.");
-}
-
-void FFGScratchAllocator::DestroyScratchAllocator()
-{
-    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
-    vmaClearVirtualBlock(VirtualMemory);
-    vmaDestroyVirtualBlock(VirtualMemory);
-}
-
-void FFGScratchAllocator::ResetScratchAllocator()
-{
-    vmaClearVirtualBlock(VirtualMemory);
-    Offset = 0;
 }
 
 FFrameGraph::FFrameGraph(FVulkanDevice &p_Device)

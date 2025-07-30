@@ -1,16 +1,20 @@
 #pragma once
 
-#include <cstdint>
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
 enum class ERHITextureFlags : uint8_t
 {
-    None = 0,
+    Unknown = 0,
 
-    Transient = 1 << 0,
+    // Long-lived object with default VMA allocator
+    Persistent = 1 << 0,
 
-    Unmanaged = 1 << 1,
+    // Short-lived object with custom allocator
+    Transient = 1 << 1,
+
+    // Memory will be managed externally
+    Unmanaged = 1 << 2,
 };
 
 inline ERHITextureFlags operator|(ERHITextureFlags Lhs, ERHITextureFlags Rhs) { return static_cast<ERHITextureFlags>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
@@ -68,7 +72,6 @@ struct FRHITextureDesc
     uint32_t MipLevels;
     uint32_t ArrayLayers;
     VkSampleCountFlagBits SampleCountFlags;
-    VmaVirtualBlock VirtualMemory;
 
     static FRHITextureDesc Create2D(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags Usage, ERHITextureFlags Flags)
     {
