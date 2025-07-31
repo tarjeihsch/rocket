@@ -32,6 +32,7 @@ target_link_libraries(Engine
     PUBLIC Rocket::Window
     PUBLIC Rocket::Scene
     PRIVATE Rocket::RHI
+    PRIVATE Rocket::RenderCore
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

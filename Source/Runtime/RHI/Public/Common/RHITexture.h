@@ -1,44 +1,81 @@
 #pragma once
+#include <cstdint>
 
-#include <vulkan/vulkan_core.h>
-#include <vma/vk_mem_alloc.h>
-
-enum class ERHITextureFlags : uint8_t
-{
-    Unknown = 0,
-
-    // Long-lived object with default VMA allocator
-    Persistent = 1 << 0,
-
-    // Short-lived object with custom allocator
-    Transient = 1 << 1,
-
-    // Memory will be managed externally
-    Unmanaged = 1 << 2,
-};
-
-inline ERHITextureFlags operator|(ERHITextureFlags Lhs, ERHITextureFlags Rhs) { return static_cast<ERHITextureFlags>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline ERHITextureFlags operator&(ERHITextureFlags Lhs, ERHITextureFlags Rhs) { return static_cast<ERHITextureFlags>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
-
+enum class ERHIResourceMemory : uint8_t;
 enum class ERHITextureUsage : uint8_t
 {
     None = 0,
-
     Present = 1 << 0, // VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT (indirectly used for presentation via swapchain)
-
     Color = 1 << 1, // VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-
     Depth = 1 << 2, // VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-
     Stencil = 1 << 3, // VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT (used with stencil aspects)
-
     CopySrc = 1 << 4, // VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-
     CopyDst = 1 << 5, // VK_IMAGE_USAGE_TRANSFER_DST_BIT
-
     SRV = 1 << 6, // VK_IMAGE_USAGE_SAMPLED_BIT
-
     UAV = 1 << 7  // VK_IMAGE_USAGE_STORAGE_BIT
+};
+
+enum class ERHITextureLayout : uint8_t
+{
+    Undefined,           // Initial undefined state
+    General,             // Read/Write by shader (UAV)
+    ColorAttachment,     // Render target
+    DepthStencil,        // Depth/stencil usage
+    DepthReadOnly,       // Shader read-only depth
+    ShaderReadOnly,      // Sampled image
+    TransferSrc,         // Copy from
+    TransferDst,         // Copy to
+    Present              // Swapchain presentation
+};
+
+enum class ERHIResourceAccess : uint16_t
+{
+    None = 0,
+
+    // GPU Shader Access
+    ShaderSampledRead         = 1 << 0,  // SRV: sampled image
+    ShaderStorageRead         = 1 << 1,  // UAV read
+    ShaderStorageWrite        = 1 << 2,  // UAV write
+    InputAttachmentRead       = 1 << 3,  // Vulkan subpass input
+
+    // Transfer Operations
+    TransferRead              = 1 << 4,
+    TransferWrite             = 1 << 5,
+
+    // Attachment Writes
+    ColorAttachmentWrite      = 1 << 6,
+    DepthStencilAttachmentWrite = 1 << 7,
+
+    // CPU Access (optional)
+    HostRead                  = 1 << 8,
+    HostWrite                 = 1 << 9,
+
+    Presentation = 1 << 10,
+};
+
+enum class ERHIPipelineStage : uint16_t
+{
+    None              = 0,
+    TopOfPipe         = 1 << 0,
+    VertexShader      = 1 << 1,
+    FragmentShader    = 1 << 2,
+    ComputeShader     = 1 << 3,
+    Transfer          = 1 << 4,
+    ColorAttachment   = 1 << 5,
+    DepthStencil      = 1 << 6,
+    BottomOfPipe      = 1 << 7,
+};
+
+enum class ERHITextureFormat
+{
+    Invalid = 0,
+    B8G8R8A8_SRGB,
+};
+
+enum class ERHITextureAspect
+{
+    None = 0,
+    Color
 };
 
 inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
@@ -46,54 +83,44 @@ inline ERHITextureUsage operator&(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { 
 
 struct FRHITextureDesc
 {
-    //union
-    //{
-    //    uint32_t Extent[2];
-    //} Tex2D;
+    union
+    {
+        uint32_t Extent[2];
+    } Tex2D;
 
-    //ERHITextureFlags Flags;
-    //ERHITextureUsage Usage;
+    ERHIResourceMemory Memory;
+    ERHITextureFormat Format;
+    ERHITextureUsage Usage;
+    ERHITextureLayout Layout;
+    uint32_t MipLevel;
+    uint32_t LayerCount;
+    uint32_t SampleCount;
 
-    //static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHITextureUsage Usage, ERHITextureFlags InFlags)
-    //{
-    //    FRHITextureDesc Desc = {};
-    //    Desc.Tex2D.Extent[0] = SizeX;
-    //    Desc.Tex2D.Extent[1] = SizeY;
-    //    Desc.Flags = InFlags;
-    //    Desc.Usage = Usage;
-    //    return Desc;
-    //}
-
-    VkExtent3D Extent;
-    VkImageUsageFlags Usage;
-    VkFormat Format;
-    VkImageLayout Layout;
-    ERHITextureFlags Flags;
-    uint32_t MipLevels;
-    uint32_t ArrayLayers;
-    VkSampleCountFlagBits SampleCountFlags;
-
-    static FRHITextureDesc Create2D(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags Usage, ERHITextureFlags Flags)
+    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceMemory InMemory, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout Layout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
     {
         FRHITextureDesc Desc = {};
-        Desc.Extent = Extent;
-        Desc.Usage = Usage;
+        Desc.Tex2D.Extent[0] = SizeX;
+        Desc.Tex2D.Extent[1] = SizeY;
         Desc.Format = Format;
-        Desc.Flags = Flags;
+        Desc.Memory = InMemory;
+        Desc.MipLevel = MipLevel;
+        Desc.Usage = Usage;
+        Desc.Layout = Layout;
+        Desc.SampleCount = SampleCount;
         return Desc;
     }
 };
 
 struct FRHITextureViewDesc
 {
-    VkFormat Format;
-    VkImageAspectFlags AspectFlags;
+    ERHITextureFormat Format = ERHITextureFormat::Invalid;
+    ERHITextureAspect Aspect = ERHITextureAspect::None;
 
-    static FRHITextureViewDesc Create2D(VkFormat Format, VkImageAspectFlags AspectFlags)
+    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect)
     {
         FRHITextureViewDesc Desc = {};
         Desc.Format = Format;
-        Desc.AspectFlags = AspectFlags;
+        Desc.Aspect = Aspect;
         return Desc;
     }
 };
@@ -103,9 +130,18 @@ struct FRHITexture
     virtual ~FRHITexture() = default;
 
     virtual const FRHITextureDesc& RHIGetTextureDesc() const = 0;
+    virtual void* GetHandle() const = 0;
+
+    ERHITextureLayout CurrentLayout = ERHITextureLayout::Undefined;
+    ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
+    ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
+    uint32_t CurrentQueueFamilyIndex = ~(0U);
 };
 
 struct FRHITextureView
 {
     virtual ~FRHITextureView() = default;
+
+    virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
+    virtual void* GetHandle() const = 0;
 };

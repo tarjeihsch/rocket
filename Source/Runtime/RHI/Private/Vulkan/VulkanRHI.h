@@ -4,6 +4,8 @@
 
 #include "vector"
 
+struct FRHITextureView;
+struct FRHITextureAttachment;
 class FVulkanDevice;
 class FVulkanViewport;
 class FFrameGraph;
@@ -14,7 +16,7 @@ public:
     // IRHI interface
     virtual void Init() override;
     virtual void Shutdown() override;
-    virtual void Tick(float DeltaTime) override;
+    virtual void EndFrame() override;
 
     [[nodiscard]] virtual const char* GetName() const override;
     [[nodiscard]] virtual const char* GetVersion() const override;
@@ -22,7 +24,16 @@ public:
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
     virtual void RHIWaitUntilIdle() const override;
-    virtual FRHITexture* RHICreateTexture(FRHITextureDesc& Desc) const override;
+    virtual uint64_t GetFrameCounter() const noexcept;
+    virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
+    virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const override;
+    virtual IRHICommandListContext* GetCommandListContext() const override;
+    virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> ColorAttachments) override;
+    virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) override;
+    virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) override;
+    virtual void RHICmdDraw(FRHICommandList& RHICmdList, std::span<FMeshDrawCommand> DrawCommands) override;
+    virtual FRHITexture* RHIGetBackBufferRenderTarget() const override;
+    // ~IRHI interface
 
     // IVulkanRHIMinimal interface
     virtual VkInstance RHIGetVkInstance() const override;
@@ -67,4 +78,6 @@ private:
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;
     std::vector<const char*> PhysicalDeviceExtensions;
+
+    uint64_t FrameCounter;
 };

@@ -8,7 +8,7 @@
 #include "VulkanDevice.h"
 #include "VulkanViewport.h"
 #include "VulkanCommandBufferContext.h"
-#include "VulkanFrameGraph.h"
+#include "../../Public/Common/FrameGraph.h"
 #include "Logger.h"
 #include "Assert.h"
 #include "VulkanPipeline.h"
@@ -149,6 +149,8 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
+
+    FrameCounter = 0;
 }
 
 void CVulkanRHI::Shutdown()
@@ -164,45 +166,21 @@ void CVulkanRHI::Shutdown()
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
-// todo: Store FrameGraph as a FRAME object
-// use FrameGraphBuilder to create passes at different places in code.
-// Add each framegraphbuilder to a vector and loop through all the builds at FrameGraph::Execute.
-// This way, we can add a framegraphbuilder that is for Graphics only, or for Present only.
-
-void CVulkanRHI::Tick(float DeltaTime)
+void CVulkanRHI::EndFrame()
 {
-    GetDevice()->GetGraphicsQueue()->Await();
-
-    Device->GC();
-
-    if (!Viewport->Acquire())
-    {
-        RK_LOG_ERROR("Failed to acquire a new swapchain image.");
-        return;
-    }
-
-    FFrameGraph FrameGraph(*Device);
-
-    FRHITextureDesc RenderTargetDesc = FRHITextureDesc::Create2D(VkExtent3D(1280, 720, 1), VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, ERHITextureFlags::Transient);
-    FRHITextureViewDesc RenderTargetViewDesc = FRHITextureViewDesc::Create2D(VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    FFGTextureRef BackBufferRef = FrameGraph.ImportTexture(Viewport->GetBackBufferTexture());
-    FFGTextureRef RenderTargetRef = FrameGraph.CreateTexture(RenderTargetDesc, RenderTargetViewDesc);
-
-    FFGPass& DrawPass = FrameGraph.AddPass("Draw", nullptr);
-    DrawPass.Callback = [&](FRHICommandList& CmdList)
-    {
-
-    };
-
-    FFGPass& PresentPass = FrameGraph.AddPass("Present", nullptr);
-    PresentPass.AddPresentSrc(&BackBufferRef);
-
-    FrameGraph.Execute();
-
     Device->GetDescriptorManager()->Flush();
 
+    Device->GetGraphicsQueue()->Submit();
+
     Viewport->Present();
+
+    Device->GetGraphicsQueue()->Wait();
+
+    FrameCounter++;
+
+    Viewport->AcquireNextImageIndex();
+
+    Device->GC();
 }
 
 const char* CVulkanRHI::GetName() const
@@ -230,9 +208,48 @@ void CVulkanRHI::RHIWaitUntilIdle() const
     Device->WaitUntilIdle();
 }
 
-FRHITexture * CVulkanRHI::RHICreateTexture(FRHITextureDesc &Desc) const
+uint64_t CVulkanRHI::GetFrameCounter() const noexcept
 {
-    return nullptr;
+    return FrameCounter;
+}
+
+FRHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
+{
+    return new FVulkanTexture(*Device, Desc);
+}
+FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const
+{
+    return new FVulkanTextureView(*Device, TextureViewDesc, static_cast<VkImage>(Texture->GetHandle()));
+}
+
+IRHICommandListContext* CVulkanRHI::GetCommandListContext() const
+{
+    return Device->GetCommandListContext();
+}
+
+void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments)
+{
+    RHICmdList->Enqueue<FVulkanCommandBeginRendering>(ColorAttachments);
+}
+
+void CVulkanRHI::RHICmdEndRendering(FRHICommandList *RHICmdList)
+{
+    RHICmdList->Enqueue<FVulkanCommandEndRendering>();
+}
+
+void CVulkanRHI::RHICmdPipelineBarrier(FRHICommandList *RHICmdList, FRHITexture *Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex, uint32_t DstQueueFamilyIndex)
+{
+    RHICmdList->Enqueue<FVulkanCommandPipelineBarrier>(Texture, SrcLayout, DstLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
+}
+
+void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, std::span<FMeshDrawCommand> DrawCommands)
+{
+    RHICmdList.Enqueue<FVulkanCommandDraw>(DrawCommands);
+}
+
+FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
+{
+    return Viewport->GetBackBufferTexture();
 }
 
 VkInstance CVulkanRHI::RHIGetVkInstance() const

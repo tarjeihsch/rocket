@@ -5,6 +5,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
+class FSceneRenderer;
 class PScene;
 class IWindow;
 class AssetManager;
@@ -16,31 +17,32 @@ static constexpr uint32_t VIEWPORT_HEIGHT = 720;
 class CEngine
 {
 public:
-	void Start();
-	void Run();
-	void Stop();
+    void Start();
+    void Run();
+    void Stop();
 
-	inline PScene* GetScene();
-	inline IWindow* GetWindow();
+    inline PScene* GetScene();
+    inline IWindow* GetWindow();
     inline AssetManager* GetAssetManager();
-	inline friend CEngine* GetEngine();
+    inline friend CEngine* GetEngine();
 
 private:
-	PScene* Scene;
-	IWindow* Window;
+    PScene* Scene;
+    IWindow* Window;
     AssetManager* mAssetManager;
+    FSceneRenderer* SceneRenderer;
 
-	static CEngine* GEngine;
+    static CEngine* GEngine;
 };
 
 inline PScene* CEngine::GetScene()
 {
-	return Scene;
+    return Scene;
 }
 
 inline IWindow* CEngine::GetWindow()
 {
-	return Window;
+    return Window;
 }
 
 AssetManager *CEngine::GetAssetManager()
@@ -50,5 +52,5 @@ AssetManager *CEngine::GetAssetManager()
 
 inline CEngine* GetEngine()
 {
-	return CEngine::GEngine;
+    return CEngine::GEngine;
 }

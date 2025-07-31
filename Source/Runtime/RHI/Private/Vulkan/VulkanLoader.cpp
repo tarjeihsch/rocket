@@ -69,89 +69,111 @@ VkImageViewCreateInfo VulkanRHI::GetVkImageViewCreateInfo(VkImage Image, VkForma
     return ImageViewCreateInfo;
 }
 
-VkImageUsageFlags VulkanRHI::RHITextureUsageToVkImageUsageFlags(ERHITextureUsage Usage)
+VkImageLayout GetVulkanLayout(ERHITextureLayout layout)
 {
-    VkImageUsageFlags Flags = 0;
-
-    if ((Usage & ERHITextureUsage::Color) == ERHITextureUsage::Color)
+    switch (layout)
     {
-        Flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    case ERHITextureLayout::Undefined:         return VK_IMAGE_LAYOUT_UNDEFINED;
+    case ERHITextureLayout::General:           return VK_IMAGE_LAYOUT_GENERAL;
+    case ERHITextureLayout::ColorAttachment:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case ERHITextureLayout::DepthStencil:      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case ERHITextureLayout::DepthReadOnly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case ERHITextureLayout::ShaderReadOnly:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    case ERHITextureLayout::TransferSrc:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    case ERHITextureLayout::TransferDst:       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case ERHITextureLayout::Present:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    default:                                    return VK_IMAGE_LAYOUT_UNDEFINED;
     }
-
-    if ((Usage & ERHITextureUsage::Depth) == ERHITextureUsage::Depth || (Usage & ERHITextureUsage::Stencil) == ERHITextureUsage::Stencil)
-    {
-        Flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-
-    if ((Usage & ERHITextureUsage::CopySrc) == ERHITextureUsage::CopySrc)
-    {
-        Flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    if ((Usage & ERHITextureUsage::CopyDst) == ERHITextureUsage::CopyDst)
-    {
-        Flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-
-    if ((Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
-    {
-        Flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    }
-
-    if ((Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
-    {
-        Flags |= VK_IMAGE_USAGE_STORAGE_BIT;
-    }
-
-    // Swapchain images (Present) are not user-created, but we include this for completeness.
-    if ((Usage & ERHITextureUsage::Present) == ERHITextureUsage::Present)
-    {
-        // Swapchain images usually come with COLOR_ATTACHMENT | TRANSFER_DST
-        Flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        Flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
-
-    return Flags;
 }
 
-VkImageLayout VulkanRHI::RHITextureUsageToVkImageLayout(ERHITextureUsage Usage)
+template<typename TEnum>
+inline bool EnumHasAnyFlags(TEnum Value, TEnum Flags)
 {
-    if ((Usage & ERHITextureUsage::Present) == ERHITextureUsage::Present)
-    {
-        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    }
+    using T = std::underlying_type_t<TEnum>;
+    return (static_cast<T>(Value) & static_cast<T>(Flags)) != 0;
+}
 
-    if ((Usage & ERHITextureUsage::Color) == ERHITextureUsage::Color)
-    {
-        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
+VkAccessFlags VulkanRHI::GetVulkanAccess(ERHIResourceAccess access)
+{
+    VkAccessFlags flags = 0;
 
-    if ((Usage & ERHITextureUsage::Depth) == ERHITextureUsage::Depth || (Usage & ERHITextureUsage::Stencil) == ERHITextureUsage::Stencil)
-    {
-        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderSampledRead)) flags |= VK_ACCESS_SHADER_READ_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderStorageRead)) flags |= VK_ACCESS_SHADER_READ_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderStorageWrite)) flags |= VK_ACCESS_SHADER_WRITE_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::InputAttachmentRead)) flags |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::TransferRead)) flags |= VK_ACCESS_TRANSFER_READ_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::TransferWrite)) flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::ColorAttachmentWrite)) flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::DepthStencilAttachmentWrite)) flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::HostRead)) flags |= VK_ACCESS_HOST_READ_BIT;
+    if (EnumHasAnyFlags(access, ERHIResourceAccess::HostWrite)) flags |= VK_ACCESS_HOST_WRITE_BIT;
 
-    if ((Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
-    {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
+    return flags;
+}
 
-    if ((Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
-    {
-        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
 
-    if ((Usage & ERHITextureUsage::CopyDst) == ERHITextureUsage::CopyDst)
+VkImageLayout VulkanRHI::GetVulkanLayout(ERHITextureLayout layout)
+{
+    switch (layout)
     {
-        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case ERHITextureLayout::Undefined:         return VK_IMAGE_LAYOUT_UNDEFINED;
+    case ERHITextureLayout::General:           return VK_IMAGE_LAYOUT_GENERAL;
+    case ERHITextureLayout::ColorAttachment:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case ERHITextureLayout::DepthStencil:      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case ERHITextureLayout::DepthReadOnly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case ERHITextureLayout::ShaderReadOnly:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    case ERHITextureLayout::TransferSrc:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    case ERHITextureLayout::TransferDst:       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case ERHITextureLayout::Present:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    default:                                   return VK_IMAGE_LAYOUT_UNDEFINED;
     }
+}
 
-    if ((Usage & ERHITextureUsage::CopySrc) == ERHITextureUsage::CopySrc)
-    {
-        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    }
+VkPipelineStageFlags VulkanRHI::GetVulkanPipelineStage(ERHIPipelineStage stage)
+{
+    VkPipelineStageFlags flags = 0;
 
-    return VK_IMAGE_LAYOUT_UNDEFINED; // Fallback or initialization
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::TopOfPipe))       flags |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::VertexShader))    flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::FragmentShader))  flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::ComputeShader))   flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::Transfer))        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::ColorAttachment)) flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::DepthStencil))    flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                                                            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    if (EnumHasAnyFlags(stage, ERHIPipelineStage::BottomOfPipe))    flags |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    return flags;
+}
+
+VkImageUsageFlags VulkanRHI::GetVulkanUsage(ERHITextureUsage usage)
+{
+    VkImageUsageFlags flags = 0;
+
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::Present))  flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Used indirectly
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::Color))    flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::Depth))    flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::Stencil))  flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::CopySrc))  flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::CopyDst))  flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::SRV))      flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (EnumHasAnyFlags(usage, ERHITextureUsage::UAV))      flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+    return flags;
+}
+
+VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
+{
+    if (Format == ERHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
+
+    return VK_FORMAT_UNDEFINED;
+}
+
+VkImageAspectFlags VulkanRHI::GetVkAspect(ERHITextureAspect Aspect)
+{
+    if (Aspect == ERHITextureAspect::Color) { return VK_IMAGE_ASPECT_COLOR_BIT; }
+
+    return VK_IMAGE_ASPECT_NONE;
 }
 
 void LoadVulkanLibrary()

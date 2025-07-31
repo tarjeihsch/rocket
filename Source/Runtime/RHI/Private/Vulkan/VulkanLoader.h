@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VulkanTexture.h"
 #include "Common/RHITexture.h"
 
 #include <vulkan/vulkan_core.h>
@@ -157,8 +158,12 @@ namespace VulkanRHI
     VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
     VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
 
-    VkImageUsageFlags RHITextureUsageToVkImageUsageFlags(ERHITextureUsage Usage);
-    VkImageLayout RHITextureUsageToVkImageLayout(ERHITextureUsage Usage);
+    VkImageLayout GetVulkanLayout(ERHITextureLayout layout);
+    VkAccessFlags GetVulkanAccess(ERHIResourceAccess access);
+    VkPipelineStageFlags GetVulkanPipelineStage(ERHIPipelineStage stage);
+    VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
+    VkFormat GetVkFormat(ERHITextureFormat Format);
+    VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
 }
 
 void LoadVulkanLibrary();

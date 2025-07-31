@@ -13,7 +13,7 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
     Surface(nullptr),
-    CurrentImageIndex(UINT32_MAX),
+    CurrentImageIndex(0),
     SemaphoreIndex(0),
     NumAcquireCalls(0),
     NumPresentCalls(0)
@@ -58,6 +58,8 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     }
 
     CreateSwapchain();
+
+    AcquireNextImageIndex();
 }
 
 FVulkanViewport::~FVulkanViewport()
@@ -136,8 +138,8 @@ void FVulkanViewport::CreateSwapchain()
 
     for (uint32_t Index = 0; Index < ImageCount; ++Index)
     {
-        FRHITextureDesc Desc = FRHITextureDesc::Create2D(VkExtent3D(Extent.width, Extent.height, 1), VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, ERHITextureFlags::Unmanaged);
-        FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceMemory::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
+        FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color);
         BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
         BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Images[Index]));
     }
@@ -159,7 +161,7 @@ void FVulkanViewport::CreateSwapchain()
     }
 }
 
-bool FVulkanViewport::Acquire()
+bool FVulkanViewport::AcquireNextImageIndex()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
@@ -169,7 +171,6 @@ bool FVulkanViewport::Acquire()
     {
         DestroySwapchain();
         CreateSwapchain();
-        return false;
     }
 
     ++NumAcquireCalls;

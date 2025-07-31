@@ -1,13 +1,27 @@
 #pragma once
 
+#include "RHITexture.h"
+
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <vector>
+
+struct FRHITexture;
+struct FMeshDrawCommand;
 
 class IRHICommandListContext
 {
 public:
     virtual ~IRHICommandListContext() = default;
+
+    virtual IRHICommandListContext& GetLowestLevelContext() { return *this; }
+
     virtual void RHISetScissorRect(uint32_t X, uint32_t Y) = 0;
+    virtual void RHIDraw(std::span<FMeshDrawCommand> DrawCommands) = 0;
+    virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess,ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;
+    virtual void RHIBeginRendering(std::span<FRHITextureView*> TextureViews) = 0;
+    virtual void RHIEndRendering() = 0;
 };
 
 struct FRHICommandBase
@@ -42,8 +56,9 @@ class FRHICommandList
 {
 public:
     explicit FRHICommandList(IRHICommandListContext& InContext)
-        : Context(&InContext) {}
-    virtual ~FRHICommandList() = default;
+        : Context(&InContext)
+    {
+    }
 
     inline IRHICommandListContext& GetContext() const
     {
@@ -73,7 +88,8 @@ private:
 class FRHICommandListImmediate : public FRHICommandList
 {
 public:
-    explicit FRHICommandListImmediate(IRHICommandListContext& Ctx) : FRHICommandList(Ctx), Context(Ctx)
+    explicit FRHICommandListImmediate(IRHICommandListContext& Ctx)
+        : FRHICommandList(Ctx), Context(Ctx)
     {
     }
 
@@ -83,6 +99,7 @@ public:
         TCmd cmd(std::forward<TArgs>(args)...);
         cmd.Execute_Internal(Context);
     }
+
 private:
     IRHICommandListContext& Context;
 };
@@ -101,16 +118,5 @@ public:
             Command->Dispatch(Context);
             Pointer += Command->ByteSize;
         }
-    }
-};
-
-struct FRHICommandSetScissorRect : TRHICommand<FRHICommandSetScissorRect>
-{
-    uint32_t X = 0, Y = 0;
-    FRHICommandSetScissorRect(uint32_t InX, uint32_t InY) : X(InX), Y(InY) {}
-
-    void Execute_Internal(IRHICommandListContext& Ctx)
-    {
-        Ctx.RHISetScissorRect(X, Y);
     }
 };

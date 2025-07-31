@@ -1,42 +1,107 @@
 #pragma once
 
-#include "VulkanFrameGraph.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandList.h"
 
-#include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan_core.h>
 
-#include <memory>
 #include <vector>
 
+class FVulkanCommandListContext;
+class FVulkanDevice;
+struct FVulkanTexture;
 class FVulkanQueue;
 class VulkanPipelineManager;
 class VulkanDescriptorManager;
 class VulkanResourceManager;
 
-struct FFGScratchAllocator
+struct FTransientResourceAllocator
 {
-    FVulkanDevice& Device;
-
-    FFGScratchAllocator(FVulkanDevice& InDevice, VkDeviceSize InSize)
+    FTransientResourceAllocator(FVulkanDevice& InDevice, VkDeviceSize InSize)
         : Device(InDevice), Size(InSize)
     {
+        Init();
     }
 
+    ~FTransientResourceAllocator()
+    {
+        Shutdown();
+    }
+
+    void Reset();
+    void Alloc(VkImage Image);
+
+private:
+    void Init();
+    void Shutdown();
+
+private:
     VmaVirtualBlock VirtualMemory = nullptr;
     VkDeviceMemory PhysicalMemory = nullptr;
     VkDeviceSize Offset = 0;
     VkDeviceSize Size = 0;
 
-    void CreateScratchAllocator();
-    void DestroyScratchAllocator();
-    void ResetScratchAllocator();
+    uint64_t TotalAllocations;
+    uint64_t CurrentAllocations;
+
+    FVulkanDevice& Device;
+};
+
+class FDeferredDeletionQueue
+{
+public:
+    FDeferredDeletionQueue(FVulkanDevice& InDevice);
+    ~FDeferredDeletionQueue();
+
+    enum class EType
+    {
+        Buffer,
+        BufferView,
+        Image,
+        ImageView,
+        Pipeline,
+        PipelineLayout,
+        DescriptorSetLayout,
+        Sampler,
+        Semaphore,
+        ShaderModule,
+    };
+
+    template <typename T>
+    inline void EnqueueResource(EType Type, T Handle)
+    {
+        static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
+        EnqueueGenericResource(Type, (uint64_t)Handle, nullptr);
+    }
+
+    template <typename T>
+    inline void EnqueueResourceWithAllocation(EType Type, T Handle, VmaAllocation Allocation)
+    {
+        static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
+        EnqueueGenericResource(Type, (uint64_t)Handle, Allocation);
+    }
+
+    void EnqueueGenericResource(EType Type, uint64_t Handle, VmaAllocation Allocation);
+
+    void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
+
+private:
+    struct FEntry
+    {
+        EType StructureType;
+        uint64_t FrameNumber;
+        uint64_t Handle;
+        VmaAllocation Allocation;
+    };
+
+    std::vector<FEntry> Entries;
+
+    FVulkanDevice& Device;
 };
 
 class FVulkanDevice
 {
-private:
-    VkPhysicalDevice PhysicalDevice;
-
 public:
     FVulkanDevice(VkPhysicalDevice InPhysicalDevice);
     ~FVulkanDevice();
@@ -56,10 +121,10 @@ public:
 
     inline VulkanPipelineManager* GetPipelineManager() const;
     inline VulkanDescriptorManager* GetDescriptorManager() const;
-    inline VulkanResourceManager* GetResourceManager() const;
 
-    inline FFGScratchAllocator *GetTextureScratchAllocator() const;
-    inline FFGScratchAllocator *GetBufferScratchAllocator() const;
+    inline FTransientResourceAllocator* GetTransientResourceAllocator() const;
+    inline FVulkanCommandListContext* GetCommandListContext() const;
+    inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
 
     void GC();
 
@@ -71,14 +136,21 @@ private:
     VkDevice Device;
     VmaAllocator Allocator;
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
-    std::vector<std::unique_ptr<FVulkanQueue>> Queues;
 
-    FFGScratchAllocator* TextureScratchAllocator;
-    FFGScratchAllocator* BufferScratchAllocator;
+    std::vector<FVulkanQueue*> Queues;
 
     VulkanPipelineManager* PipelineManager;
+
     VulkanDescriptorManager* DescriptorManager;
-    VulkanResourceManager* ResourceManager;
+
+    FDeferredDeletionQueue* DeferredDeletionQueue;
+
+    FVulkanCommandListContext* CommandListContext;
+
+    FTransientResourceAllocator* TransientResourceAllocator;
+
+private:
+    VkPhysicalDevice PhysicalDevice;
 };
 
 inline VkDevice FVulkanDevice::GetVkDevice() const
@@ -101,27 +173,27 @@ inline VkDebugUtilsMessengerEXT FVulkanDevice::GetVkDebugUtilsMessenger() const
     return DebugUtilsMessenger;
 }
 
-inline VulkanPipelineManager *FVulkanDevice::GetPipelineManager() const
+inline VulkanPipelineManager* FVulkanDevice::GetPipelineManager() const
 {
     return PipelineManager;
 }
 
-inline VulkanDescriptorManager *FVulkanDevice::GetDescriptorManager() const
+inline VulkanDescriptorManager* FVulkanDevice::GetDescriptorManager() const
 {
     return DescriptorManager;
 }
 
-inline VulkanResourceManager *FVulkanDevice::GetResourceManager() const
+inline FTransientResourceAllocator *FVulkanDevice::GetTransientResourceAllocator() const
 {
-    return ResourceManager;
+    return TransientResourceAllocator;
 }
 
-inline FFGScratchAllocator *FVulkanDevice::GetTextureScratchAllocator() const
+inline FVulkanCommandListContext *FVulkanDevice::GetCommandListContext() const
 {
-    return TextureScratchAllocator;
+    return CommandListContext;
 }
 
-inline FFGScratchAllocator *FVulkanDevice::GetBufferScratchAllocator() const
+inline FDeferredDeletionQueue *FVulkanDevice::GetDeferredDeletionQueue() const
 {
-    return BufferScratchAllocator;
+    return DeferredDeletionQueue;
 }

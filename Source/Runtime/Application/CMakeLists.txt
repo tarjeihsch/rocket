@@ -27,13 +27,12 @@ target_include_directories(Application
     PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
 )
 
-target_link_options(Application PRIVATE "LINKER:--whole-archive")
 target_link_libraries(Application
-    PUBLIC Rocket::Engine
-    PRIVATE ${PRIMARY_MODULE_NAME}
+        PUBLIC Rocket::Engine
+        PRIVATE $<$<CONFIG:Debug>:-Wl,--whole-archive>
+        PRIVATE Game
+        PRIVATE $<$<CONFIG:Debug>:-Wl,--no-whole-archive>
 )
-target_link_options(Application PRIVATE "LINKER:--no-whole-archive")
-
 add_custom_command(
     TARGET Application POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json

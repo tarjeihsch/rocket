@@ -17,7 +17,9 @@ public:
     FVulkanViewport(FVulkanDevice& InDevice);
     ~FVulkanViewport();
 
-    bool Acquire();
+    void Tick();
+
+    bool AcquireNextImageIndex();
     void Present();
 
     inline VkSurfaceKHR GetVkSurface() const;

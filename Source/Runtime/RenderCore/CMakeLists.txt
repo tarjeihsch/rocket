@@ -29,6 +29,8 @@ target_include_directories(RenderCore
 
 target_link_libraries(RenderCore
     PUBLIC Rocket::Core
+    PUBLIC Rocket::Scene
+    PRIVATE Rocket::RHI
 )
 
 set_target_properties(RenderCore PROPERTIES POSITION_INDEPENDENT_CODE ON)

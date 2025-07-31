@@ -6,6 +6,9 @@
 #include "VulkanCommandBufferContext.h"
 #include "VulkanDevice.h"
 #include "Assert.h"
+#include "VulkanCommandList.h"
+
+#include <cstring>
 
 FVulkanQueue::FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex)
     : Device(InDevice),
@@ -23,29 +26,11 @@ FVulkanQueue::~FVulkanQueue()
     Shutdown();
 }
 
-static VkPipelineStageFlags2 ChooseWaitStage(VkQueueFlags flags)
-{
-    // Graphics queues support every graphics pipeline stage.
-    if (flags & VK_QUEUE_GRAPHICS_BIT)
-    {
-        return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
-    }
-
-    // Pure compute queues have no graphics stages, but always support COMPUTE_SHADER.
-    if (flags & VK_QUEUE_COMPUTE_BIT)
-    {
-        return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
-    }
-
-    // Transfer‑only (or “DMA”) queues support no shader stages at all.
-    // TOP_OF_PIPE is valid for every queue family, so it’s the safe fallback.
-    return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR;
-}
-
-void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
+void FVulkanQueue::Submit()
 {
     std::vector<FVulkanCommandBufferPayload*> Payloads;
-    Context.Finalize(Payloads);
+    auto CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
+    CmdListContext->Finalize(Payloads);
 
     for (FVulkanCommandBufferPayload* Payload : Payloads)
     {
@@ -55,13 +40,13 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
         if (bIsFirst)
         {
             Payload->WaitSemaphores.push_back(GetVulkanRHIMinimal()->GetImageAcquiredSemaphore());
-            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR);
+            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR); // todo: these are not correct
         }
 
         if (bIsLast)
         {
             Payload->SignalSemaphores.push_back(GetVulkanRHIMinimal()->GetRenderFinishedSemaphore());
-            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR);
+            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR); // todo: these are not correct
         }
 
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;
@@ -120,7 +105,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
     }
 }
 
-void FVulkanQueue::Await()
+void FVulkanQueue::Wait()
 {
     if (SubmissionQueue.empty())
     {
@@ -147,9 +132,14 @@ void FVulkanQueue::Await()
     delete Payload;
 }
 
+FVulkanCommandBufferPool* FVulkanQueue::GetCommandBufferPool() const
+{
+    return CommandBufferPool;
+}
+
 void FVulkanQueue::Init()
 {
-    VulkanRHI::vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
+    VulkanRHI::vkGetDeviceQueue(Device .GetVkDevice(), QueueFamilyIndex, 0, &Handle);
 
     VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
     TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -161,7 +151,7 @@ void FVulkanQueue::Init()
     SemaphoreCreateInfo.pNext = &TimelineSemaphoreCreateInfo;
     VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
 
-    CommandBufferPool = std::make_unique<FVulkanCommandBufferPool>(Device, *this);
+    CommandBufferPool = new FVulkanCommandBufferPool(Device, *this);
 }
 
 void FVulkanQueue::Shutdown()
@@ -173,7 +163,7 @@ void FVulkanQueue::Shutdown()
         delete Payload;
     }
 
-    CommandBufferPool = nullptr;
+    delete CommandBufferPool;
 
     VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), TimelineSemaphore, nullptr);
 }

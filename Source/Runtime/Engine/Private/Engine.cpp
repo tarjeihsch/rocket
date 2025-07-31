@@ -7,6 +7,7 @@
 #include "Logger.h"
 #include "Scene.h"
 #include "AssetManager.h"
+#include "SceneRenderer.h"
 
 CEngine* CEngine::GEngine = nullptr;
 
@@ -14,21 +15,23 @@ ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
 
 void CEngine::Start()
 {
-	GEngine = this;
+    GEngine = this;
 
-	FLogger::Init();
+    FLogger::Init();
 
-	SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
+    SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
 
-	Scene = new PScene();
+    Scene = new PScene();
 
-	SetRHIModule(ERHIInterfaceType::Vulkan);
+    SetRHIModule(ERHIInterfaceType::Vulkan);
 
     IWindow::Get()->CreateNativeWindow();
     GRHI->Init();
-	Scene->Init();
+    Scene->Init();
 
     mAssetManager = new AssetManager();
+
+    SceneRenderer = new FSceneRenderer();
 
 #if RK_PLATFORM_WINDOWS
     HMODULE GameLib = LoadLibraryA("Game.dll");
@@ -46,12 +49,12 @@ void CEngine::Start()
 
 void CEngine::Run()
 {
-	while (!IWindow::Get()->ShouldClose())
-	{
-		IWindow::Get()->Poll();
-
-        GRHI->Tick(0.0f);
-	}
+    while (!IWindow::Get()->ShouldClose())
+    {
+	IWindow::Get()->Poll();
+        SceneRenderer->Tick(Scene);
+        GRHI->EndFrame();
+    }
 }
 
 void CEngine::Stop()

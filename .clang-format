@@ -19,3 +19,13 @@ BinPackArguments: true
 # Optional: Avoid breaking after return types
 AlwaysBreakAfterReturnType: None
 AccessModifierOffset: -4
+
+# Keeps * and & next to the variable name
+PointerAlignment: Right
+ReferenceAlignment: Right
+
+# Prevents weird breaks between return type and name
+AlwaysBreakAfterDefinitionReturnType: None
+
+# Optional: Enforce alignment across declarations uniformly
+DerivePointerAlignment: false
