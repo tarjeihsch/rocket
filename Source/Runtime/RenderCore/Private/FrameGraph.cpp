@@ -1,17 +1,18 @@
-#include "Common/FrameGraph.h"
+#include "FrameGraph.h"
 
 #include "Common/RHI.h"
 #include "Common/RHICommandList.h"
 #include "Common/RHITexture.h"
-#include "Vulkan/VulkanCommandBuffer.h"
-#include "Vulkan/VulkanCommandBufferContext.h"
-#include "Vulkan/VulkanCommandList.h"
-#include "Vulkan/VulkanDevice.h"
-#include "Vulkan/VulkanQueue.h"
-#include "Vulkan/VulkanRHI.h"
-#include "Vulkan/VulkanRHIMinimal.h"
 
 #include <cassert>
+
+FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture *InHandle)
+    : FFGResourceRef(InAccess), Handle(InHandle)
+{
+    RTVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
+    SRVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
+    UAVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
+}
 
 void FFrameGraphPass::AddColorAttachment(FRHITexture* Resource)
 {

@@ -30,6 +30,7 @@ target_include_directories(RenderCore
 target_link_libraries(RenderCore
     PUBLIC Rocket::Core
     PUBLIC Rocket::Scene
+    PUBLIC Rocket::Asset
     PRIVATE Rocket::RHI
 )
 

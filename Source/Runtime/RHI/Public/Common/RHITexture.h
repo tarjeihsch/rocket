@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-enum class ERHIResourceMemory : uint8_t;
+enum class ERHIResourceLifetime : uint8_t;
 enum class ERHITextureUsage : uint8_t
 {
     None = 0,
@@ -88,7 +88,7 @@ struct FRHITextureDesc
         uint32_t Extent[2];
     } Tex2D;
 
-    ERHIResourceMemory Memory;
+    ERHIResourceLifetime Memory;
     ERHITextureFormat Format;
     ERHITextureUsage Usage;
     ERHITextureLayout Layout;
@@ -96,7 +96,7 @@ struct FRHITextureDesc
     uint32_t LayerCount;
     uint32_t SampleCount;
 
-    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceMemory InMemory, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout Layout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
+    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceLifetime InMemory, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout Layout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
     {
         FRHITextureDesc Desc = {};
         Desc.Tex2D.Extent[0] = SizeX;
@@ -107,20 +107,6 @@ struct FRHITextureDesc
         Desc.Usage = Usage;
         Desc.Layout = Layout;
         Desc.SampleCount = SampleCount;
-        return Desc;
-    }
-};
-
-struct FRHITextureViewDesc
-{
-    ERHITextureFormat Format = ERHITextureFormat::Invalid;
-    ERHITextureAspect Aspect = ERHITextureAspect::None;
-
-    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect)
-    {
-        FRHITextureViewDesc Desc = {};
-        Desc.Format = Format;
-        Desc.Aspect = Aspect;
         return Desc;
     }
 };
@@ -136,6 +122,20 @@ struct FRHITexture
     ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
     ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
     uint32_t CurrentQueueFamilyIndex = ~(0U);
+};
+
+struct FRHITextureViewDesc
+{
+    ERHITextureFormat Format = ERHITextureFormat::Invalid;
+    ERHITextureAspect Aspect = ERHITextureAspect::None;
+
+    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect)
+    {
+        FRHITextureViewDesc Desc = {};
+        Desc.Format = Format;
+        Desc.Aspect = Aspect;
+        return Desc;
+    }
 };
 
 struct FRHITextureView

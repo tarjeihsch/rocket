@@ -1,12 +1,17 @@
-#include "VulkanPipeline.h"
+#include "FVulkanPipeline.h"
 
 #include "Assert.h"
 #include "Logger.h"
-#include "VulkanLoader.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanDevice.h"
+#include "VulkanLoader.h"
 
 #include <vulkan/vulkan_core.h>
+
+#ifdef RK_PLATFORM_LINUX
+    #include <dlfcn.h>
+    #include <dxc/dxcapi.h>
+#endif
 
 static constexpr uint64_t FNV_OFFSET = 1469598103934665603ull;
 static constexpr uint64_t FNV_PRIME  = 1099511628211ull;
@@ -29,11 +34,6 @@ static inline void HashObject(uint64_t& pHash, const TObject& pObject)
     auto bytes = std::as_bytes(std::span<const TObject>(&pObject, 1));
     HashBytes(pHash, bytes.data(), bytes.size());
 }
-
-#ifdef RK_PLATFORM_LINUX
-    #include <dlfcn.h>
-    #include <dxc/dxcapi.h>
-#endif
 
 VulkanShader::VulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
     : Device(pDevice), Stage(pStage), Module(VK_NULL_HANDLE), Version(0)
@@ -70,11 +70,11 @@ void VulkanShader::Destroy()
     Version = 0;
 }
 
-VulkanShaderRef VulkanShaderRef::Capture(VulkanShader* pShader)
+VulkanShaderRef VulkanShaderRef::Capture(VulkanShader *pShader)
 {
     VulkanShaderRef Ref;
     Ref.Shader = pShader;
-    Ref.Snapshot = pShader->Version;
+    Ref.SnapshotVersion = pShader->Version;
     return Ref;
 }
 
@@ -97,18 +97,22 @@ VulkanPipelineSpecification VulkanPipelineManager::MakeSpecification(VkPipelineL
     return Spec;
 }
 
-VkPipeline VulkanPipelineManager::GetPipeline(const VulkanPipelineSpecification &pSpec)
+FVulkanPipeline* VulkanPipelineManager::GetPipeline(const VulkanPipelineSpecification &pSpec)
 {
     const uint64_t Key = Hash(pSpec);
     if (auto It = Data.find(Key); It != Data.end())
     {
-        return It->second.Pipeline;
+        return It->second;
     }
 
     VkPipeline Pipeline = Compile(pSpec);
-    VulkanPipelineStateObject PSO = { pSpec.VertexShader, pSpec.FragmentShader, Pipeline };
+    FVulkanPipeline* PSO = new FVulkanPipeline(
+        pSpec.VertexShader,
+        pSpec.FragmentShader,
+        Pipeline
+    );
     Data.emplace(Key, PSO);
-    return Pipeline;
+    return PSO;
 }
 
 void VulkanPipelineManager::GC()
@@ -117,21 +121,21 @@ void VulkanPipelineManager::GC()
     {
         bool Stale = false;
 
-        const VulkanPipelineStateObject& PSO = It->second;
+        const FVulkanPipeline& PSO = *It->second;
 
-        if (PSO.VertexShader.Snapshot != PSO.VertexShader.Shader->Version)
+        if (PSO.VertexShaderRef.SnapshotVersion != PSO.VertexShaderRef.Shader->Version)
         {
             Stale = true;
         }
 
-        if (PSO.FragmentShader.Snapshot != PSO.FragmentShader.Shader->Version)
+        if (PSO.FragmentShaderRef.SnapshotVersion != PSO.FragmentShaderRef.Shader->Version)
         {
             Stale = true;
         }
 
         if (Stale)
         {
-            VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), It->second.Pipeline, nullptr);
+            VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), It->second->Pipeline, nullptr);
             It = Data.erase(It);
         }
         else
@@ -145,9 +149,9 @@ void VulkanPipelineManager::Invalidate()
 {
     for (auto& KV : Data)
     {
-        VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), KV.second.Pipeline, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second.VertexShader.Shader->Module, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second.FragmentShader.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), KV.second->Pipeline, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->VertexShaderRef.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->FragmentShaderRef.Shader->Module, nullptr);
     }
     Data.clear();
 }
@@ -264,9 +268,9 @@ uint64_t VulkanPipelineManager::Hash(const VulkanPipelineSpecification &pSpec)
 
     HashObject(Hash, pSpec.Layout);
     HashObject(Hash, pSpec.VertexShader.Shader);
-    HashObject(Hash, pSpec.VertexShader.Snapshot);
+    HashObject(Hash, pSpec.VertexShader.SnapshotVersion);
     HashObject(Hash, pSpec.FragmentShader.Shader);
-    HashObject(Hash, pSpec.FragmentShader.Snapshot);
+    HashObject(Hash, pSpec.FragmentShader.SnapshotVersion);
     HashObject(Hash, pSpec.DepthFormat);
     HashObject(Hash, pSpec.StencilFormat);
     HashObject(Hash, pSpec.Topology);

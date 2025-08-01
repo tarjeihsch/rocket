@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Common/RHIPipeline.h"
 #include "vulkan/vulkan_core.h"
 
 #include <cstdint>
@@ -27,7 +28,7 @@ private:
 struct VulkanShaderRef
 {
     VulkanShader *Shader; // this is a memory-leak
-    uint32_t Snapshot = 0;
+    uint32_t SnapshotVersion = 0;
 
     static VulkanShaderRef Capture(VulkanShader *pShader);
 };
@@ -52,10 +53,25 @@ struct VulkanPipelineSpecification
     uint8_t DepthWriteEnable;
 };
 
-struct VulkanPipelineStateObject
+struct FVulkanPipeline : FRHIPipeline
 {
-    VulkanShaderRef VertexShader;
-    VulkanShaderRef FragmentShader;
+    FVulkanPipeline(
+        VulkanShaderRef InVS,
+        VulkanShaderRef InFS,
+        VkPipeline InPipeline)
+        : VertexShaderRef(std::move(InVS))
+        , FragmentShaderRef(std::move(InFS))
+        , Pipeline(InPipeline)
+    {
+    }
+
+    virtual void* GetHandle() const override
+    {
+        return Pipeline;;
+    }
+
+    VulkanShaderRef VertexShaderRef;
+    VulkanShaderRef FragmentShaderRef;
     VkPipeline Pipeline;
 };
 
@@ -69,7 +85,7 @@ public:
 
     static VulkanPipelineSpecification MakeSpecification(VkPipelineLayout pLayout, VulkanShader *pVertexShader, VulkanShader *pFragmentShader);
 
-    VkPipeline GetPipeline(const VulkanPipelineSpecification &pSpec);
+    FVulkanPipeline* GetPipeline(const VulkanPipelineSpecification &pSpec);
 
     void GC();
     void Invalidate();
@@ -81,5 +97,5 @@ private:
 private:
     FVulkanDevice& Device;
     VkPipelineCache DriverCache;
-    std::unordered_map<uint64_t, VulkanPipelineStateObject> Data;
+    std::unordered_map<uint64_t, FVulkanPipeline*> Data;
 };

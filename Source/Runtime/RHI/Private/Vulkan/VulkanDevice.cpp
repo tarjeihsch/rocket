@@ -1,12 +1,12 @@
 #include "VulkanDevice.h"
+#include "Assert.h"
+#include "FVulkanPipeline.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanCommandList.h"
+#include "VulkanDescriptorManager.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
-#include "VulkanPipeline.h"
-#include "VulkanDescriptorManager.h"
 #include "VulkanResourceManager.h"
-#include "Vulkan/VulkanRHIMinimal.h"
-#include "Assert.h"
-#include "VulkanCommandList.h"
 
 void FTransientResourceAllocator::Init()
 {
@@ -22,7 +22,7 @@ void FTransientResourceAllocator::Init()
 
     for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
     {
-        if ((MemoryTypeBits & (1 << Index)) && (MemoryProperties.memoryTypes[Index].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+        if ((MemoryTypeBits & (1 << Index)) && ((MemoryProperties.memoryTypes[Index].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)))
         {
             TypeIndex = Index;
             break;
@@ -38,6 +38,9 @@ void FTransientResourceAllocator::Init()
 
     Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
+
+    Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to map transient memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
     BlockCreateInfo.size = VK_WHOLE_SIZE;
@@ -60,10 +63,10 @@ void FTransientResourceAllocator::Reset()
     Offset = 0;
 }
 
-void FTransientResourceAllocator::Alloc(VkImage Image)
+void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
 {
     VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), Image, &MemoryRequirements);
+    VulkanRHI::vkGetImageMemoryRequirements(Device.GetVkDevice(), Image, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -71,15 +74,40 @@ void FTransientResourceAllocator::Alloc(VkImage Image)
 
     // We can safely throw away the allocation and offset info given by vmaVirtualAllocate, as we are resetting the entire allocator each frame.
     VmaVirtualAllocation Allocation;
-    VkDeviceSize Offset;
 
-    VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &Offset);
+    VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
-    VulkanRHI::vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), Image, PhysicalMemory, Offset);
+    VulkanRHI::vkBindImageMemory(Device.GetVkDevice(), Image, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
 }
+
+void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset)
+{
+    VkMemoryRequirements MemoryRequirements;
+    VulkanRHI::vkGetBufferMemoryRequirements(Device.GetVkDevice(), Buffer, &MemoryRequirements);
+
+    VmaVirtualAllocationCreateInfo AllocInfo = {};
+    AllocInfo.size = MemoryRequirements.size;
+    AllocInfo.alignment = MemoryRequirements.alignment;
+
+    // We can safely throw away the allocation and offset info given by vmaVirtualAllocate, as we are resetting the entire allocator each frame.
+    VmaVirtualAllocation Allocation;
+
+    VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
+    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
+    VulkanRHI::vkBindBufferMemory(Device.GetVkDevice(), Buffer, PhysicalMemory, OutOffset);
+
+    CurrentAllocations++;
+    TotalAllocations++;
+}
+
+void *FTransientResourceAllocator::GetMappedBasePtr() const
+{
+    return MappedBasePtr;
+}
+
 FDeferredDeletionQueue::FDeferredDeletionQueue(FVulkanDevice &InDevice) : Device(InDevice)
 {
 }
@@ -104,27 +132,25 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
 {
     for (auto It = Entries.begin(); It != Entries.end(); )
     {
-        if (It->FrameNumber <= CompletedFrameNumber)
+        if (It->FrameNumber > CompletedFrameNumber)
         {
-            switch (It->StructureType)
-            {
-            case EType::Image:
-                VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr);
-
-                if (It->Allocation != VK_NULL_HANDLE)
-                {
-                    vmaFreeMemory(Device.GetVmaAllocator(), It->Allocation);
-                }
-
-                break;
-            }
-
-            It = Entries.erase(It);
+            // Further defer destruction of objects that are in use
+            It++;
+            continue;
         }
-        else
+
+        switch (It->StructureType)
         {
-            ++It;
+        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
+        case EType::Buffer: VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr); break;
         }
+
+        if (It->Allocation != nullptr)
+        {
+            vmaFreeMemory(Device.GetVmaAllocator(), It->Allocation);
+        }
+
+        It = Entries.erase(It);
     }
 }
 
@@ -142,6 +168,11 @@ FVulkanDevice::~FVulkanDevice()
 void FVulkanDevice::WaitUntilIdle() const
 {
     VulkanRHI::vkDeviceWaitIdle(Device);
+}
+
+FVulkanCommandListContext *FVulkanDevice::GetImmediateCommandListContext() const
+{
+    return ImmediateCommandListContext;
 }
 
 void FVulkanDevice::GC()

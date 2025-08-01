@@ -20,19 +20,32 @@ inline ERHIBufferUsage operator&(ERHIBufferUsage Lhs, ERHIBufferUsage Rhs) { ret
 
 struct FRHIBufferDesc
 {
-    uint64_t SizeInBytes = 0;
+    uint64_t TotalSize = 0;
     uint32_t Stride = 0;
 
-    ERHIResourceMemory Memory = ERHIResourceMemory::DeviceLocal;
+    ERHIResourceLifetime Lifetime = ERHIResourceLifetime::Unknown;
     ERHIBufferUsage Usage = ERHIBufferUsage::Vertex;
+    ERHIResourceMemory Memory = ERHIResourceMemory::Unknown;
 
-    static FRHIBufferDesc Create(uint64_t InSize, uint32_t InStride, ERHIResourceMemory InMemory, ERHIBufferUsage InUsage)
+    static FRHIBufferDesc CreateStagingBuffer(uint64_t InSize, uint32_t InStride, ERHIResourceLifetime InLifetime, ERHIResourceMemory InMemory)
     {
         FRHIBufferDesc Desc = {};
-        Desc.SizeInBytes = InSize;
+        Desc.TotalSize = InSize;
         Desc.Stride = InStride;
+        Desc.Lifetime = InLifetime;
         Desc.Memory = InMemory;
-        Desc.Usage = InUsage;
+        Desc.Usage = ERHIBufferUsage::TransferSrc;
+        return Desc;
+    }
+
+    static FRHIBufferDesc CreateVertexBuffer(uint64_t InSize, uint32_t InStride, ERHIResourceLifetime InLifetime, ERHIResourceMemory InMemory)
+    {
+        FRHIBufferDesc Desc = {};
+        Desc.TotalSize = InSize;
+        Desc.Stride = InStride;
+        Desc.Lifetime = InLifetime;
+        Desc.Memory = InMemory;
+        Desc.Usage = ERHIBufferUsage::Vertex | ERHIBufferUsage::TransferDst;
         return Desc;
     }
 };
@@ -41,8 +54,10 @@ struct FRHIBuffer
 {
     virtual ~FRHIBuffer() = default;
 
-    virtual const FRHIBufferDesc& RHIGetBufferDesc() const = 0;
+    virtual const FRHIBufferDesc& GetBufferDesc() const = 0;
     virtual void* GetHandle() const = 0;
+
+    virtual void Map(const void* Data, uint64_t Size) = 0;
 
     ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
     ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;

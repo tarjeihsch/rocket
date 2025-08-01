@@ -2,12 +2,12 @@
 #include <dlfcn.h>
 #include "Engine.h"
 
+#include "AssetManager.h"
 #include "Common/RHI.h"
-#include "Window.h"
 #include "Logger.h"
 #include "Scene.h"
-#include "AssetManager.h"
 #include "SceneRenderer.h"
+#include "Window.h"
 
 CEngine* CEngine::GEngine = nullptr;
 
@@ -29,7 +29,7 @@ void CEngine::Start()
     GRHI->Init();
     Scene->Init();
 
-    mAssetManager = new AssetManager();
+    mAssetManager = new FAssetManager();
 
     SceneRenderer = new FSceneRenderer();
 

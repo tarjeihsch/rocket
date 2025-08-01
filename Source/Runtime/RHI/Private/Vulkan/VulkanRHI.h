@@ -27,7 +27,11 @@ public:
     virtual uint64_t GetFrameCounter() const noexcept;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
     virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const override;
+    virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const override;
+    virtual void RHIUploadBufferData(FRHIBuffer* Buffer, void* Data, uint64_t Size) override;
+    virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) override;
     virtual IRHICommandListContext* GetCommandListContext() const override;
+    virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) override;
     virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> ColorAttachments) override;
     virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) override;
     virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) override;

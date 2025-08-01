@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanTexture.h"
+#include "Common/RHIPipeline.h"
 #include "Common/RHITexture.h"
 
 #include <vulkan/vulkan_core.h>
@@ -141,11 +141,13 @@
     X(vkDestroyImage) \
     X(vkCmdCopyBuffer)
 
-#define VULKAN_ALL_FUNCTIONS(X) \
-    VULKAN_GLOBAL_FUNCTIONS(X) \
-    VULKAN_INSTANCE_FUNCTIONS(X) \
+#define VULKAN_ALL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+    VULKAN_GLOBAL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+    VULKAN_INSTANCE_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     VULKAN_DEVICE_FUNCTIONS(X)
 
+enum class ERHIResourceMemory;
+enum class ERHIBufferUsage : uint32_t;
 namespace VulkanRHI
 {
     // Opaque handle to dynamic library
@@ -157,6 +159,7 @@ namespace VulkanRHI
 
     VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
     VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
+    VkBufferCreateInfo GetVkBufferCreateInfo(uint64_t Size, VkBufferUsageFlags UsageFlags);
 
     VkImageLayout GetVulkanLayout(ERHITextureLayout layout);
     VkAccessFlags GetVulkanAccess(ERHIResourceAccess access);
@@ -164,6 +167,13 @@ namespace VulkanRHI
     VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
     VkFormat GetVkFormat(ERHITextureFormat Format);
     VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
+    VkFormat ToVkFormat(ERHIFormat Format);
+    VkPrimitiveTopology ToVkTopology(ERHIPrimitiveTopology Topology);
+    VkCullModeFlags ToVkCullMode(ERHICullMode Mode);
+    VkPolygonMode ToVkPolygonMode(ERHIPolygonMode Mode);
+    VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
+
+    VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
 }
 
 void LoadVulkanLibrary();

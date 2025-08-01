@@ -1,14 +1,20 @@
 #include "VulkanCommandList.h"
 
+#include "Common/Buffer.h"
+#include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanDevice.h"
-#include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
 
 FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
     : FVulkanCommandBufferContext(*InDevice.GetGraphicsQueue()->GetCommandBufferPool())
 {
+}
+
+void FVulkanCommandListContext::RHIBindPipeline(FRHIPipeline *Pipeline)
+{
+    VulkanRHI::vkCmdBindPipeline(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(Pipeline->GetHandle()));
 }
 
 void FVulkanCommandListContext::RHISetScissorRect(uint32_t X, uint32_t Y)
@@ -93,6 +99,16 @@ void FVulkanCommandListContext::RHIEndRendering()
     VulkanRHI::vkCmdEndRendering(GetCurrentCommandBuffer()->GetHandle());
 }
 
+void FVulkanCommandListContext::RHICopyBuffer(FRHIBuffer *Src, FRHIBuffer *Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize)
+{
+    VkBufferCopy BufferCopy = {};
+    BufferCopy.srcOffset = 0;
+    BufferCopy.dstOffset = 0;
+    BufferCopy.size = Src->GetBufferDesc().TotalSize;
+
+    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkBuffer>(Src->GetHandle()), reinterpret_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
+}
+
 void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
 {
     VkImageMemoryBarrier ImageMemoryBarrier = {};
@@ -111,11 +127,6 @@ void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout
     ImageMemoryBarrier.subresourceRange.layerCount = 1;
 
     VulkanRHI::vkCmdPipelineBarrier(GetCurrentCommandBuffer()->GetHandle(), SrcStage, DstStage, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
-}
-
-void FVulkanCommandListContext::RHIBindPipeline(VkPipelineBindPoint pPipelineBindPoint, VkPipeline pPipeline)
-{
-    VulkanRHI::vkCmdBindPipeline(GetCurrentCommandBuffer()->GetHandle(), pPipelineBindPoint, pPipeline);
 }
 
 void FVulkanCommandListContext::RHIBindVertexBuffer(VkBuffer pBuffer)
@@ -153,14 +164,4 @@ void FVulkanCommandListContext::RHISetScissor(int32_t p_OffsetX, int32_t p_Offse
 void FVulkanCommandListContext::RHIBindDescriptorSets(VkPipelineBindPoint p_PipelineBindPoint, VkPipelineLayout p_PipelineLayout, uint32_t p_FirstSet, uint32_t p_DescriptorSetCount, const VkDescriptorSet *p_DescriptorSets)
 {
     VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), p_PipelineBindPoint, p_PipelineLayout, p_FirstSet, p_DescriptorSetCount, p_DescriptorSets, 0, nullptr);
-}
-
-void FVulkanCommandListContext::RHICopyBuffer(VkBuffer p_StagingBuffer, VkBuffer p_Buffer)
-{
-    VkBufferCopy BufferCopy = {};
-    BufferCopy.srcOffset = 0;
-    BufferCopy.dstOffset = 0;
-    BufferCopy.size = 64ull * 1024 * 1024;
-
-    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), p_StagingBuffer, p_Buffer, 1, &BufferCopy);
 }

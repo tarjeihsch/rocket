@@ -1,11 +1,20 @@
 #include "SceneRenderer.h"
 
+#include "../Public/FrameGraph.h"
+#include "Buffer.h"
+#include "Common/RHI.h"
+#include "Common/RHICommandList.h"
+#include "Pipeline.h"
 #include "PrimitiveDrawInterface.h"
+#include "RenderTarget.h"
 #include "Scene.h"
 #include "StaticMesh.h"
-#include "Common/RHICommandList.h"
-#include "Common/FrameGraph.h"
-#include "Common/RHI.h"
+#include "Texture2D.h"
+
+void FSceneRenderer::Init()
+{
+
+}
 
 void FSceneRenderer::Tick(PScene* Scene)
 {
@@ -23,21 +32,28 @@ void FSceneRenderer::Tick(PScene* Scene)
 
     Scene->GetRegistry()->View<FStaticMeshComponent>([&](const FStaticMeshComponent& StaticMeshComponent)
     {
-        DrawCommands.push_back({ StaticMeshComponent.VertexBuffer, StaticMeshComponent.IndexBuffer });
+        DrawCommands.push_back({ StaticMeshComponent.Handle });
     });
 
-    std::unique_ptr<FRHITexture> RenderTarget(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(1280, 720, ERHIResourceMemory::Transient, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color, ERHITextureLayout::Undefined, 0, 0, 1)));
+    FVertexBuffer VertexBuffer = FVertexBuffer(1024);
+    FPipeline Pipeline = FPipeline("VertexShader.hlsl", "PixelShader.hlsl");
+    FRenderTarget RenderTarget = FRenderTarget(1280, 720);
+
+    std::vector<uint32_t> TestData = { 0xDEADBEEF, 0x12345678, 0xCAFEBABE, 0x0BADF00D };
+    uint64_t DataSize = TestData.size() * sizeof(uint32_t);
+    VertexBuffer.UploadDataBlocking(TestData.data(), DataSize);
 
     FFrameGraphBuilder Builder;
+
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
     {
+        GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
         GetRHI()->RHICmdDraw(RHICmdList, DrawCommands);
     });
-    DrawPass.AddColorAttachment(RenderTarget.get());
+    DrawPass.AddColorAttachment(RenderTarget.GetHandle());
 
     FFrameGraphPass& PresentPass = Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);
     PresentPass.AddPresentSrc(GetRHI()->RHIGetBackBufferRenderTarget());
 
     Builder.Execute();
-
 }

@@ -20,6 +20,7 @@ struct FVulkanTexture : FRHITexture
 
     VkImage Image;
     VmaAllocation Allocation;
+    uint64_t Offset;
 
     VkImageLayout ImageLayout;
     VkAccessFlags AccessFlags;

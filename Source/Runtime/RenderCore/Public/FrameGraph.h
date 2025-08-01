@@ -1,18 +1,19 @@
 #pragma once
 
-#include "RHI.h"
-#include "RHICommandList.h"
-#include "RHITexture.h"
-
-#include <functional>
-#include <vector>
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <vector>
 
-struct FRHITextureViewDesc;
-struct FRHITextureDesc;
+struct FRHIPipeline;
 struct FRHITexture;
+struct FRHITextureDesc;
+struct FRHITextureView;
+struct FRHITextureViewDesc;
+struct FRHIBuffer;
+struct FRHIBufferDesc;
 class FRHICommandList;
+enum class ERHIResourceAccess : uint16_t;
 
 enum class EFGPassFlags : uint8_t
 {
@@ -52,13 +53,7 @@ struct FFGResourceRef
 
 struct FFGTextureRef : FFGResourceRef
 {
-    FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture* InHandle)
-        : FFGResourceRef(InAccess), Handle(InHandle)
-    {
-        RTVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
-        SRVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
-        UAVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
-    }
+    FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture* InHandle);
 
     FRHITexture* Handle;
 
@@ -74,7 +69,12 @@ struct FFGTextureRef : FFGResourceRef
 
 struct FFGBufferRef : FFGResourceRef
 {
-    //FRHIBuffer* Handle;
+    FRHIBuffer* Handle;
+};
+
+struct FFGPipelineRef : FFGResourceRef
+{
+    FRHIPipeline* Handle;
 };
 
 struct FFrameGraphPass
@@ -86,9 +86,16 @@ struct FFrameGraphPass
     std::vector<FFGTextureRef> TextureReads;
     std::vector<FFGTextureRef> TextureWrites;
 
-    void AddTextureInput();
-    void AddTextureOutput();
+    std::vector<FFGBufferRef> BufferReads;
+    std::vector<FFGBufferRef> BufferWrites;
 
+    void AddTextureInput(FFGTextureRef TextureRef);
+    void AddTextureOutput(FFGTextureRef TextureRef);
+
+    void AddBufferInput(FFGBufferRef BufferRef);
+    void AddBufferOutput(FFGBufferRef BufferRef);
+
+    // todo: remove
     void AddColorAttachment(FRHITexture* Resource);
     void AddInputAttachment(FRHITexture* Resource);
     void AddSampledTexture(FRHITexture* Resource);

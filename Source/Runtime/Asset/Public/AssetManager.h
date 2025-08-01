@@ -1,55 +1,58 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
+#include <deque>
 #include <string>
+#include <vector>
 
-using AssetID = uint32_t;
-constexpr AssetID InvalidAssetID = 0xFFFFFFFFu;
+using FAssetID = uint32_t;
+constexpr FAssetID InvalidAssetID = 0xFFFFFFFFu;
 
-inline constexpr AssetID MakeAssetID(uint8_t pType, uint8_t pGeneration, uint16_t pIndex)
+inline constexpr FAssetID MakeAssetID(uint8_t pType, uint8_t pGeneration, uint16_t pIndex)
 {
-    return (AssetID(pType) << 24) | (AssetID(pGeneration) << 16) | pIndex;
+    return (FAssetID(pType) << 24) | (FAssetID(pGeneration) << 16) | pIndex;
 }
 
-inline constexpr uint8_t GetType(AssetID pAssetID) { return uint8_t(pAssetID >> 24); }
-inline constexpr uint8_t GetGeneration(AssetID pAssetID) { return uint8_t(pAssetID >> 16); }
-inline constexpr uint16_t GetIndex(AssetID pAssetID) { return uint16_t(pAssetID); }
+inline constexpr uint8_t GetType(FAssetID pAssetID) { return uint8_t(pAssetID >> 24); }
+inline constexpr uint8_t GetGeneration(FAssetID pAssetID) { return uint8_t(pAssetID >> 16); }
+inline constexpr uint16_t GetIndex(FAssetID pAssetID) { return uint16_t(pAssetID); }
 
 template<typename T>
-struct AssetHandle
+struct FAssetHandle
 {
-    AssetID ID = InvalidAssetID;
+    // TODO: Use DTOR to Free this asset
+
+    FAssetID ID = InvalidAssetID;
     bool IsValid() const { return ID != InvalidAssetID; }
 };
 
-struct AssetLoaderRequest
+struct FAssetLoaderRequest
 {
     std::string Path;
 };
 
 struct NoOptions {};
 
-template<typename T> struct AssetTag; // Specialized per asset type
-template<typename T> struct AssetDefaultOptions { using Type = NoOptions; }; // Default = no options
+template<typename T> struct TAssetTag; // Specialized per asset type
+template<typename T> struct TAssetDefaultOptions { using Type = NoOptions; }; // Default = no options
 
-template<typename T, typename Options = typename AssetDefaultOptions<T>::Type>
-struct AssetLoader; // Specializations must implement function: static T Load(Request, Options);
+template<typename T, typename Options = typename TAssetDefaultOptions<T>::Type>
+struct TAssetLoader; // Specializations must implement function: static T Load(Request, Options);
 
 template<typename T>
-struct AssetLoader<T, NoOptions>
+struct TAssetLoader<T, NoOptions>
 {
-    static T Load(const AssetLoaderRequest& Request);
+    static T Load(const FAssetLoaderRequest& Request);
 };
 
 template<typename T>
-using AssetOptionsT = typename AssetDefaultOptions<T>::Type;
+using AssetOptionsT = typename TAssetDefaultOptions<T>::Type;
 
 template<typename T>
-class AssetPool
+class FAssetPool
 {
 public:
-    AssetHandle<T> Alloc()
+    FAssetHandle<T> Alloc()
     {
         uint16_t Index;
         if (FreeList.empty())
@@ -64,10 +67,10 @@ public:
             FreeList.pop_back();
         }
 
-        return { MakeAssetID(AssetTag<T>::Value, Generations[Index], Index) };
+        return { MakeAssetID(TAssetTag<T>::Value, Generations[Index], Index) };
     }
 
-    void Free(AssetHandle<T> Handle)
+    void Free(FAssetHandle<T> Handle)
     {
         if (!Handle.IsValid())
         {
@@ -87,14 +90,14 @@ public:
         Items[Index] = T{};
     }
 
-    T* Get(AssetHandle<T> Handle)
+    T* Get(FAssetHandle<T> Handle)
     {
         const uint16_t Index = GetIndex(Handle.ID);
         const uint8_t Generation = GetGeneration(Handle.ID);
         return (Index < Items.size() && Generations[Index] == Generation) ? &Items[Index] : nullptr;
     }
 
-    const T* Get(AssetHandle<T> Handle) const
+    const T* Get(FAssetHandle<T> Handle) const
     {
         const uint16_t Index = GetIndex(Handle.ID);
         const uint8_t Generation = GetGeneration(Handle.ID);
@@ -102,40 +105,46 @@ public:
     }
 
 private:
-    std::vector<T> Items;
+    std::deque<T> Items;
     std::vector<uint8_t> Generations;
     std::vector<uint16_t> FreeList;
 };
 
-class AssetManager
+class FAssetManager
 {
 public:
     template<typename T, typename Options = AssetOptionsT<T>>
-    AssetHandle<T> Load(const AssetLoaderRequest& Request, const Options& opts = Options{})
+    FAssetHandle<T> Load(const FAssetLoaderRequest& Request, const Options& opts = Options{})
     {
         auto Handle = GetPool<T>().Alloc();
         T* Slot = GetPool<T>().Get(Handle);
-        *Slot = AssetLoader<T, Options>::Load(Request, opts);
+        *Slot = TAssetLoader<T, Options>::Load(Request, opts);
         return Handle;
     }
 
     template<typename T>
-    void Unload(AssetHandle<T> Handle)
+    void Unload(FAssetHandle<T> Handle)
     {
         GetPool<T>().Free(Handle);
     }
 
     template<typename T>
-    T* Get(AssetHandle<T> Handle)
+    T* GetAsset(FAssetHandle<T> Handle)
     {
         return GetPool<T>().Get(Handle);
     }
 
+    static FAssetManager& Get()
+    {
+        static FAssetManager Instance;
+        return Instance;
+    }
+
 private:
     template<typename T>
-    AssetPool<T>& GetPool()
+    FAssetPool<T>& GetPool()
     {
-        static AssetPool<T> Pool;
+        static FAssetPool<T> Pool;
         return Pool;
     }
 };

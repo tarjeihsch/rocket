@@ -30,7 +30,11 @@ struct FTransientResourceAllocator
     }
 
     void Reset();
-    void Alloc(VkImage Image);
+
+    void AllocImage(VkImage Image, uint64_t& OutOffset);
+    void AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset);
+
+    void* GetMappedBasePtr() const;
 
 private:
     void Init();
@@ -41,6 +45,7 @@ private:
     VkDeviceMemory PhysicalMemory = nullptr;
     VkDeviceSize Offset = 0;
     VkDeviceSize Size = 0;
+    void* MappedBasePtr = nullptr;
 
     uint64_t TotalAllocations;
     uint64_t CurrentAllocations;
@@ -124,6 +129,7 @@ public:
 
     inline FTransientResourceAllocator* GetTransientResourceAllocator() const;
     inline FVulkanCommandListContext* GetCommandListContext() const;
+    inline FVulkanCommandListContext* GetImmediateCommandListContext() const;
     inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
 
     void GC();
@@ -146,6 +152,8 @@ private:
     FDeferredDeletionQueue* DeferredDeletionQueue;
 
     FVulkanCommandListContext* CommandListContext;
+
+    FVulkanCommandListContext* ImmediateCommandListContext;
 
     FTransientResourceAllocator* TransientResourceAllocator;
 

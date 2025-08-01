@@ -9,6 +9,7 @@
 
 #include "VulkanLoader.h"
 
+#include "Common/Buffer.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 
 #include <assert.h>
@@ -65,8 +66,17 @@ VkImageViewCreateInfo VulkanRHI::GetVkImageViewCreateInfo(VkImage Image, VkForma
     ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
     ImageViewCreateInfo.subresourceRange.layerCount = 1;
     ImageViewCreateInfo.subresourceRange.aspectMask = AspectFlags; // VK_IMAGE_ASPECT_COLOR_BIT
-
     return ImageViewCreateInfo;
+}
+
+VkBufferCreateInfo VulkanRHI::GetVkBufferCreateInfo(uint64_t Size, VkBufferUsageFlags UsageFlags)
+{
+    VkBufferCreateInfo BufferCreateInfo = {};
+    BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BufferCreateInfo.size = Size;
+    BufferCreateInfo.usage = UsageFlags;
+    BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    return BufferCreateInfo;
 }
 
 VkImageLayout GetVulkanLayout(ERHITextureLayout layout)
@@ -171,9 +181,85 @@ VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
 
 VkImageAspectFlags VulkanRHI::GetVkAspect(ERHITextureAspect Aspect)
 {
-    if (Aspect == ERHITextureAspect::Color) { return VK_IMAGE_ASPECT_COLOR_BIT; }
+    if (Aspect == ERHITextureAspect::Color)
+    {
+        return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
 
     return VK_IMAGE_ASPECT_NONE;
+}
+
+VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(ERHIBufferUsage Usage)
+{
+    VkBufferUsageFlags Flags = 0;
+
+    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Vertex)) Flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Index)) Flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferSrc)) Flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferDst)) Flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    return Flags;
+}
+
+VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
+{
+    switch (Format)
+    {
+    case ERHIFormat::RGBA8_UNorm:        return VK_FORMAT_R8G8B8A8_UNORM;
+    case ERHIFormat::BGRA8_UNorm:        return VK_FORMAT_B8G8R8A8_UNORM;
+    case ERHIFormat::RGBA16_Float:       return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case ERHIFormat::RGBA32_Float:       return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case ERHIFormat::D24S8:              return VK_FORMAT_D24_UNORM_S8_UINT;
+    case ERHIFormat::D32_Float:          return VK_FORMAT_D32_SFLOAT;
+    case ERHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    default:                             return VK_FORMAT_UNDEFINED;
+    }
+}
+
+VkPrimitiveTopology VulkanRHI::ToVkTopology(ERHIPrimitiveTopology Topology)
+{
+    switch (Topology)
+    {
+    case ERHIPrimitiveTopology::TriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    case ERHIPrimitiveTopology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    case ERHIPrimitiveTopology::LineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    case ERHIPrimitiveTopology::LineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    case ERHIPrimitiveTopology::PointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    case ERHIPrimitiveTopology::PatchList: return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    default: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Fallback
+    }
+}
+
+VkCullModeFlags VulkanRHI::ToVkCullMode(ERHICullMode Mode)
+{
+    switch (Mode)
+    {
+    case ERHICullMode::None:           return VK_CULL_MODE_NONE;
+    case ERHICullMode::Front:          return VK_CULL_MODE_FRONT_BIT;
+    case ERHICullMode::Back:           return VK_CULL_MODE_BACK_BIT;
+    case ERHICullMode::FrontAndBack:   return VK_CULL_MODE_FRONT_AND_BACK;
+    default:                           return VK_CULL_MODE_NONE;
+    }
+}
+
+VkPolygonMode VulkanRHI::ToVkPolygonMode(ERHIPolygonMode Mode)
+{
+    switch (Mode)
+    {
+    case ERHIPolygonMode::Fill: return VK_POLYGON_MODE_FILL;
+    case ERHIPolygonMode::Line: return VK_POLYGON_MODE_LINE;
+    case ERHIPolygonMode::Point: return VK_POLYGON_MODE_POINT;
+    default: return VK_POLYGON_MODE_FILL;
+    }
+}
+VmaMemoryUsage VulkanRHI::ToVmaMemoryUsage(ERHIResourceMemory Memory)
+{
+    switch (Memory)
+    {
+    case ERHIResourceMemory::DeviceLocal: return VMA_MEMORY_USAGE_GPU_ONLY;
+    case ERHIResourceMemory::HostVisible: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+    default: return VMA_MEMORY_USAGE_UNKNOWN;
+    }
 }
 
 void LoadVulkanLibrary()

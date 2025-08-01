@@ -1,10 +1,13 @@
 #pragma once
 
 #include "RHICommandList.h"
+#include "RHIPipeline.h"
 
 #include <cstdint>
 #include <span>
 
+struct FRHIBufferDesc;
+struct FRHIBuffer;
 struct FMeshDrawCommand;
 enum class ERHIPipelineStage : uint16_t;
 enum class ERHIResourceAccess : uint16_t;
@@ -15,7 +18,7 @@ struct FRHITexture;
 class IRHICommandListContext;
 class FRHICommandList;
 
-enum class ERHIResourceMemory : uint8_t
+enum class ERHIResourceLifetime : uint8_t
 {
     Unknown = 0,
 
@@ -27,18 +30,29 @@ enum class ERHIResourceMemory : uint8_t
 
     // Memory will be managed externally
     Unmanaged,
+};
 
-    HostLocal,
+enum class ERHIResourceMemory
+{
+    Unknown = 0,
 
-    DeviceLocal
+    // GPU-only memory; fastest access by the GPU; CPU can't map it
+    DeviceLocal,
+
+    // CPU can map this memory
+    HostVisible
 };
 
 enum class ERHIInterfaceType : uint8_t
 {
     None = 0,
+
     Vulkan,
+
     D3D12,
+
     Metal,
+
     WebGL
 };
 
@@ -60,12 +74,18 @@ public:
     virtual void RHIWaitUntilIdle() const = 0;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
     virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const = 0;
+    virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
+    virtual void RHIUploadBufferData(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
+    virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
     virtual IRHICommandListContext* GetCommandListContext() const = 0;
+    virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;
     virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments) = 0;
     virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) = 0;
     virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, std::span<FMeshDrawCommand> DrawCommands) = 0;
     virtual FRHITexture* RHIGetBackBufferRenderTarget() const = 0;
+
+    // virtual void RHIUploadTextureData()
 };
 
 class IRHIModule

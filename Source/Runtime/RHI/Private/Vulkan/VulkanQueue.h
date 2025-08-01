@@ -1,7 +1,10 @@
 #pragma once
 
-#include <queue>
+#include "Common/RHICommandList.h"
+
+#include <functional>
 #include <memory>
+#include <queue>
 #include <vulkan/vulkan_core.h>
 
 class IRHICommandListContext;
@@ -24,6 +27,7 @@ public:
 
     void Wait();
     void Submit();
+    void ImmediateSubmit(std::function<void(FRHICommandList& CmdList)> InCallback);
 
     inline VkQueue GetHandle() const;
     inline VkQueueFlags GetQueueFlags() const;

@@ -5,7 +5,7 @@
 #include <variant>
 #include <Logger.h>
 
-MeshAsset AssetLoader<MeshAsset, MeshAssetOptions>::Load(const AssetLoaderRequest &p_Request, const MeshAssetOptions &p_Options)
+MeshAsset TAssetLoader<MeshAsset, MeshAssetOptions>::Load(const FAssetLoaderRequest &p_Request, const MeshAssetOptions &p_Options)
 {
     fastgltf::Parser parser;
     auto Data = fastgltf::GltfDataBuffer::FromPath(p_Request.Path);

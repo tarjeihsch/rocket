@@ -7,6 +7,8 @@
 #include <span>
 #include <vector>
 
+struct FRHIBuffer;
+struct FRHIPipeline;
 struct FRHITexture;
 struct FMeshDrawCommand;
 
@@ -17,11 +19,13 @@ public:
 
     virtual IRHICommandListContext& GetLowestLevelContext() { return *this; }
 
+    virtual void RHIBindPipeline(FRHIPipeline* Pipeline) = 0;
     virtual void RHISetScissorRect(uint32_t X, uint32_t Y) = 0;
     virtual void RHIDraw(std::span<FMeshDrawCommand> DrawCommands) = 0;
     virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess,ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;
     virtual void RHIBeginRendering(std::span<FRHITextureView*> TextureViews) = 0;
     virtual void RHIEndRendering() = 0;
+    virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) = 0;
 };
 
 struct FRHICommandBase
@@ -93,11 +97,11 @@ public:
     {
     }
 
-    template<class TCmd, class... TArgs>
-    void EnqueueImmediate(TArgs&&... args)
+    template<class TCommand, class... TArgs>
+    void EnqueueImmediate(TArgs&&... Args)
     {
-        TCmd cmd(std::forward<TArgs>(args)...);
-        cmd.Execute_Internal(Context);
+        TCommand Command(std::forward<TArgs>(Args)...);
+        Command.Execute_Internal(Context);
     }
 
 private:

@@ -3,8 +3,13 @@
 class FRHIVertexBuffer;
 class FRHIIndexBuffer;
 
-struct FStaticMeshComponent
+class FStaticMesh
 {
     FRHIVertexBuffer* VertexBuffer;
     FRHIIndexBuffer* IndexBuffer;
+};
+
+struct FStaticMeshComponent
+{
+    FStaticMesh* Handle;
 };

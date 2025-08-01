@@ -28,14 +28,14 @@ FVulkanQueue::~FVulkanQueue()
 
 void FVulkanQueue::Submit()
 {
-    std::vector<FVulkanCommandBufferPayload*> Payloads;
-    auto CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
+    std::vector<FVulkanCommandBufferPayload *> Payloads;
+    auto CmdListContext = static_cast<FVulkanCommandListContext *>(GetRHI()->GetCommandListContext());
     CmdListContext->Finalize(Payloads);
 
-    for (FVulkanCommandBufferPayload* Payload : Payloads)
+    for (FVulkanCommandBufferPayload *Payload : Payloads)
     {
         bool bIsFirst = (Payload == Payloads.front());
-        bool bIsLast  = (Payload == Payloads.back());
+        bool bIsLast = (Payload == Payloads.back());
 
         if (bIsFirst)
         {
@@ -70,7 +70,7 @@ void FVulkanQueue::Submit()
         }
 
         std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
-        for (FVulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
+        for (FVulkanCommandBuffer *CommandBuffer : Payload->CommandBuffers)
         {
             VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
             CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -85,7 +85,7 @@ void FVulkanQueue::Submit()
         VkSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
         TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
         TimelineSemaphoreSubmitInfo.semaphore = TimelineSemaphore;
-        TimelineSemaphoreSubmitInfo.value     = TimelineValue;
+        TimelineSemaphoreSubmitInfo.value = TimelineValue;
         TimelineSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
         SignalSemaphoreSubmitInfos.push_back(TimelineSemaphoreSubmitInfo);
 
@@ -102,6 +102,48 @@ void FVulkanQueue::Submit()
         RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
         SubmissionQueue.push(Payload);
+    }
+}
+void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)> InCallback)
+{
+    FVulkanCommandListContext CmdListContext(Device);
+    FRHICommandList CmdList(CmdListContext);
+
+    InCallback(CmdList);
+
+    FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
+
+    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    CmdListContext.Finalize(Payloads);
+
+    for (FVulkanCommandBufferPayload* Payload : Payloads)
+    {
+        std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
+        for (FVulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
+        {
+            VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
+            CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+            CommandBufferSubmitInfo.commandBuffer = CommandBuffer->GetHandle();
+            CommandBufferSubmitInfos.push_back(CommandBufferSubmitInfo);
+            CommandBuffer->Submit();
+        }
+
+        VkFenceCreateInfo FenceCreateInfo = {};
+        FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        VkFence Fence;
+        VulkanRHI::vkCreateFence(Device.GetVkDevice(), &FenceCreateInfo, nullptr, &Fence);
+
+        VkSubmitInfo2 SubmitInfo = {};
+        SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        SubmitInfo.commandBufferInfoCount = CommandBufferSubmitInfos.size();
+        SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
+
+        VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, Fence);
+        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit to queue.");
+
+        VulkanRHI::vkWaitForFences(Device.GetVkDevice(), 1, &Fence, VK_TRUE, UINT64_MAX);
+        VulkanRHI::vkDestroyFence(Device.GetVkDevice(), Fence, nullptr);
     }
 }
 

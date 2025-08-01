@@ -8,7 +8,7 @@
 class FSceneRenderer;
 class PScene;
 class IWindow;
-class AssetManager;
+class FAssetManager;
 
 static const char* VIEWPORT_NAME = "Rocket Engine";
 static constexpr uint32_t VIEWPORT_WIDTH = 1280;
@@ -23,13 +23,13 @@ public:
 
     inline PScene* GetScene();
     inline IWindow* GetWindow();
-    inline AssetManager* GetAssetManager();
+    inline FAssetManager* GetAssetManager();
     inline friend CEngine* GetEngine();
 
 private:
     PScene* Scene;
     IWindow* Window;
-    AssetManager* mAssetManager;
+    FAssetManager* mAssetManager;
     FSceneRenderer* SceneRenderer;
 
     static CEngine* GEngine;
@@ -45,7 +45,7 @@ inline IWindow* CEngine::GetWindow()
     return Window;
 }
 
-AssetManager *CEngine::GetAssetManager()
+FAssetManager *CEngine::GetAssetManager()
 {
     return mAssetManager;
 }

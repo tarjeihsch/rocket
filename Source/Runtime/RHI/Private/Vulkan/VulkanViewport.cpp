@@ -138,7 +138,7 @@ void FVulkanViewport::CreateSwapchain()
 
     for (uint32_t Index = 0; Index < ImageCount; ++Index)
     {
-        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceMemory::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
+        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color);
         BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
         BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Images[Index]));

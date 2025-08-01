@@ -35,11 +35,11 @@ struct MeshAssetOptions
 {
 };
 
-template<> struct AssetTag<MeshAsset> { static constexpr uint8_t Value = 1; };
-template<> struct AssetDefaultOptions<MeshAssetOptions> { using Type = MeshAssetOptions; };
+template<> struct TAssetTag<MeshAsset> { static constexpr uint8_t Value = 1; };
+template<> struct TAssetDefaultOptions<MeshAssetOptions> { using Type = MeshAssetOptions; };
 
 template<>
-struct AssetLoader<MeshAsset, MeshAssetOptions>
+struct TAssetLoader<MeshAsset, MeshAssetOptions>
 {
-    static MeshAsset Load(const AssetLoaderRequest& p_Request, const MeshAssetOptions& p_Options);
+    static MeshAsset Load(const FAssetLoaderRequest& p_Request, const MeshAssetOptions& p_Options);
 };

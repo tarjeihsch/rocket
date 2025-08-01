@@ -22,7 +22,7 @@ FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc)
 FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc, VkImage InImage)
     : Device(InDevice), Desc(InDesc), Image(InImage), Allocation(nullptr)
 {
-    assert(Desc.Memory != ERHIResourceMemory::Unknown);
+    assert(Desc.Memory != ERHIResourceLifetime::Unknown);
 }
 
 FVulkanTexture::~FVulkanTexture()
@@ -44,14 +44,14 @@ void FVulkanTexture::Alloc()
 {
     VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Tex2D.Extent[0], Desc.Tex2D.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
 
-    if (Desc.Memory == ERHIResourceMemory::Transient)
+    if (Desc.Memory == ERHIResourceLifetime::Transient)
     {
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
         RK_ASSERT(Result == VK_SUCCESS);
 
-        Device.GetTransientResourceAllocator()->Alloc(Image);
+        Device.GetTransientResourceAllocator()->AllocImage(Image, Offset);
     }
-    else if (Desc.Memory == ERHIResourceMemory::Persistent)
+    else if (Desc.Memory == ERHIResourceLifetime::Persistent)
     {
         // We own the allocation, allocate a persistent image
         VmaAllocationCreateInfo AllocationCreateInfo = {};
@@ -64,12 +64,12 @@ void FVulkanTexture::Alloc()
 
 void FVulkanTexture::Free()
 {
-    if (Desc.Memory == ERHIResourceMemory::Transient)
+    if (Desc.Memory == ERHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
         Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Image, Image);
     }
-    else if (Desc.Memory == ERHIResourceMemory::Persistent)
+    else if (Desc.Memory == ERHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
         Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Image, Image, Allocation);

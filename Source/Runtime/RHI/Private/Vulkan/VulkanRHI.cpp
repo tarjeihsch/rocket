@@ -1,25 +1,22 @@
 #include "VulkanRHI.h"
 
-#include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanLoader.h"
-#include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
-#include "VulkanQueue.h"
-#include "VulkanDevice.h"
-#include "VulkanViewport.h"
-#include "VulkanCommandBufferContext.h"
-#include "../../Public/Common/FrameGraph.h"
-#include "Logger.h"
 #include "Assert.h"
-#include "VulkanPipeline.h"
-#include "VulkanDescriptorManager.h"
-#include "VulkanResourceManager.h"
+#include "FVulkanPipeline.h"
+#include "Logger.h"
 #include "MeshAsset.h"
-#include <GLFW/glfw3.h>
-
-
-// TEMPORARY: Testing
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanBuffer.h"
+#include "VulkanCommandBufferContext.h"
+#include "VulkanCommandList.h"
+#include "VulkanDescriptorManager.h"
+#include "VulkanDevice.h"
+#include "VulkanLoader.h"
+#include "VulkanQueue.h"
+#include "VulkanResourceManager.h"
 #include "VulkanTexture.h"
+#include "VulkanViewport.h"
+
+#include <GLFW/glfw3.h>
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -170,11 +167,11 @@ void CVulkanRHI::EndFrame()
 {
     Device->GetDescriptorManager()->Flush();
 
-    Device->GetGraphicsQueue()->Submit();
+    Device->GetPresentQueue()->Submit();
 
     Viewport->Present();
 
-    Device->GetGraphicsQueue()->Wait();
+    Device->GetPresentQueue()->Wait();
 
     FrameCounter++;
 
@@ -217,14 +214,85 @@ FRHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
 {
     return new FVulkanTexture(*Device, Desc);
 }
-FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const
+
+FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture *Texture) const
 {
     return new FVulkanTextureView(*Device, TextureViewDesc, static_cast<VkImage>(Texture->GetHandle()));
 }
 
-IRHICommandListContext* CVulkanRHI::GetCommandListContext() const
+FRHIBuffer *CVulkanRHI::RHICreateBuffer(FRHIBufferDesc Desc) const
+{
+    return new FVulkanBuffer(*Device, Desc);
+}
+
+void CVulkanRHI::RHIUploadBufferData(FRHIBuffer *Buffer, void *Data, uint64_t Size)
+{
+    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Size, 16, ERHIResourceLifetime::Transient, ERHIResourceMemory::HostVisible)));
+
+    StagingBuffer->Map(Data, Size);
+
+    Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
+    {
+        CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
+    });
+}
+
+FRHIPipeline *CVulkanRHI::RHICreatePipelineStateObject(FRHIPipelineDesc Desc)
+{
+    VulkanPipelineSpecification Spec;
+
+    VulkanShader* VS = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT);
+    VS->Create(Desc.VSData, Desc.VSWordCount);
+
+    VulkanShader* PS = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+    PS->Create(Desc.PSData, Desc.PSWordCount);
+
+    Spec.VertexShader = VulkanShaderRef::Capture(VS);
+    Spec.FragmentShader = VulkanShaderRef::Capture(PS);
+    Spec.Layout = Device->GetDescriptorManager()->GetPipelineLayout();
+
+    Spec.ColorAttachmentFormats.reserve(Desc.ColorAttachmentFormats.size());
+    for (ERHIFormat Format : Desc.ColorAttachmentFormats)
+    {
+        Spec.ColorAttachmentFormats.push_back(VulkanRHI::ToVkFormat(Format));
+    }
+
+    // 2. Vertex Bindings
+    Spec.VertexBindings.reserve(Desc.VertexBindings.size());
+    for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
+    {
+        VkVertexInputBindingDescription VkBinding = {};
+        VkBinding.binding = Binding.Binding;
+        VkBinding.stride = Binding.Stride;
+        VkBinding.inputRate = Binding.PerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+
+        Spec.VertexBindings.push_back(VkBinding);
+    }
+
+    // 3. Vertex Attributes
+    Spec.VertexAttributes.reserve(Desc.VertexAttributes.size());
+    for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
+    {
+        VkVertexInputAttributeDescription VkAttr = {};
+        VkAttr.location = Attr.Location;
+        VkAttr.binding = Attr.Binding;
+        VkAttr.format = VulkanRHI::ToVkFormat(Attr.Format);
+        VkAttr.offset = Attr.Offset;
+
+        Spec.VertexAttributes.push_back(VkAttr);
+    }
+
+    FVulkanPipeline* Pipeline = Device->GetPipelineManager()->GetPipeline(Spec);
+    return Pipeline;
+}
+
+IRHICommandListContext *CVulkanRHI::GetCommandListContext() const
 {
     return Device->GetCommandListContext();
+}
+void CVulkanRHI::RHICmdBindPipeline(FRHICommandList &RHICmdList, FRHIPipeline *Pipeline)
+{
+    RHICmdList.Enqueue<FVulkanCommandBindPipeline>(Pipeline);
 }
 
 void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments)

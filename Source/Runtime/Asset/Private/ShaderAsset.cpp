@@ -8,7 +8,7 @@
 #endif
 
 
-ShaderAsset AssetLoader<ShaderAsset>::Load(const AssetLoaderRequest &pRequest, const ShaderAssetOptions& pOptions)
+ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest, const ShaderAssetOptions& pOptions)
 {
     void* DxcLibHandle = dlopen(ROCKET_BINARIES "/ThirdParty/Vulkan/lib/libdxcompiler.so", RTLD_LAZY);
     RK_ASSERT(DxcLibHandle, "Failed to dynamically load DXC library (Ensure DXC is installed and environment is set).");
@@ -72,11 +72,9 @@ ShaderAsset AssetLoader<ShaderAsset>::Load(const AssetLoaderRequest &pRequest, c
     const size_t ByteSize = ShaderBlob->GetBufferSize();
     const size_t WordCount = ByteSize / sizeof(uint32_t);
 
-    ShaderAsset Asset = {};
-    Asset.Data = new uint32_t[WordCount];
-    Asset.WordCount = WordCount;
-
-    memcpy(Asset.Data, ShaderBlob->GetBufferPointer(), ByteSize);
+    ShaderAsset Asset;
+    Asset.Code.resize(WordCount);
+    memcpy(Asset.Code.data(), ShaderBlob->GetBufferPointer(), ByteSize);
 
     ShaderBlob = nullptr;
     Compiler = nullptr;
