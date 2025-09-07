@@ -1,16 +1,21 @@
 #include "VulkanRHI.h"
 
-#include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanLoader.h"
-#include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
-#include "VulkanQueue.h"
-#include "VulkanDevice.h"
-#include "VulkanViewport.h"
-#include "VulkanCommandBufferContext.h"
-#include "VulkanRenderGraph.h"
-#include "Logger.h"
 #include "Assert.h"
+#include "FVulkanPipeline.h"
+#include "Logger.h"
+#include "MeshAsset.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanBuffer.h"
+#include "VulkanCommandBufferContext.h"
+#include "VulkanCommandList.h"
+#include "VulkanDescriptorManager.h"
+#include "VulkanDevice.h"
+#include "VulkanLoader.h"
+#include "VulkanQueue.h"
+#include "VulkanResourceManager.h"
+#include "VulkanTexture.h"
+#include "VulkanViewport.h"
+
 #include <GLFW/glfw3.h>
 
 #if RK_PLATFORM_WINDOWS
@@ -141,62 +146,38 @@ void CVulkanRHI::Init()
     }
 
     Viewport = new FVulkanViewport(*Device);
-    RenderGraph = new FVulkanRenderGraph();
+
+    FrameCounter = 0;
 }
 
 void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
 
-    delete RenderGraph;
     delete Viewport;
     delete Device;
 
-    RenderGraph = nullptr;
     Viewport = nullptr;
     Device = nullptr;
 
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
-void CVulkanRHI::Tick(float DeltaTime)
+void CVulkanRHI::EndFrame()
 {
-    GetDevice()->GetGraphicsQueue()->Await();
+    Device->GetDescriptorManager()->Flush();
 
-    if (Viewport->Acquire())
-    {
-        RenderGraph->End();
+    Device->GetPresentQueue()->Submit();
 
-        FVulkanRGBuilder Builder = RenderGraph->GetMutableBuilder();
-        auto Color = Builder.CreateTexture({1024, 1024, VK_FORMAT_B8G8R8A8_UNORM, "RT", VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT });
+    Viewport->Present();
 
-        const FRGResourceAccess Writes[] = { WriteImage(Color) };
-        const FRGResourceAccess Reads[] = { ReadImage(Color) };
+    Device->GetPresentQueue()->Wait();
 
-        Builder.AddPass("GBuffer", EVulkanQueueType::Graphics, {}, Writes, [&](FRHICommandList& RHICmdList)
-        {
-            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            RHICmdList.Enqueue<FVulkanCommandBeginRendering>(GetViewport()->GetImageView());
-            RHICmdList.Enqueue<FVulkanCommandEndRendering>();
-        });
+    FrameCounter++;
 
-        Builder.AddPass("Present", EVulkanQueueType::Graphics, Reads , {}, [&](FRHICommandList& RHICmdList)
-        {
-            RHICmdList.Enqueue<FVulkanCommandSetMemoryBarrier>(GetViewport()->GetImage(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        });     
+    Viewport->AcquireNextImageIndex();
 
-        RenderGraph->Compile();
-
-        FVulkanCommandBufferPool* CommandBufferPool = GetDevice()->GetGraphicsQueue()->GetCommandBufferPool();
-        FVulkanCommandBufferContext Ctx(*CommandBufferPool);
-
-        Ctx.AddWaitSemaphore(Viewport->GetImageAcquiredSemaphore());
-        RenderGraph->Execute(Ctx);
-        Ctx.AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore());
-
-        GetDevice()->GetGraphicsQueue()->Submit(Ctx);
-        Viewport->Present();
-    }
+    Device->GC();
 }
 
 const char* CVulkanRHI::GetName() const
@@ -224,6 +205,98 @@ void CVulkanRHI::RHIWaitUntilIdle() const
     Device->WaitUntilIdle();
 }
 
+uint64_t CVulkanRHI::GetFrameCounter() const noexcept
+{
+    return FrameCounter;
+}
+
+FRHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
+{
+    return new FVulkanTexture(*Device, Desc);
+}
+
+FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture *Texture) const
+{
+    return new FVulkanTextureView(*Device, TextureViewDesc, static_cast<VkImage>(Texture->GetHandle()));
+}
+
+FRHIBuffer *CVulkanRHI::RHICreateBuffer(FRHIBufferDesc Desc) const
+{
+    return new FVulkanBuffer(*Device, Desc);
+}
+
+void CVulkanRHI::RHIUploadDataBlocking(FRHIBuffer *Buffer, void *Data, uint64_t Size)
+{
+    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Size)));
+
+    StagingBuffer->Lock(Data, Size);
+
+    Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
+    {
+        CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
+    });
+
+    //StagingBuffer->Unlock();
+}
+
+FRHIPipeline *CVulkanRHI::RHICreatePipelineStateObject(FRHIPipelineDesc Desc)
+{
+    return Device->GetPipelineManager()->GetPipeline(Desc);
+}
+
+IRHICommandListContext *CVulkanRHI::GetCommandListContext() const
+{
+    return Device->GetCommandListContext();
+}
+void CVulkanRHI::RHICmdBindPipeline(FRHICommandList &RHICmdList, FRHIPipeline *Pipeline)
+{
+    RHICmdList.Enqueue<FVulkanCommandBindPipeline>(Pipeline);
+}
+
+void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments, FRHITextureView* DepthAttachmentView)
+{
+    RHICmdList->Enqueue<FVulkanCommandBeginRendering>(ColorAttachments, DepthAttachmentView);
+}
+
+void CVulkanRHI::RHICmdEndRendering(FRHICommandList *RHICmdList)
+{
+    RHICmdList->Enqueue<FVulkanCommandEndRendering>();
+}
+
+void CVulkanRHI::RHICmdPipelineBarrier(FRHICommandList *RHICmdList, FRHITexture *Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex, uint32_t DstQueueFamilyIndex)
+{
+    RHICmdList->Enqueue<FVulkanCommandPipelineBarrier>(Texture, SrcLayout, DstLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
+}
+
+void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+{
+    RHICmdList.Enqueue<FVulkanCommandDraw>(DrawCommand, Params);
+}
+
+void CVulkanRHI::RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+{
+    RHICmdList.Enqueue<FVulkanCommandDrawIndexed>(DrawCommand, Params);
+}
+
+FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
+{
+    return Viewport->GetBackBufferTexture();
+}
+
+void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
+{
+    RHICmdList.Enqueue<FVulkanCommandBlitImage>(Src, Dst);
+}
+
+std::shared_ptr<FRHIBuffer> CVulkanRHI::RHIBindBuffer(void *Data, uint64_t Size)
+{
+    std::shared_ptr<FRHIBuffer> Buffer(RHICreateBuffer(FRHIBufferDesc::CreateStorageBuffer(Size)));
+
+    Buffer->Lock(Data, Size);
+
+    return Buffer;
+}
+
 VkInstance CVulkanRHI::RHIGetVkInstance() const
 {
     return Instance;
@@ -237,6 +310,11 @@ VkDevice CVulkanRHI::RHIGetVkDevice() const
 VkPhysicalDevice CVulkanRHI::RHIGetVkPhysicalDevice() const
 {
     return GetDevice()->GetVkPhysicalDevice();
+}
+
+VmaAllocator CVulkanRHI::RHIGetVmaAllocator() const
+{
+    return GetDevice()->GetVmaAllocator();
 }
 
 VkQueue CVulkanRHI::RHIGetGraphicsVkQueue() const
@@ -304,6 +382,16 @@ VkSurfaceFormatKHR CVulkanRHI::RHIGetSwapchainSurfaceFormat() const
     return Viewport->GetSurfaceFormat();
 }
 
+VkSemaphore CVulkanRHI::GetImageAcquiredSemaphore() const
+{
+    return Viewport->GetImageAcquiredSemaphore();
+}
+
+VkSemaphore CVulkanRHI::GetRenderFinishedSemaphore() const
+{
+    return Viewport->GetRenderFinishedSemaphore();
+}
+
 std::span<const char *> CVulkanRHI::GetValidationExtensions()
 {
     return std::span(ValidationLayerExtensions);
@@ -314,17 +402,36 @@ std::span<const char*> CVulkanRHI::GetInstanceExtensions()
     return std::span(InstanceExtensions);
 }
 
-std::span<const char*> CVulkanRHI::GetPhysicalDeviceExtensions()
+std::span<const char *> CVulkanRHI::GetPhysicalDeviceExtensions()
 {
     return std::span(PhysicalDeviceExtensions);
 }
 
-FVulkanDevice* CVulkanRHI::GetDevice() const
+VkPipelineLayout CVulkanRHI::GetBindlessPipelineLayout() const
 {
+    return Device->GetDescriptorManager()->GetPipelineLayout();
+}
+
+VkDescriptorSet CVulkanRHI::GetBindlessDescriptorSet() const
+{
+    return Device->GetDescriptorManager()->GetDescriptorSet();
+}
+
+VkDescriptorSetLayout CVulkanRHI::GetBindlessDesciptorSetLayout() const
+{
+    return Device->GetDescriptorManager()->GetDescriptorSetLayout();
+}
+
+FVulkanDevice * CVulkanRHI::GetDevice() const
+{
+    assert(Device != nullptr);
+
     return Device;
 }
 
 FVulkanViewport* CVulkanRHI::GetViewport() const
 {
+    assert(Viewport != nullptr);
+
     return Viewport;
 }

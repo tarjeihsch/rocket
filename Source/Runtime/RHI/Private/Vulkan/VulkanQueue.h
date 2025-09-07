@@ -1,13 +1,19 @@
 #pragma once
 
-#include <queue>
+#include "Common/RHICommandList.h"
+
+#include <functional>
 #include <memory>
+#include <queue>
 #include <vulkan/vulkan_core.h>
 
+class IRHICommandListContext;
+class FRHICommandList;
 class FVulkanDevice;
 class FVulkanCommandBufferPayload;
 class FVulkanCommandBufferPool;
 class FVulkanCommandBufferContext;
+class FVulkanCommandBuffer;
 
 class FVulkanQueue
 {
@@ -19,8 +25,9 @@ public:
     FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
      ~FVulkanQueue();
 
-    void Submit(FVulkanCommandBufferContext& Context);
-    void Await();
+    void Wait();
+    void Submit();
+    void ImmediateSubmit(std::function<void(FRHICommandList& CmdList)> InCallback);
 
     inline VkQueue GetHandle() const;
     inline VkQueueFlags GetQueueFlags() const;
@@ -31,7 +38,7 @@ public:
     inline VkSemaphore GetTimelineSemaphore() const;
     inline uint64_t GetTimelineSemaphoreValue() const;
 
-    inline FVulkanCommandBufferPool* GetCommandBufferPool() const;
+    FVulkanCommandBufferPool* GetCommandBufferPool() const;
 
 private:
     void Init();
@@ -46,7 +53,7 @@ private:
     VkSemaphore TimelineSemaphore;
     uint64_t NextTimelineSemaphoreValue;
 
-    std::unique_ptr<FVulkanCommandBufferPool> CommandBufferPool;
+    FVulkanCommandBufferPool* CommandBufferPool;
     std::queue<FVulkanCommandBufferPayload*> SubmissionQueue;
 };
 
@@ -83,9 +90,4 @@ uint64_t FVulkanQueue::GetTimelineSemaphoreValue() const
 VkSemaphore FVulkanQueue::GetTimelineSemaphore() const
 {
     return TimelineSemaphore;
-}
-
-inline FVulkanCommandBufferPool* FVulkanQueue::GetCommandBufferPool() const
-{
-    return CommandBufferPool.get();
 }

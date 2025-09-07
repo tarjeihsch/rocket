@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Common/RHIPipeline.h"
+#include "Common/RHITexture.h"
+
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 
@@ -93,10 +96,33 @@
     X(vkAcquireNextImageKHR) \
     X(vkGetDeviceBufferMemoryRequirements) \
     X(vkGetDeviceImageMemoryRequirements) \
+    X(vkCreateShaderModule) \
+    X(vkDestroyShaderModule) \
+    X(vkCreateGraphicsPipelines) \
+    X(vkDestroyPipeline) \
+    X(vkCmdBindPipeline) \
+    X(vkCmdBindDescriptorSets) \
+    X(vkCmdBindVertexBuffers) \
+    X(vkCreateDescriptorSetLayout) \
+    X(vkCreateDescriptorPool) \
+    X(vkAllocateDescriptorSets) \
+    X(vkUpdateDescriptorSets) \
+    X(vkCmdBindIndexBuffer) \
+    X(vkCmdDraw) \
+    X(vkCmdBlitImage) \
+    X(vkCmdDrawIndexed) \
+    X(vkDestroyDescriptorPool) \
+    X(vkDestroyDescriptorSetLayout)\
+    X(vkCreatePipelineLayout) \
+    X(vkDestroyPipelineLayout) \
+    X(vkCmdSetViewport) \
+    X(vkCmdSetScissor) \
     X(vkCmdCopyBuffer) \
     X(vkCmdPipelineBarrier) \
+    X(vkCmdPipelineBarrier2) \
     X(vkCmdBeginRendering) \
     X(vkCmdEndRendering) \
+    X(vkCmdPushConstants)
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \
@@ -119,11 +145,13 @@
     X(vkDestroyImage) \
     X(vkCmdCopyBuffer)
 
-#define VULKAN_ALL_FUNCTIONS(X) \
-    VULKAN_GLOBAL_FUNCTIONS(X) \
-    VULKAN_INSTANCE_FUNCTIONS(X) \
+#define VULKAN_ALL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
+    VULKAN_GLOBAL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
+    VULKAN_INSTANCE_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     VULKAN_DEVICE_FUNCTIONS(X)
 
+enum class ERHIResourceMemory;
+enum class ERHIBufferUsage : uint32_t;
 namespace VulkanRHI
 {
     // Opaque handle to dynamic library
@@ -132,6 +160,24 @@ namespace VulkanRHI
     #define DECLARE_PFN(name) extern PFN_##name name;
     VULKAN_ALL_FUNCTIONS(DECLARE_PFN)
     #undef DECLARE_PFN
+
+    VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
+    VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
+    VkBufferCreateInfo GetVkBufferCreateInfo(uint64_t Size, VkBufferUsageFlags UsageFlags);
+
+    VkImageLayout GetVulkanLayout(ERHITextureLayout layout);
+    VkAccessFlags GetVulkanAccess(ERHIResourceAccess access);
+    VkPipelineStageFlags GetVulkanPipelineStage(ERHIPipelineStage stage);
+    VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
+    VkFormat GetVkFormat(ERHITextureFormat Format);
+    VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
+    VkFormat ToVkFormat(ERHIFormat Format);
+    VkPrimitiveTopology ToVkTopology(ERHIPrimitiveTopology Topology);
+    VkCullModeFlags ToVkCullMode(ERHICullMode Mode);
+    VkPolygonMode ToVkPolygonMode(ERHIPolygonMode Mode);
+    VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
+
+    VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
 }
 
 void LoadVulkanLibrary();

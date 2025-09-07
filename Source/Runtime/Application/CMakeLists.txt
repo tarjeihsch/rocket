@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.16)
-
 project(Application LANGUAGES CXX)
 
 add_executable(Application)
@@ -27,11 +26,20 @@ target_include_directories(Application
     PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
 )
 
-target_link_libraries(Application
-    PUBLIC Rocket::Engine
-)
+if (DEFINED PRIMARY_MODULE)
+    target_link_libraries(Application
+        PUBLIC Rocket::Engine
+        PRIVATE $<$<CONFIG:Debug>:-Wl,--whole-archive>
+        PRIVATE Game
+        PRIVATE $<$<CONFIG:Debug>:-Wl,--no-whole-archive>
+    )
+else()
+    target_link_libraries(Application
+        PUBLIC Rocket::Engine
+    )
+endif()
 
 add_custom_command(
-        TARGET Application POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+    TARGET Application POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
 )

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <iostream>
+#include <span>
 
 // TODO: Use macros SUBSYSTEM_INIT_ENTRYPOINT() and SUBSYSTEM_EXIT_ENTRYPOINT() over the current solution
 
@@ -9,22 +11,17 @@ class ISubsystem
 public:
     virtual ~ISubsystem() = default;
 
-    virtual void OnAwake() {}
-    virtual void OnStart() {}
-    virtual void OnDetach() {}
-    virtual void OnUpdate(float DeltaTime) {}
+    virtual void OnInit() {}
+    virtual void OnExit() {}
+    virtual void OnTick(float DeltaTime) {}
 };
 
 struct SSubsystemStaticRegistry 
 {
 public:
-    static SSubsystemStaticRegistry& GetStaticRegistry() 
-    {
-        static SSubsystemStaticRegistry StaticRegistry;
-        return StaticRegistry;
-    }
+    static SSubsystemStaticRegistry& Get();
 
-    std::vector<ISubsystem*>& GetSubsystems()
+    std::span<ISubsystem*> All()
     {
         return Subsystems;
     }
@@ -43,6 +40,6 @@ static struct ClassName##AutoRegister \
 { \
     ClassName##AutoRegister() \
     { \
-        SSubsystemStaticRegistry::GetStaticRegistry().AddSubsystem(new ClassName()); \
+        SSubsystemStaticRegistry::Get().AddSubsystem(new ClassName()); \
     } \
 } ClassName##AutoRegisterInstance;

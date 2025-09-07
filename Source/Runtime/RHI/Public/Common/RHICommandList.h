@@ -1,13 +1,39 @@
 #pragma once
 
+#include "RHITexture.h"
+
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <vector>
+
+struct FRHIDrawCommand;
+struct FRHIDrawParams;
+struct FRHIBuffer;
+struct FRHIPipeline;
+struct FRHITexture;
+struct FRHITextureView;
+struct FMeshDrawCommand;
+enum class ERHITextureLayout : uint8_t;
+enum class ERHIResourceAccess : uint16_t;
+enum class ERHIPipelineStage : uint16_t;
 
 class IRHICommandListContext
 {
 public:
     virtual ~IRHICommandListContext() = default;
+
+    virtual IRHICommandListContext& GetLowestLevelContext() { return *this; }
+
+    virtual void RHIBindPipeline(FRHIPipeline* Pipeline) = 0;
     virtual void RHISetScissorRect(uint32_t X, uint32_t Y) = 0;
+    virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
+    virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) = 0;
+    virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;
+    virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachment) = 0;
+    virtual void RHIEndRendering() = 0;
+    virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) = 0;
+    virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) = 0;
 };
 
 struct FRHICommandBase
@@ -42,8 +68,9 @@ class FRHICommandList
 {
 public:
     explicit FRHICommandList(IRHICommandListContext& InContext)
-        : Context(&InContext) {}
-    virtual ~FRHICommandList() = default;
+        : Context(&InContext)
+    {
+    }
 
     inline IRHICommandListContext& GetContext() const
     {
@@ -73,16 +100,18 @@ private:
 class FRHICommandListImmediate : public FRHICommandList
 {
 public:
-    explicit FRHICommandListImmediate(IRHICommandListContext& Ctx) : FRHICommandList(Ctx), Context(Ctx)
+    explicit FRHICommandListImmediate(IRHICommandListContext& Ctx)
+        : FRHICommandList(Ctx), Context(Ctx)
     {
     }
 
-    template<class TCmd, class... TArgs>
-    void EnqueueImmediate(TArgs&&... args)
+    template<class TCommand, class... TArgs>
+    void EnqueueImmediate(TArgs&&... Args)
     {
-        TCmd cmd(std::forward<TArgs>(args)...);
-        cmd.Execute_Internal(Context);
+        TCommand Command(std::forward<TArgs>(Args)...);
+        Command.Execute_Internal(Context);
     }
+
 private:
     IRHICommandListContext& Context;
 };
@@ -101,16 +130,5 @@ public:
             Command->Dispatch(Context);
             Pointer += Command->ByteSize;
         }
-    }
-};
-
-struct FRHICommandSetScissorRect : TRHICommand<FRHICommandSetScissorRect>
-{
-    uint32_t X = 0, Y = 0;
-    FRHICommandSetScissorRect(uint32_t InX, uint32_t InY) : X(InX), Y(InY) {}
-
-    void Execute_Internal(IRHICommandListContext& Ctx)
-    {
-        Ctx.RHISetScissorRect(X, Y);
     }
 };

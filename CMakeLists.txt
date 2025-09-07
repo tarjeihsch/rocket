@@ -37,15 +37,34 @@ if (MINGW)
     add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
-add_subdirectory(Source/Runtime/Core)
-add_subdirectory(Source/Runtime/Engine)
-add_subdirectory(Source/Runtime/RHI)
-add_subdirectory(Source/Runtime/Window)
-add_subdirectory(Source/Runtime/Scene)
-add_subdirectory(Source/Runtime/Application)
+add_compile_definitions(ROCKET_BINARIES="${CMAKE_CURRENT_SOURCE_DIR}/Binaries")
+add_compile_definitions(ROCKET_SRC="${CMAKE_CURRENT_SOURCE_DIR}/Source")
+add_compile_definitions(ROCKET_CONTENT="${CMAKE_CURRENT_SOURCE_DIR}/Content")
+
+# Third Party modules
 add_subdirectory(Source/ThirdParty/glfw)
 add_subdirectory(Source/ThirdParty/vulkan)
 add_subdirectory(Source/ThirdParty/imgui)
 add_subdirectory(Source/ThirdParty/glm)
 add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
+add_subdirectory(Source/ThirdParty/fastgltf)
+add_subdirectory(Source/ThirdParty/tinygltf)
+
+# Rocket modules
+add_subdirectory(Source/Runtime/Core)
+add_subdirectory(Source/Runtime/Engine)
+add_subdirectory(Source/Runtime/RHI)
+add_subdirectory(Source/Runtime/RenderCore)
+add_subdirectory(Source/Runtime/Window)
+add_subdirectory(Source/Runtime/Scene)
+add_subdirectory(Source/Runtime/Asset)
+add_subdirectory(Source/Runtime/Application)
+add_subdirectory(Source/Runtime/Object)
+
+# Game entrypoint module
+if (DEFINED PRIMARY_MODULE)
+    add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_DIR}")
+
+    message("Found Primary Module -- proceed to hook")
+endif()

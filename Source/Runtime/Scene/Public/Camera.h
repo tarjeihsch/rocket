@@ -8,66 +8,72 @@
 
 enum class ECameraProjectionMode 
 { 
-	Perspective, Orthographic
+    Perspective, Orthographic
 };
 
-class ICamera {};
+struct FCameraData
+{
+    alignas(16) glm::mat4 ViewMatrix = glm::identity<glm::mat4>();
+    alignas(16) glm::mat4 Projection = glm::identity<glm::mat4>();
+};
 
-class PCamera : public ICamera
+class ICamera
 {
 public:
-	PCamera() 
-	{
-		Settings.ProjectionMode = ECameraProjectionMode::Perspective;
-    	Settings.FoVY = 66.0f;
-    	Settings.ZNear = 0.1f;
-    	Settings.ZFar = 1000.0f;
-		Settings.FilmGrainIntensity = 0.0f;
-		Settings.ChromaticAberration = 0.0f;
-		
-		ApplySettings();
-	}
+    virtual ~ICamera() = default;
 
-	void SetOrthographicProjection(float Zoom, float AspectRatio, float ZNear, float ZFar);
-	void SetPerspectiveProjection(float FovY, float AspectRatio, float ZNear, float ZFar);
-	void CalculateViewMatrix(const glm::vec3& Position, const glm::vec3& Rotation);
-	void ApplySettings();
+    virtual FCameraData GetCameraData() const = 0;
 
-	inline const glm::mat4& GetViewMatrix() const
-	{
-		return ViewMatrix;
-	}
+    virtual void UpdateCameraData(const glm::vec3& Position, const glm::vec3& Rotation) = 0;
+};
 
-	inline const glm::mat4& GetProjectionMatrix() const
-	{
-		return Projection;
-	}
+class CPerspectiveCamera : public ICamera
+{
+public:
+    CPerspectiveCamera();
 
-	inline const glm::vec3& GetPosition() const
-	{
-		return Position;
-	}
+    virtual FCameraData GetCameraData() const override;
 
-	inline const glm::vec3& GetRotation() const
-	{
-		return Rotation;
-	}
+    void SetOrthographicProjection(float Zoom, float AspectRatio, float ZNear, float ZFar);
+    void SetPerspectiveProjection(float FovY, float AspectRatio, float ZNear, float ZFar);
+    void CalculateViewMatrix(const glm::vec3& Position, const glm::vec3& Rotation);
+    void ApplySettings();
 
-	struct SCameraSettings 
-	{
-		ECameraProjectionMode ProjectionMode;
-		float FoVY;
-		float ZNear;
-		float ZFar;
-		float FilmGrainIntensity;
-		float ChromaticAberration;
-		float AspectRatio;
-	} Settings;
+    virtual void UpdateCameraData(const glm::vec3& Position, const glm::vec3& Rotation) override;
+
+    inline const glm::mat4& GetViewMatrix() const
+    {
+	    return ViewMatrix;
+    }
+
+    inline const glm::mat4& GetProjectionMatrix() const
+    {
+	    return Projection;
+    }
+
+    inline const glm::vec3& GetPosition() const
+    {
+	    return Position;
+    }
+
+    inline const glm::vec3& GetRotation() const
+    {
+	    return Rotation;
+    }
+
+    struct SCameraSettings
+    {
+	    ECameraProjectionMode ProjectionMode;
+	    float FoVY;
+	    float ZNear;
+	    float ZFar;
+	    float AspectRatio;
+    } Settings;
 
 private:
-	glm::mat4 Projection = glm::identity<glm::mat4>();
-	glm::mat4 ViewMatrix = glm::identity<glm::mat4>();
+    glm::mat4 Projection = glm::identity<glm::mat4>();
+    glm::mat4 ViewMatrix = glm::identity<glm::mat4>();
 
-	glm::vec3 Position;
-	glm::vec3 Rotation;
+    glm::vec3 Position;
+    glm::vec3 Rotation;
 };

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
+#include "VulkanResourceManager.h"
+#include "VulkanTexture.h"
 
+#include <vulkan/vulkan_core.h>
 #include <vector>
 
 class FVulkanDevice;
@@ -15,7 +17,9 @@ public:
     FVulkanViewport(FVulkanDevice& InDevice);
     ~FVulkanViewport();
 
-    bool Acquire();
+    void Tick();
+
+    bool AcquireNextImageIndex();
     void Present();
 
     inline VkSurfaceKHR GetVkSurface() const;
@@ -29,6 +33,9 @@ public:
     inline VkImage GetImage() const;
     inline VkImageView GetImageView() const;
 
+    inline FVulkanTexture* GetBackBufferTexture() const;
+    inline FVulkanTextureView* GetBackBufferTextureView() const;
+
 private:
     void CreateSwapchain();
     void DestroySwapchain();
@@ -40,13 +47,14 @@ private:
     VkPresentModeKHR PresentMode;
     VkSurfaceFormatKHR SurfaceFormat;
 
-    std::vector<VkImage> Images;
-    std::vector<VkImageView> Views;
+    std::vector<FVulkanTexture*> BackBuffer;
+    std::vector<FVulkanTextureView*> BackBufferView;
+
     std::vector<VkSemaphore> ImageAcquiredSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
 
     uint32_t CurrentImageIndex;
-    uint32_t SemaphoreIndex ;
+    uint32_t SemaphoreIndex;
     uint32_t NumAcquireCalls;
     uint32_t NumPresentCalls;
 };
@@ -88,10 +96,20 @@ inline VkSemaphore FVulkanViewport::GetRenderFinishedSemaphore() const
 
 inline VkImage FVulkanViewport::GetImage() const
 {
-    return Images[CurrentImageIndex];
+    return BackBuffer[CurrentImageIndex]->Image;
 }
 
 inline VkImageView FVulkanViewport::GetImageView() const
 {
-    return Views[CurrentImageIndex];
+    return BackBufferView[CurrentImageIndex]->View;
+}
+
+inline FVulkanTexture * FVulkanViewport::GetBackBufferTexture() const
+{
+    return BackBuffer[CurrentImageIndex];
+}
+
+inline FVulkanTextureView * FVulkanViewport::GetBackBufferTextureView() const
+{
+    return BackBufferView[CurrentImageIndex];
 }

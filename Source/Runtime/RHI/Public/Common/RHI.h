@@ -1,16 +1,62 @@
 #pragma once
 
-#include <cstdint>
+#include "RHICommandList.h"
+#include "RHIPipeline.h"
 
+#include <cstdint>
+#include <memory>
+#include <span>
+
+struct FRHIDrawCommand;
+struct FRHIBufferDesc;
+struct FRHIBuffer;
+struct FMeshDrawCommand;
+enum class ERHIPipelineStage : uint16_t;
+enum class ERHIResourceAccess : uint16_t;
+enum class ERHITextureLayout : uint8_t;
+struct FRHITextureView;
+struct FRHITextureDesc;
+struct FRHITextureViewDesc;
+struct FRHITexture;
+struct FRHIDrawParams;
 class IRHICommandListContext;
 class FRHICommandList;
+
+enum class ERHIResourceLifetime : uint8_t
+{
+    Unknown = 0,
+
+    // Long-lived object with default VMA allocator
+    Persistent,
+
+    // Short-lived object with custom allocator
+    Transient,
+
+    // Memory will be managed externally
+    Unmanaged,
+};
+
+enum class ERHIResourceMemory
+{
+    Unknown = 0,
+
+    // GPU-only memory; fastest access by the GPU; CPU can't map it
+    DeviceLocal,
+
+    // CPU can map this memory
+    HostVisible
+};
 
 enum class ERHIInterfaceType : uint8_t
 {
     None = 0,
+
     Vulkan,
+
     D3D12,
+
     Metal,
+
     WebGL
 };
 
@@ -21,14 +67,33 @@ public:
 
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
-    virtual void Tick(float DeltaTime) = 0;
+    virtual void EndFrame() = 0;
 
     [[nodiscard]] virtual const char* GetName() const  = 0;
     [[nodiscard]] virtual const char* GetVersion() const  = 0;
     [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
 
+    virtual uint64_t GetFrameCounter() const noexcept = 0;
     virtual void RHIWaitUntilIdle() const = 0;
+    virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
+    virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const = 0;
+    virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
+    virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
+    virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
+    virtual IRHICommandListContext* GetCommandListContext() const = 0;
+    virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;
+    virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments, FRHITextureView* DepthAttachmentView) = 0;
+    virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) = 0;
+    virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
+    virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
+    virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
+
+    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
+    virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
+    virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
+
+    // virtual void RHIUploadTextureData()
 };
 
 class IRHIModule
@@ -59,4 +124,9 @@ template<typename TRHI>
 inline TRHI* GetRHI()
 {
     return CastRHI<TRHI>(GRHI);
+}
+
+inline IRHI* GetRHI()
+{
+    return GRHI;
 }

@@ -6,6 +6,9 @@
 #include "VulkanCommandBufferContext.h"
 #include "VulkanDevice.h"
 #include "Assert.h"
+#include "VulkanCommandList.h"
+
+#include <cstring>
 
 FVulkanQueue::FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex)
     : Device(InDevice),
@@ -23,35 +26,51 @@ FVulkanQueue::~FVulkanQueue()
     Shutdown();
 }
 
-void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
+void FVulkanQueue::Submit()
 {
-    std::vector<FVulkanCommandBufferPayload*> Payloads;
-    Context.Finalize(Payloads);
+    std::vector<FVulkanCommandBufferPayload *> Payloads;
+    auto CmdListContext = static_cast<FVulkanCommandListContext *>(GetRHI()->GetCommandListContext());
+    CmdListContext->Finalize(Payloads);
 
-    for (FVulkanCommandBufferPayload* Payload : Payloads)
+    for (FVulkanCommandBufferPayload *Payload : Payloads)
     {
+        bool bIsFirst = (Payload == Payloads.front());
+        bool bIsLast = (Payload == Payloads.back());
+
+        if (bIsFirst)
+        {
+            Payload->WaitSemaphores.push_back(GetVulkanRHIMinimal()->GetImageAcquiredSemaphore());
+            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR);
+        }
+
+        if (bIsLast)
+        {
+            Payload->SignalSemaphores.push_back(GetVulkanRHIMinimal()->GetRenderFinishedSemaphore());
+            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR);
+        }
+
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;
-        for (VkSemaphore Semaphore : Payload->WaitSemaphores)
+        for (uint32_t Index = 0; Index < Payload->WaitSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo WaitSemaphoreSubmitInfo = {};
             WaitSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            WaitSemaphoreSubmitInfo.semaphore = Semaphore;
-            WaitSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+            WaitSemaphoreSubmitInfo.semaphore = Payload->WaitSemaphores[Index];
+            WaitSemaphoreSubmitInfo.stageMask = Payload->WaitStageMasks[Index];
             WaitSemaphoreSubmitInfos.push_back(WaitSemaphoreSubmitInfo);
         }
 
         std::vector<VkSemaphoreSubmitInfo> SignalSemaphoreSubmitInfos;
-        for (VkSemaphore Semaphore : Payload->SignalSemaphores)
+        for (uint32_t Index = 0; Index < Payload->SignalSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo ReadySemaphoreSubmitInfo = {};
             ReadySemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            ReadySemaphoreSubmitInfo.semaphore = Semaphore;
-            ReadySemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            ReadySemaphoreSubmitInfo.semaphore = Payload->SignalSemaphores[Index];
+            ReadySemaphoreSubmitInfo.stageMask = Payload->SignalStageMasks[Index];
             SignalSemaphoreSubmitInfos.push_back(ReadySemaphoreSubmitInfo);
         }
 
         std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
-        for (FVulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
+        for (FVulkanCommandBuffer *CommandBuffer : Payload->CommandBuffers)
         {
             VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
             CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -66,7 +85,7 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
         VkSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
         TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
         TimelineSemaphoreSubmitInfo.semaphore = TimelineSemaphore;
-        TimelineSemaphoreSubmitInfo.value     = TimelineValue;
+        TimelineSemaphoreSubmitInfo.value = TimelineValue;
         TimelineSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
         SignalSemaphoreSubmitInfos.push_back(TimelineSemaphoreSubmitInfo);
 
@@ -85,8 +104,50 @@ void FVulkanQueue::Submit(FVulkanCommandBufferContext& Context)
         SubmissionQueue.push(Payload);
     }
 }
+void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)> InCallback)
+{
+    FVulkanCommandListContext CmdListContext(Device);
+    FRHICommandList CmdList(CmdListContext);
 
-void FVulkanQueue::Await()
+    InCallback(CmdList);
+
+    FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
+
+    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    CmdListContext.Finalize(Payloads);
+
+    for (FVulkanCommandBufferPayload* Payload : Payloads)
+    {
+        std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
+        for (FVulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
+        {
+            VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
+            CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+            CommandBufferSubmitInfo.commandBuffer = CommandBuffer->GetHandle();
+            CommandBufferSubmitInfos.push_back(CommandBufferSubmitInfo);
+            CommandBuffer->Submit();
+        }
+
+        VkFenceCreateInfo FenceCreateInfo = {};
+        FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        VkFence Fence;
+        VulkanRHI::vkCreateFence(Device.GetVkDevice(), &FenceCreateInfo, nullptr, &Fence);
+
+        VkSubmitInfo2 SubmitInfo = {};
+        SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        SubmitInfo.commandBufferInfoCount = CommandBufferSubmitInfos.size();
+        SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
+
+        VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, Fence);
+        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit to queue.");
+
+        VulkanRHI::vkWaitForFences(Device.GetVkDevice(), 1, &Fence, VK_TRUE, UINT64_MAX);
+        VulkanRHI::vkDestroyFence(Device.GetVkDevice(), Fence, nullptr);
+    }
+}
+
+void FVulkanQueue::Wait()
 {
     if (SubmissionQueue.empty())
     {
@@ -113,9 +174,14 @@ void FVulkanQueue::Await()
     delete Payload;
 }
 
+FVulkanCommandBufferPool* FVulkanQueue::GetCommandBufferPool() const
+{
+    return CommandBufferPool;
+}
+
 void FVulkanQueue::Init()
 {
-    VulkanRHI::vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
+    VulkanRHI::vkGetDeviceQueue(Device .GetVkDevice(), QueueFamilyIndex, 0, &Handle);
 
     VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
     TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -127,7 +193,7 @@ void FVulkanQueue::Init()
     SemaphoreCreateInfo.pNext = &TimelineSemaphoreCreateInfo;
     VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &TimelineSemaphore);
 
-    CommandBufferPool = std::make_unique<FVulkanCommandBufferPool>(Device, *this);
+    CommandBufferPool = new FVulkanCommandBufferPool(Device, *this);
 }
 
 void FVulkanQueue::Shutdown()
@@ -139,7 +205,7 @@ void FVulkanQueue::Shutdown()
         delete Payload;
     }
 
-    CommandBufferPool = nullptr;
+    delete CommandBufferPool;
 
     VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), TimelineSemaphore, nullptr);
 }

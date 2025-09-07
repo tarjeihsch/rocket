@@ -31,3 +31,5 @@ target_link_libraries(Window
     PUBLIC Rocket::Core
     PRIVATE glfw
 )
+
+set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

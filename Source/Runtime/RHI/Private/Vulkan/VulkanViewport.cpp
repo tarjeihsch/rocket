@@ -4,6 +4,8 @@
 #include "VulkanLoader.h"
 #include "VulkanDevice.h"
 #include "Assert.h"
+#include "VulkanTexture.h"
+
 #include <GLFW/glfw3.h>
 #include "Window.h"
 
@@ -11,7 +13,7 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
     Surface(nullptr),
-    CurrentImageIndex(UINT32_MAX),
+    CurrentImageIndex(0),
     SemaphoreIndex(0),
     NumAcquireCalls(0),
     NumPresentCalls(0)
@@ -56,6 +58,8 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     }
 
     CreateSwapchain();
+
+    AcquireNextImageIndex();
 }
 
 FVulkanViewport::~FVulkanViewport()
@@ -67,8 +71,8 @@ FVulkanViewport::~FVulkanViewport()
 
 void FVulkanViewport::CreateSwapchain()
 {
-	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-	VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
+    VkSurfaceCapabilitiesKHR SurfaceCapabilities;
+    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
     int32_t Width, Height;
     glfwGetFramebufferSize((GLFWwindow*)IWindow::Get()->GetNativeWindow(), &Width, &Height);
@@ -124,6 +128,9 @@ void FVulkanViewport::CreateSwapchain()
 
     RK_LOG_DEBUG("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
 
+    std::vector<VkImage> Images;
+    std::vector<VkImageView> Views;
+
     VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
     Images.resize(ImageCount);
     Views.resize(ImageCount);
@@ -131,25 +138,12 @@ void FVulkanViewport::CreateSwapchain()
 
     for (uint32_t Index = 0; Index < ImageCount; ++Index)
     {
-        VkImageViewCreateInfo ImageViewCreateInfo = {};
-        ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        ImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ImageViewCreateInfo.image = Images[Index];
-        ImageViewCreateInfo.format = SurfaceFormat.format;
-        ImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        ImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        ImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        ImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        ImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        ImageViewCreateInfo.subresourceRange.levelCount = 1;
-        ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        ImageViewCreateInfo.subresourceRange.layerCount = 1;
-        ImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-        VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &ImageViewCreateInfo, nullptr, &Views[Index]);
-        RK_ASSERT(Result == VK_SUCCESS, "Failed to create image view.");
+        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
+        FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
+        BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
+        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Images[Index]));
     }
-    
+
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
     SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -167,7 +161,7 @@ void FVulkanViewport::CreateSwapchain()
     }
 }
 
-bool FVulkanViewport::Acquire()
+bool FVulkanViewport::AcquireNextImageIndex()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
@@ -177,7 +171,6 @@ bool FVulkanViewport::Acquire()
     {
         DestroySwapchain();
         CreateSwapchain();
-        return false;
     }
 
     ++NumAcquireCalls;
@@ -204,6 +197,8 @@ void FVulkanViewport::DestroySwapchain()
 {
     Device.WaitUntilIdle();
 
+    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
+
     for (auto& Semaphore : ImageAcquiredSemaphores)
     {
         VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
@@ -214,15 +209,17 @@ void FVulkanViewport::DestroySwapchain()
         VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
     }
 
-    for (auto& view : Views)
+    for (auto& Texture : BackBuffer)
     {
-        VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), view, nullptr);
+        delete Texture;
     }
 
-    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
+    for (auto& View : BackBufferView)
+    {
+        delete View;
+    }
 
-    Views.clear();
-    Images.clear();
+    BackBuffer.clear();
     ImageAcquiredSemaphores.clear();
     RenderFinishedSemaphores.clear();
 

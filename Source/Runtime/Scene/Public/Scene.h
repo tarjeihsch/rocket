@@ -6,31 +6,31 @@
 class PScene
 {
 public:
-	void Init()
-	{
-		Camera = new PCamera();
-		Registry = new PRegistry();
-	}
+    void Init()
+    {
+	    Camera = new CPerspectiveCamera();
+	    Registry = new PRegistry();
+    }
 
-	void Cleanup() 
-	{
-		delete Camera;
-		delete Registry;
-	}
+    void Cleanup()
+    {
+	    delete Camera;
+	    delete Registry;
+    }
 
-	[[nodiscard]] PCamera* GetCamera() const
-	{
-		return Camera;
-	}
+    [[nodiscard]] CPerspectiveCamera* GetCamera() const
+    {
+	    return static_cast<CPerspectiveCamera*>(Camera);
+    }
 
-	[[nodiscard]] PRegistry* GetRegistry() const
-	{
-		return Registry;
-	}
+    [[nodiscard]] PRegistry* GetRegistry() const
+    {
+	    return Registry;
+    }
 
-	void OnImGuiRender();
+    void OnImGuiRender();
 
 private:
-	PCamera* Camera;
-	PRegistry* Registry;
+    ICamera* Camera;
+    PRegistry* Registry;
 };
