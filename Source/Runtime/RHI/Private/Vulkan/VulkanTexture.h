@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VulkanDescriptorManager.h"
 #include "Common/RHITexture.h"
 #include "vma/vk_mem_alloc.h"
 
@@ -46,7 +47,6 @@ struct FVulkanTextureView : FRHITextureView
 
     VkImage Image;
     VkImageView View;
-    VkImageAspectFlags AspectFlags;
 
 private:
     void Alloc();
@@ -55,4 +55,6 @@ private:
 private:
     FRHITextureViewDesc Desc;
     FVulkanDevice& Device;
+
+    DescriptorHandle m_DescriptorHandle;
 };

@@ -108,6 +108,9 @@
     X(vkAllocateDescriptorSets) \
     X(vkUpdateDescriptorSets) \
     X(vkCmdBindIndexBuffer) \
+    X(vkCmdDraw) \
+    X(vkCmdBlitImage) \
+    X(vkCmdDrawIndexed) \
     X(vkDestroyDescriptorPool) \
     X(vkDestroyDescriptorSetLayout)\
     X(vkCreatePipelineLayout) \
@@ -119,6 +122,7 @@
     X(vkCmdPipelineBarrier2) \
     X(vkCmdBeginRendering) \
     X(vkCmdEndRendering) \
+    X(vkCmdPushConstants)
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \

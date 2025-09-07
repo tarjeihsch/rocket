@@ -5,8 +5,11 @@
 #include "VulkanLoader.h"
 #include "VulkanResourceManager.h"
 #include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanDescriptorManager.h"
 
 #include <cassert>
+
+#include "VulkanDescriptorManager.h"
 
 FVulkanTexture::FVulkanTexture(FVulkanDevice& InDevice)
     : Device(InDevice)
@@ -22,7 +25,7 @@ FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc)
 FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc, VkImage InImage)
     : Device(InDevice), Desc(InDesc), Image(InImage), Allocation(nullptr)
 {
-    assert(Desc.Memory != ERHIResourceLifetime::Unknown);
+    assert(Desc.Lifetime != ERHIResourceLifetime::Unknown);
 }
 
 FVulkanTexture::~FVulkanTexture()
@@ -44,14 +47,14 @@ void FVulkanTexture::Alloc()
 {
     VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Tex2D.Extent[0], Desc.Tex2D.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
 
-    if (Desc.Memory == ERHIResourceLifetime::Transient)
+    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
         RK_ASSERT(Result == VK_SUCCESS);
 
         Device.GetTransientResourceAllocator()->AllocImage(Image, Offset);
     }
-    else if (Desc.Memory == ERHIResourceLifetime::Persistent)
+    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
     {
         // We own the allocation, allocate a persistent image
         VmaAllocationCreateInfo AllocationCreateInfo = {};
@@ -60,19 +63,21 @@ void FVulkanTexture::Alloc()
         VkResult Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
         RK_ASSERT(Result == VK_SUCCESS);
     }
+
+    CurrentLayout = Desc.InitialLayout;
 }
 
 void FVulkanTexture::Free()
 {
-    if (Desc.Memory == ERHIResourceLifetime::Transient)
+    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
-        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Image, Image);
+        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Image, Image, {});
     }
-    else if (Desc.Memory == ERHIResourceLifetime::Persistent)
+    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
-        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Image, Image, Allocation);
+        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Image, Image, {}, Allocation);
     }
 }
 
@@ -92,12 +97,12 @@ FVulkanTextureView::~FVulkanTextureView()
     Free();
 }
 
-const FRHITextureViewDesc & FVulkanTextureView::RHIGetTextureViewDesc() const
+const FRHITextureViewDesc& FVulkanTextureView::RHIGetTextureViewDesc() const
 {
     return Desc;
 }
 
-void * FVulkanTextureView::GetHandle() const
+void* FVulkanTextureView::GetHandle() const
 {
     return View;
 }
@@ -112,5 +117,6 @@ void FVulkanTextureView::Alloc()
 
 void FVulkanTextureView::Free()
 {
-    VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), View, nullptr);
+    //VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), View, nullptr);
+    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::ImageView, View, m_DescriptorHandle);
 }

@@ -7,11 +7,11 @@
 struct DescriptorHandle
 {
     uint32_t Index = UINT32_MAX;
-    uint32_t Generation = 0;
+    uint32_t Generation = UINT32_MAX;
 
     inline bool IsValid() const
     {
-        return Index != UINT32_MAX;
+        return Index != UINT32_MAX && Generation != UINT32_MAX;
     }
 };
 
@@ -21,8 +21,14 @@ enum class DescriptorBinding : uint32_t
     Sampler = 1,
     StorageImage = 2,
     StorageBuffer = 3,
-
     Count
+};
+
+struct PushConstantConfig
+{
+    VkPushConstantRange Range = {};
+    uint32_t Size = 0;
+    VkShaderStageFlags Stages = 0;
 };
 
 class FVulkanDevice;
@@ -30,7 +36,7 @@ class FVulkanDevice;
 class VulkanDescriptorManager
 {
 public:
-    explicit VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_t pMaxSampledImages = 16384, uint32_t pMaxSamplers = 1024, uint32_t pMaxStorageImages = 2048, uint32_t pMaxStorageBuffers = 4096);
+    explicit VulkanDescriptorManager(FVulkanDevice& p_Device, uint32_t p_MaxSampledImages = 16384, uint32_t p_MaxSamplers = 1024, uint32_t p_MaxStorageImages = 2048, uint32_t p_MaxStorageBuffers = 4096);
     ~VulkanDescriptorManager();
 
     DescriptorHandle AddSampledImage(VkImageView View, VkImageLayout Layout);
@@ -89,6 +95,8 @@ private:
     ImageSlotArray Samplers;
     ImageSlotArray StorageImages;
     BufferSlotArray StorageBuffers;
+
+    PushConstantConfig m_PushConstantConfig;
 };
 
 VkDescriptorSet VulkanDescriptorManager::GetDescriptorSet() const

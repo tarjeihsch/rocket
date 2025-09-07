@@ -9,9 +9,19 @@
 FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture *InHandle)
     : FFGResourceRef(InAccess), Handle(InHandle)
 {
-    RTVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
-    SRVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
-    UAVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color), Handle));
+    // TODO: switch
+    if (Handle->RHIGetTextureDesc().Format == ERHITextureFormat::B8G8R8A8_SRGB)
+    {
+        RTVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), Handle));
+    }
+    else if (Handle->RHIGetTextureDesc().Format == ERHITextureFormat::D32_SFLOAT)
+    {
+        DSVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::D32_SFLOAT, ERHITextureAspect::Depth, ERHIResourceLifetime::Transient), Handle));
+    }
+    else if (Handle->RHIGetTextureDesc().Format == ERHITextureFormat::D32_SFLOAT_S8_UINT)
+    {
+        DSVHandle.reset(GetRHI()->RHICreateTextureView(FRHITextureViewDesc::Create2D(ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureAspect::DepthStencil, ERHIResourceLifetime::Transient), Handle));
+    }
 }
 
 void FFrameGraphPass::AddColorAttachment(FRHITexture* Resource)
@@ -43,7 +53,6 @@ void FFrameGraphPass::AddTransferSrc(FRHITexture* Resource)
 {
     TextureReads.push_back({ERHIResourceAccess::TransferRead, Resource});
 }
-
 
 void FFrameGraphPass::AddTransferDst(FRHITexture* Resource)
 {
@@ -115,7 +124,8 @@ void FFrameGraphBuilder::Execute()
             }
         }
 
-        std::vector<FRHITextureView*> TextureViews;
+        std::vector<FRHITextureView*> ColorAttachments;
+        FRHITextureView* DepthAttachmentView;
 
         for (const FFGTextureRef& Resource : Pass.TextureWrites)
         {
@@ -160,15 +170,20 @@ void FFrameGraphBuilder::Execute()
                 Resource.Handle->CurrentPipelineStage = NewStage;
             }
 
-            if (NewAccess == ERHIResourceAccess::ColorAttachmentWrite || NewAccess == ERHIResourceAccess::DepthStencilAttachmentWrite)
+            if (NewAccess == ERHIResourceAccess::ColorAttachmentWrite)
             {
-                TextureViews.push_back(Resource.UAVHandle.get());
+                ColorAttachments.push_back(Resource.RTVHandle.get());
+            }
+
+            if (NewAccess == ERHIResourceAccess::DepthStencilAttachmentWrite)
+            {
+                DepthAttachmentView = Resource.DSVHandle.get();
             }
         }
 
         if ((Pass.Flags & EFGPassFlags::Dynamic) == EFGPassFlags::Dynamic)
         {
-            GetRHI()->RHICmdBeginRendering(&CmdList, TextureViews);
+            GetRHI()->RHICmdBeginRendering(&CmdList, ColorAttachments, DepthAttachmentView);
         }
 
         if (Pass.Callback)

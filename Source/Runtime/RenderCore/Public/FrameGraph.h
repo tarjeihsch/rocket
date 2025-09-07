@@ -57,14 +57,17 @@ struct FFGTextureRef : FFGResourceRef
 
     FRHITexture* Handle;
 
-    // Output color buffer
+    // Output color buffer (color attachment)
     std::unique_ptr<FRHITextureView> RTVHandle;
 
-    // Input for shaders
+    // Input for shaders (sampled textures)
     std::unique_ptr<FRHITextureView> SRVHandle;
 
-    // Read/write in shaders
+    // Read/write in shaders (compute)
     std::unique_ptr<FRHITextureView> UAVHandle;
+
+    // Output depth buffer (depth stencil attachment)
+    std::unique_ptr<FRHITextureView> DSVHandle;
 };
 
 struct FFGBufferRef : FFGResourceRef

@@ -225,65 +225,23 @@ FRHIBuffer *CVulkanRHI::RHICreateBuffer(FRHIBufferDesc Desc) const
     return new FVulkanBuffer(*Device, Desc);
 }
 
-void CVulkanRHI::RHIUploadBufferData(FRHIBuffer *Buffer, void *Data, uint64_t Size)
+void CVulkanRHI::RHIUploadDataBlocking(FRHIBuffer *Buffer, void *Data, uint64_t Size)
 {
-    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Size, 16, ERHIResourceLifetime::Transient, ERHIResourceMemory::HostVisible)));
+    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Size)));
 
-    StagingBuffer->Map(Data, Size);
+    StagingBuffer->Lock(Data, Size);
 
     Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
     {
         CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
     });
+
+    //StagingBuffer->Unlock();
 }
 
 FRHIPipeline *CVulkanRHI::RHICreatePipelineStateObject(FRHIPipelineDesc Desc)
 {
-    VulkanPipelineSpecification Spec;
-
-    VulkanShader* VS = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT);
-    VS->Create(Desc.VSData, Desc.VSWordCount);
-
-    VulkanShader* PS = new VulkanShader(Device->GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
-    PS->Create(Desc.PSData, Desc.PSWordCount);
-
-    Spec.VertexShader = VulkanShaderRef::Capture(VS);
-    Spec.FragmentShader = VulkanShaderRef::Capture(PS);
-    Spec.Layout = Device->GetDescriptorManager()->GetPipelineLayout();
-
-    Spec.ColorAttachmentFormats.reserve(Desc.ColorAttachmentFormats.size());
-    for (ERHIFormat Format : Desc.ColorAttachmentFormats)
-    {
-        Spec.ColorAttachmentFormats.push_back(VulkanRHI::ToVkFormat(Format));
-    }
-
-    // 2. Vertex Bindings
-    Spec.VertexBindings.reserve(Desc.VertexBindings.size());
-    for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
-    {
-        VkVertexInputBindingDescription VkBinding = {};
-        VkBinding.binding = Binding.Binding;
-        VkBinding.stride = Binding.Stride;
-        VkBinding.inputRate = Binding.PerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-
-        Spec.VertexBindings.push_back(VkBinding);
-    }
-
-    // 3. Vertex Attributes
-    Spec.VertexAttributes.reserve(Desc.VertexAttributes.size());
-    for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
-    {
-        VkVertexInputAttributeDescription VkAttr = {};
-        VkAttr.location = Attr.Location;
-        VkAttr.binding = Attr.Binding;
-        VkAttr.format = VulkanRHI::ToVkFormat(Attr.Format);
-        VkAttr.offset = Attr.Offset;
-
-        Spec.VertexAttributes.push_back(VkAttr);
-    }
-
-    FVulkanPipeline* Pipeline = Device->GetPipelineManager()->GetPipeline(Spec);
-    return Pipeline;
+    return Device->GetPipelineManager()->GetPipeline(Desc);
 }
 
 IRHICommandListContext *CVulkanRHI::GetCommandListContext() const
@@ -295,9 +253,9 @@ void CVulkanRHI::RHICmdBindPipeline(FRHICommandList &RHICmdList, FRHIPipeline *P
     RHICmdList.Enqueue<FVulkanCommandBindPipeline>(Pipeline);
 }
 
-void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments)
+void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments, FRHITextureView* DepthAttachmentView)
 {
-    RHICmdList->Enqueue<FVulkanCommandBeginRendering>(ColorAttachments);
+    RHICmdList->Enqueue<FVulkanCommandBeginRendering>(ColorAttachments, DepthAttachmentView);
 }
 
 void CVulkanRHI::RHICmdEndRendering(FRHICommandList *RHICmdList)
@@ -310,14 +268,33 @@ void CVulkanRHI::RHICmdPipelineBarrier(FRHICommandList *RHICmdList, FRHITexture 
     RHICmdList->Enqueue<FVulkanCommandPipelineBarrier>(Texture, SrcLayout, DstLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
 }
 
-void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, std::span<FMeshDrawCommand> DrawCommands)
+void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
 {
-    RHICmdList.Enqueue<FVulkanCommandDraw>(DrawCommands);
+    RHICmdList.Enqueue<FVulkanCommandDraw>(DrawCommand, Params);
+}
+
+void CVulkanRHI::RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+{
+    RHICmdList.Enqueue<FVulkanCommandDrawIndexed>(DrawCommand, Params);
 }
 
 FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
 {
     return Viewport->GetBackBufferTexture();
+}
+
+void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
+{
+    RHICmdList.Enqueue<FVulkanCommandBlitImage>(Src, Dst);
+}
+
+std::shared_ptr<FRHIBuffer> CVulkanRHI::RHIBindBuffer(void *Data, uint64_t Size)
+{
+    std::shared_ptr<FRHIBuffer> Buffer(RHICreateBuffer(FRHIBufferDesc::CreateStorageBuffer(Size)));
+
+    Buffer->Lock(Data, Size);
+
+    return Buffer;
 }
 
 VkInstance CVulkanRHI::RHIGetVkInstance() const
@@ -425,12 +402,27 @@ std::span<const char*> CVulkanRHI::GetInstanceExtensions()
     return std::span(InstanceExtensions);
 }
 
-std::span<const char*> CVulkanRHI::GetPhysicalDeviceExtensions()
+std::span<const char *> CVulkanRHI::GetPhysicalDeviceExtensions()
 {
     return std::span(PhysicalDeviceExtensions);
 }
 
-FVulkanDevice* CVulkanRHI::GetDevice() const
+VkPipelineLayout CVulkanRHI::GetBindlessPipelineLayout() const
+{
+    return Device->GetDescriptorManager()->GetPipelineLayout();
+}
+
+VkDescriptorSet CVulkanRHI::GetBindlessDescriptorSet() const
+{
+    return Device->GetDescriptorManager()->GetDescriptorSet();
+}
+
+VkDescriptorSetLayout CVulkanRHI::GetBindlessDesciptorSetLayout() const
+{
+    return Device->GetDescriptorManager()->GetDescriptorSetLayout();
+}
+
+FVulkanDevice * CVulkanRHI::GetDevice() const
 {
     assert(Device != nullptr);
 

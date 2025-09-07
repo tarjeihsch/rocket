@@ -1,7 +1,10 @@
 #pragma once
 #include <cstdint>
 
+#include "RHI.h"
+
 enum class ERHIResourceLifetime : uint8_t;
+
 enum class ERHITextureUsage : uint8_t
 {
     None = 0,
@@ -70,12 +73,17 @@ enum class ERHITextureFormat
 {
     Invalid = 0,
     B8G8R8A8_SRGB,
+    D32_SFLOAT_S8_UINT,
+    D32_SFLOAT,
 };
 
 enum class ERHITextureAspect
 {
-    None = 0,
-    Color
+    None    = 0,
+    Color   = 1 << 0,
+    Depth   = 1 << 1,
+    Stencil = 1 << 2,
+    DepthStencil = Depth | Stencil
 };
 
 inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
@@ -88,24 +96,24 @@ struct FRHITextureDesc
         uint32_t Extent[2];
     } Tex2D;
 
-    ERHIResourceLifetime Memory;
+    ERHIResourceLifetime Lifetime;
     ERHITextureFormat Format;
     ERHITextureUsage Usage;
-    ERHITextureLayout Layout;
+    ERHITextureLayout InitialLayout;
     uint32_t MipLevel;
     uint32_t LayerCount;
     uint32_t SampleCount;
 
-    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceLifetime InMemory, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout Layout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
+    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceLifetime InLifetime, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout InitialLayout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
     {
         FRHITextureDesc Desc = {};
         Desc.Tex2D.Extent[0] = SizeX;
         Desc.Tex2D.Extent[1] = SizeY;
         Desc.Format = Format;
-        Desc.Memory = InMemory;
+        Desc.Lifetime = InLifetime;
         Desc.MipLevel = MipLevel;
         Desc.Usage = Usage;
-        Desc.Layout = Layout;
+        Desc.InitialLayout = InitialLayout;
         Desc.SampleCount = SampleCount;
         return Desc;
     }
@@ -128,12 +136,14 @@ struct FRHITextureViewDesc
 {
     ERHITextureFormat Format = ERHITextureFormat::Invalid;
     ERHITextureAspect Aspect = ERHITextureAspect::None;
+    ERHIResourceLifetime Lifetime;
 
-    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect)
+    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect, ERHIResourceLifetime Lifetime)
     {
         FRHITextureViewDesc Desc = {};
         Desc.Format = Format;
         Desc.Aspect = Aspect;
+        Desc.Lifetime = Lifetime;
         return Desc;
     }
 };

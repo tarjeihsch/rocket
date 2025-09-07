@@ -43,7 +43,7 @@ void FTransientResourceAllocator::Init()
     RK_ASSERT(Result == VK_SUCCESS, "Failed to map transient memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
-    BlockCreateInfo.size = VK_WHOLE_SIZE;
+    BlockCreateInfo.size = 64ull * 1024 * 1024;
     BlockCreateInfo.flags = 0;
 
     Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
@@ -117,13 +117,14 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;
     Entry.Handle = Handle;
     Entry.Allocation = Allocation;
     Entry.FrameNumber = GetRHI()->GetFrameCounter();
+    Entry.m_DescriptorHandle = BindingIndex;
 
     Entries.push_back(Entry);
 }
@@ -142,12 +143,18 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
         switch (It->StructureType)
         {
         case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
+        case EType::ImageView: VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr); break;
         case EType::Buffer: VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr); break;
         }
 
         if (It->Allocation != nullptr)
         {
             vmaFreeMemory(Device.GetVmaAllocator(), It->Allocation);
+        }
+
+        if (It->m_DescriptorHandle.IsValid())
+        {
+            Device.GetDescriptorManager()->RemoveStorageBuffer(It->m_DescriptorHandle);
         }
 
         It = Entries.erase(It);
@@ -194,12 +201,12 @@ void FVulkanDevice::Initialize()
     std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos(QueueFamilyCount);
     for (uint32_t Index = 0; Index < QueueFamilyCount; Index++)
     {
-	VkDeviceQueueCreateInfo QueueFamilyCreateInfo = {};
-	QueueFamilyCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	QueueFamilyCreateInfo.queueCount = 1;
-	QueueFamilyCreateInfo.queueFamilyIndex = Index;
-	QueueFamilyCreateInfo.pQueuePriorities = &QueuePriorities[Index];
-	QueueCreateInfos[Index] = QueueFamilyCreateInfo;
+	    VkDeviceQueueCreateInfo QueueFamilyCreateInfo = {};
+	    QueueFamilyCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	    QueueFamilyCreateInfo.queueCount = 1;
+	    QueueFamilyCreateInfo.queueFamilyIndex = Index;
+	    QueueFamilyCreateInfo.pQueuePriorities = &QueuePriorities[Index];
+	    QueueCreateInfos[Index] = QueueFamilyCreateInfo;
     }
 
     // Vulkan 1.3 features
@@ -267,7 +274,7 @@ void FVulkanDevice::Initialize()
         Queues.push_back(new FVulkanQueue(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
     }
 
-    PipelineManager = new VulkanPipelineManager(*this);
+    PipelineManager = new FVulkanPipelineManager(*this);
 
     DescriptorManager = new VulkanDescriptorManager(*this);
 
@@ -275,7 +282,7 @@ void FVulkanDevice::Initialize()
 
     CommandListContext = new FVulkanCommandListContext(*this);
 
-    TransientResourceAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024);
+    TransientResourceAllocator = new FTransientResourceAllocator(*this, 64ull * 1024 * 1024);
 }
 
 void FVulkanDevice::Shutdown()

@@ -7,10 +7,16 @@
 #include <span>
 #include <vector>
 
+struct FRHIDrawCommand;
+struct FRHIDrawParams;
 struct FRHIBuffer;
 struct FRHIPipeline;
 struct FRHITexture;
+struct FRHITextureView;
 struct FMeshDrawCommand;
+enum class ERHITextureLayout : uint8_t;
+enum class ERHIResourceAccess : uint16_t;
+enum class ERHIPipelineStage : uint16_t;
 
 class IRHICommandListContext
 {
@@ -21,11 +27,13 @@ public:
 
     virtual void RHIBindPipeline(FRHIPipeline* Pipeline) = 0;
     virtual void RHISetScissorRect(uint32_t X, uint32_t Y) = 0;
-    virtual void RHIDraw(std::span<FMeshDrawCommand> DrawCommands) = 0;
-    virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess,ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;
-    virtual void RHIBeginRendering(std::span<FRHITextureView*> TextureViews) = 0;
+    virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
+    virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) = 0;
+    virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;
+    virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachment) = 0;
     virtual void RHIEndRendering() = 0;
     virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) = 0;
+    virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) = 0;
 };
 
 struct FRHICommandBase

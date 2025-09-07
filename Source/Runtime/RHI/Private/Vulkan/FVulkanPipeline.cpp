@@ -2,7 +2,9 @@
 
 #include "Assert.h"
 #include "Logger.h"
+#include "ShaderAsset.h"
 #include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanDescriptorManager.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 
@@ -35,12 +37,12 @@ static inline void HashObject(uint64_t& pHash, const TObject& pObject)
     HashBytes(pHash, bytes.data(), bytes.size());
 }
 
-VulkanShader::VulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
+FVulkanShader::FVulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
     : Device(pDevice), Stage(pStage), Module(VK_NULL_HANDLE), Version(0)
 {
 }
 
-void VulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
+void FVulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
 {
     if (Module)
     {
@@ -59,7 +61,7 @@ void VulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
     Version += 1;
 }
 
-void VulkanShader::Destroy()
+void FVulkanShader::Destroy()
 {
     if (Module)
     {
@@ -70,52 +72,45 @@ void VulkanShader::Destroy()
     Version = 0;
 }
 
-VulkanShaderRef VulkanShaderRef::Capture(VulkanShader *pShader)
+FVulkanShaderRef FVulkanShaderRef::Capture(FVulkanShader *pShader)
 {
-    VulkanShaderRef Ref;
+    FVulkanShaderRef Ref;
     Ref.Shader = pShader;
     Ref.SnapshotVersion = pShader->Version;
     return Ref;
 }
 
-VulkanPipelineManager::VulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache)
+FVulkanPipelineManager::FVulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache)
     : Device(pDevice), DriverCache(pDriverCache)
 {
 }
 
-VulkanPipelineManager::~VulkanPipelineManager()
+FVulkanPipelineManager::~FVulkanPipelineManager()
 {
     Invalidate();
 }
 
-VulkanPipelineSpecification VulkanPipelineManager::MakeSpecification(VkPipelineLayout pLayout, VulkanShader *pVertexShader, VulkanShader *pFragmentShader)
+FVulkanPipeline* FVulkanPipelineManager::GetPipeline(const FRHIPipelineDesc &Desc)
 {
-    VulkanPipelineSpecification Spec = {};
-    Spec.Layout = pLayout;
-    Spec.VertexShader = VulkanShaderRef::Capture(pVertexShader);
-    Spec.FragmentShader = VulkanShaderRef::Capture(pFragmentShader);
-    return Spec;
-}
-
-FVulkanPipeline* VulkanPipelineManager::GetPipeline(const VulkanPipelineSpecification &pSpec)
-{
-    const uint64_t Key = Hash(pSpec);
+    const uint64_t Key = Hash(Desc);
     if (auto It = Data.find(Key); It != Data.end())
     {
         return It->second;
     }
 
-    VkPipeline Pipeline = Compile(pSpec);
-    FVulkanPipeline* PSO = new FVulkanPipeline(
-        pSpec.VertexShader,
-        pSpec.FragmentShader,
-        Pipeline
-    );
+    FVulkanShaderRef VertexShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT));
+    FVulkanShaderRef PixelShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT));
+
+    VertexShaderRef.Shader->Create(Desc.VertexShader->Data(), Desc.VertexShader->WordCount());
+    PixelShaderRef.Shader->Create(Desc.PixelShader->Data(), Desc.PixelShader->WordCount());
+
+    VkPipeline Pipeline = Compile(Desc, VertexShaderRef, PixelShaderRef);
+    FVulkanPipeline* PSO = new FVulkanPipeline(VertexShaderRef, PixelShaderRef, Pipeline);
     Data.emplace(Key, PSO);
     return PSO;
 }
 
-void VulkanPipelineManager::GC()
+void FVulkanPipelineManager::GC()
 {
     for (auto It = Data.begin(); It != Data.end(); )
     {
@@ -145,7 +140,7 @@ void VulkanPipelineManager::GC()
     }
 }
 
-void VulkanPipelineManager::Invalidate()
+void FVulkanPipelineManager::Invalidate()
 {
     for (auto& KV : Data)
     {
@@ -156,43 +151,81 @@ void VulkanPipelineManager::Invalidate()
     Data.clear();
 }
 
-VkPipeline VulkanPipelineManager::Compile(const VulkanPipelineSpecification &pSpec)
+VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef)
 {
-    VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
-    uint32_t StageCount = 0;
-    if (pSpec.VertexShader.Shader && pSpec.VertexShader.Shader->Module)
+    std::vector<VkPipelineShaderStageCreateInfo> ShaderStages = {};
+
+    VkPipelineShaderStageCreateInfo VSElement = {};
+    VSElement.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    VSElement.stage = VertexShaderRef.Shader->Stage;
+    VSElement.module = VertexShaderRef.Shader->Module;
+    VSElement.pName = "main";
+    ShaderStages.push_back(VSElement);
+
+    VkPipelineShaderStageCreateInfo FSElement = {};
+    FSElement.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    FSElement.stage = PixelShaderRef.Shader->Stage;
+    FSElement.module = PixelShaderRef.Shader->Module;
+    FSElement.pName = "main";
+    ShaderStages.push_back(FSElement);
+
+    std::vector<VkVertexInputBindingDescription> VertexBindings;
+    for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
     {
-        auto& VSElement = ShaderStages[StageCount++];
-        VSElement.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        VSElement.stage = pSpec.VertexShader.Shader->Stage;
-        VSElement.module = pSpec.VertexShader.Shader->Module;
-        VSElement.pName = "main";
+        VkVertexInputBindingDescription VkBinding = {};
+        VkBinding.binding = Binding.Binding;
+        VkBinding.stride = Binding.Stride;
+        VkBinding.inputRate = Binding.bPerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+        VertexBindings.push_back(VkBinding);
     }
 
-    if (pSpec.FragmentShader.Shader && pSpec.FragmentShader.Shader->Module)
+    std::vector<VkVertexInputAttributeDescription> VertexAttributes;
+    for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
     {
-        auto& FSElement = ShaderStages[StageCount++];
-        FSElement.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        FSElement.stage = pSpec.FragmentShader.Shader->Stage;
-        FSElement.module = pSpec.FragmentShader.Shader->Module;
-        FSElement.pName = "main";
+        VkVertexInputAttributeDescription VkAttr = {};
+        VkAttr.location = Attr.Location;
+        VkAttr.binding = Attr.Binding;
+        VkAttr.format = VulkanRHI::ToVkFormat(Attr.Format);
+        VkAttr.offset = Attr.Offset;
+        VertexAttributes.push_back(VkAttr);
     }
+
+    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments(Desc.ColorAttachmentFormats.size());
+    for (auto& BlendAttachment : BlendAttachments)
+    {
+        BlendAttachment.blendEnable = VK_FALSE;
+
+        BlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        BlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        BlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+
+        BlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        BlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        BlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
+
+    VkPipelineColorBlendStateCreateInfo ColorBlendCreateInfo = {};
+    ColorBlendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    ColorBlendCreateInfo.attachmentCount = static_cast<uint32_t>(BlendAttachments.size());
+    ColorBlendCreateInfo.pAttachments = BlendAttachments.data();
 
     VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo = {};
     VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    VertexInputStateCreateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(pSpec.VertexBindings.size());
-    VertexInputStateCreateInfo.pVertexBindingDescriptions = pSpec.VertexBindings.data();
-    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(pSpec.VertexAttributes.size());
-    VertexInputStateCreateInfo.pVertexAttributeDescriptions = pSpec.VertexAttributes.data();
+    VertexInputStateCreateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(VertexBindings.size());
+    VertexInputStateCreateInfo.pVertexBindingDescriptions = VertexBindings.data();
+    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(VertexAttributes.size());
+    VertexInputStateCreateInfo.pVertexAttributeDescriptions = VertexAttributes.data();
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCreateInfo = {};
     InputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    InputAssemblyCreateInfo.topology = pSpec.Topology;
+    InputAssemblyCreateInfo.topology = VulkanRHI::ToVkTopology(Desc.Topology);
 
     VkPipelineRasterizationStateCreateInfo RasterizerCreateInfo = {};
     RasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    RasterizerCreateInfo.polygonMode = pSpec.PolygonMode;
-    RasterizerCreateInfo.cullMode = pSpec.CullMode;
+    RasterizerCreateInfo.polygonMode = VulkanRHI::ToVkPolygonMode(Desc.PolygonMode);
+    RasterizerCreateInfo.cullMode = VulkanRHI::ToVkCullMode(Desc.CullMode);
     RasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     RasterizerCreateInfo.lineWidth = 1.0f;
 
@@ -208,28 +241,22 @@ VkPipeline VulkanPipelineManager::Compile(const VulkanPipelineSpecification &pSp
 
     VkPipelineDepthStencilStateCreateInfo DepthStencilCreateInfo = {};
     DepthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    DepthStencilCreateInfo.depthTestEnable = pSpec.DepthTestEnable ? VK_TRUE : VK_FALSE;
-    DepthStencilCreateInfo.depthWriteEnable = pSpec.DepthWriteEnable ? VK_TRUE : VK_FALSE;
+    DepthStencilCreateInfo.depthTestEnable = Desc.bDepthTestEnable ? VK_TRUE : VK_FALSE;
+    DepthStencilCreateInfo.depthWriteEnable = Desc.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
     DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
-    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments(pSpec.ColorAttachmentFormats.size());
-    for (auto& BlendAttachment : BlendAttachments)
+    std::vector<VkFormat> ColorAttachmentFormats;
+    for (ERHIFormat Format : Desc.ColorAttachmentFormats)
     {
-        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        BlendAttachment.blendEnable = VK_FALSE;
+        ColorAttachmentFormats.push_back(VulkanRHI::ToVkFormat(Format));
     }
-
-    VkPipelineColorBlendStateCreateInfo ColorBlendCreateInfo = {};
-    ColorBlendCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    ColorBlendCreateInfo.attachmentCount = static_cast<uint32_t>(BlendAttachments.size());
-    ColorBlendCreateInfo.pAttachments = BlendAttachments.data();
 
     VkPipelineRenderingCreateInfo RenderingCreateInfo = {};
     RenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    RenderingCreateInfo.colorAttachmentCount = static_cast<uint32_t>(pSpec.ColorAttachmentFormats.size());
-    RenderingCreateInfo.pColorAttachmentFormats = pSpec.ColorAttachmentFormats.data();
-    RenderingCreateInfo.depthAttachmentFormat = pSpec.DepthFormat;
-    RenderingCreateInfo.stencilAttachmentFormat = pSpec.StencilFormat;
+    RenderingCreateInfo.pColorAttachmentFormats = ColorAttachmentFormats.data();
+    RenderingCreateInfo.colorAttachmentCount = static_cast<uint32_t>(ColorAttachmentFormats.size());
+    RenderingCreateInfo.depthAttachmentFormat = VulkanRHI::ToVkFormat(Desc.DepthFormat);
+    RenderingCreateInfo.stencilAttachmentFormat = VulkanRHI::ToVkFormat(Desc.StencilFormat);
 
     std::vector<VkDynamicState> DynamicStates = {};
     DynamicStates.emplace_back(VK_DYNAMIC_STATE_VIEWPORT);
@@ -243,8 +270,8 @@ VkPipeline VulkanPipelineManager::Compile(const VulkanPipelineSpecification &pSp
     VkGraphicsPipelineCreateInfo PipelineCreateInfo = {};
     PipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     PipelineCreateInfo.pNext = &RenderingCreateInfo;
-    PipelineCreateInfo.pStages = ShaderStages;
-    PipelineCreateInfo.stageCount = 2;
+    PipelineCreateInfo.pStages = ShaderStages.data();
+    PipelineCreateInfo.stageCount = ShaderStages.size();
     PipelineCreateInfo.pVertexInputState = &VertexInputStateCreateInfo;
     PipelineCreateInfo.pInputAssemblyState = &InputAssemblyCreateInfo;
     PipelineCreateInfo.pRasterizationState = &RasterizerCreateInfo;
@@ -253,7 +280,7 @@ VkPipeline VulkanPipelineManager::Compile(const VulkanPipelineSpecification &pSp
     PipelineCreateInfo.pColorBlendState = &ColorBlendCreateInfo;
     PipelineCreateInfo.pDepthStencilState = &DepthStencilCreateInfo;
     PipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
-    PipelineCreateInfo.layout = pSpec.Layout;
+    PipelineCreateInfo.layout = Device.GetDescriptorManager()->GetPipelineLayout();
 
     VkPipeline Pipeline = VK_NULL_HANDLE;
     VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.GetVkDevice(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
@@ -262,25 +289,23 @@ VkPipeline VulkanPipelineManager::Compile(const VulkanPipelineSpecification &pSp
     return Pipeline;
 }
 
-uint64_t VulkanPipelineManager::Hash(const VulkanPipelineSpecification &pSpec)
+uint64_t FVulkanPipelineManager::Hash(const FRHIPipelineDesc &pSpec)
 {
     uint64_t Hash = FNV_OFFSET;
 
-    HashObject(Hash, pSpec.Layout);
-    HashObject(Hash, pSpec.VertexShader.Shader);
-    HashObject(Hash, pSpec.VertexShader.SnapshotVersion);
-    HashObject(Hash, pSpec.FragmentShader.Shader);
-    HashObject(Hash, pSpec.FragmentShader.SnapshotVersion);
+    //HashObject(Hash, pSpec.Layout);
+    //HashObject(Hash, pSpec.VertexShader.SnapshotVersion);
+    //HashObject(Hash, pSpec.FragmentShader.SnapshotVersion);
     HashObject(Hash, pSpec.DepthFormat);
     HashObject(Hash, pSpec.StencilFormat);
     HashObject(Hash, pSpec.Topology);
     HashObject(Hash, pSpec.CullMode);
     HashObject(Hash, pSpec.PolygonMode);
-    HashObject(Hash, pSpec.DepthTestEnable);
-    HashObject(Hash, pSpec.DepthWriteEnable);
-    HashBytes(Hash, pSpec.ColorAttachmentFormats.data(), pSpec.ColorAttachmentFormats.size() * sizeof(VkFormat));
-    HashBytes(Hash, pSpec.VertexBindings.data(), pSpec.VertexBindings.size() * sizeof(VkVertexInputBindingDescription));
-    HashBytes(Hash, pSpec.VertexAttributes.data(), pSpec.VertexAttributes.size() * sizeof(VkVertexInputAttributeDescription));
+    HashObject(Hash, pSpec.bDepthTestEnable);
+    HashObject(Hash, pSpec.bDepthWriteEnable);
+    HashBytes(Hash, pSpec.ColorAttachmentFormats.data(), pSpec.ColorAttachmentFormats.size() * sizeof(ERHIFormat));
+    HashBytes(Hash, pSpec.VertexBindings.data(), pSpec.VertexBindings.size() * sizeof(FRHIVertexBinding));
+    HashBytes(Hash, pSpec.VertexAttributes.data(), pSpec.VertexAttributes.size() * sizeof(FRHIVertexAttribute));
 
     return Hash;
 }

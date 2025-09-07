@@ -40,13 +40,13 @@ void FVulkanQueue::Submit()
         if (bIsFirst)
         {
             Payload->WaitSemaphores.push_back(GetVulkanRHIMinimal()->GetImageAcquiredSemaphore());
-            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR); // todo: these are not correct
+            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR);
         }
 
         if (bIsLast)
         {
             Payload->SignalSemaphores.push_back(GetVulkanRHIMinimal()->GetRenderFinishedSemaphore());
-            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR); // todo: these are not correct
+            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR);
         }
 
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;

@@ -46,9 +46,9 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
 
     std::vector<VkDescriptorBindingFlags> Flags(static_cast<uint32_t>(DescriptorBinding::Count));
     Flags[static_cast<uint32_t>(DescriptorBinding::SampledImage)] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT_EXT;
-    Flags[static_cast<uint32_t>(DescriptorBinding::Sampler)] = 0;
-    Flags[static_cast<uint32_t>(DescriptorBinding::StorageImage)] = 0;
-    Flags[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)] = 0;
+    Flags[static_cast<uint32_t>(DescriptorBinding::Sampler)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::StorageImage)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo Extension = {};
     Extension.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -89,10 +89,17 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     Result = VulkanRHI::vkAllocateDescriptorSets(pDevice.GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
     RK_ASSERT(Result == VK_SUCCESS);
 
+    VkPushConstantRange PushConstantRanges[1];
+    PushConstantRanges[0].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    PushConstantRanges[0].offset = 0;
+    PushConstantRanges[0].size = 128; // Target minimum push constant capacity
+
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
     PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     PipelineLayoutCreateInfo.setLayoutCount = 1;
     PipelineLayoutCreateInfo.pSetLayouts = &DescriptorSetLayout;
+    PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges;
     VulkanRHI::vkCreatePipelineLayout(Device.GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
     RK_ASSERT(Result == VK_SUCCESS);
 }

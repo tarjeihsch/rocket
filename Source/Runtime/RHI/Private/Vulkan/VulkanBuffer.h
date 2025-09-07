@@ -1,9 +1,11 @@
 #pragma once
 
-#include "Common/Buffer.h"
+#include "Common/RHIBuffer.h"
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
+
+#include "VulkanDescriptorManager.h"
 
 class FVulkanDevice;
 
@@ -17,7 +19,9 @@ public:
     virtual const FRHIBufferDesc& GetBufferDesc() const override;
     virtual void* GetHandle() const override;
 
-    virtual void Map(const void* Data, uint64_t Size) override;
+    virtual uint32_t GetBindingIndex() const;
+
+    virtual void Lock(const void* Data, uint64_t Size) override;
 
 private:
     void Alloc();
@@ -26,8 +30,9 @@ private:
 private:
     VkBuffer Buffer;
     VmaAllocation Allocation;
-
     VkDeviceSize Offset;
+
+    DescriptorHandle m_DescriptorHandle;
 
     FRHIBufferDesc Desc;
 

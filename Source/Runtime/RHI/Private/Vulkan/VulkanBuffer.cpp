@@ -6,6 +6,8 @@
 
 #include <cstring>
 
+#include "VulkanDescriptorManager.h"
+
 FVulkanBuffer::FVulkanBuffer(FVulkanDevice &InDevice, FRHIBufferDesc InDesc)
     : Device(InDevice), Desc(InDesc)
 {
@@ -31,9 +33,14 @@ void *FVulkanBuffer::GetHandle() const
     return Buffer;
 }
 
-void FVulkanBuffer::Map(const void *Data, uint64_t Size)
+uint32_t FVulkanBuffer::GetBindingIndex() const
 {
-    RK_ASSERT(Size <= Desc.TotalSize, "Trying to map beyond buffer size.");
+    return m_DescriptorHandle.Index;
+}
+
+void FVulkanBuffer::Lock(const void *Data, uint64_t Size)
+{
+    RK_ASSERT(Size <= Desc.Size, "Trying to map beyond buffer size.");
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
@@ -57,7 +64,7 @@ void FVulkanBuffer::Map(const void *Data, uint64_t Size)
 
 void FVulkanBuffer::Alloc()
 {
-    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(1024, VulkanRHI::GetVkBufferUsage(Desc.Usage));
+    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(Desc.Size, VulkanRHI::GetVkBufferUsage(Desc.Usage));
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
@@ -75,6 +82,12 @@ void FVulkanBuffer::Alloc()
         VkResult Result = vmaCreateBuffer(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Buffer, &Allocation, nullptr);
         RK_ASSERT(Result == VK_SUCCESS);
     }
+
+    if ((Desc.Usage & ERHIBufferUsage::Uniform) == ERHIBufferUsage::Uniform ||
+        (Desc.Usage & ERHIBufferUsage::Storage) == ERHIBufferUsage::Storage)
+    {
+        m_DescriptorHandle = Device.GetDescriptorManager()->AddStorageBuffer(Buffer, Desc.Size);
+    }
 }
 
 void FVulkanBuffer::Free()
@@ -82,11 +95,11 @@ void FVulkanBuffer::Free()
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
-        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Buffer, Buffer);
+        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Buffer, Buffer, m_DescriptorHandle);
     }
     else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
-        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Buffer, Buffer, Allocation);
+        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Buffer, Buffer, m_DescriptorHandle, Allocation);
     }
 }

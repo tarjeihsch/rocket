@@ -49,6 +49,7 @@ add_subdirectory(Source/ThirdParty/glm)
 add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
 add_subdirectory(Source/ThirdParty/fastgltf)
+add_subdirectory(Source/ThirdParty/tinygltf)
 
 # Rocket modules
 add_subdirectory(Source/Runtime/Core)
@@ -59,6 +60,7 @@ add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Asset)
 add_subdirectory(Source/Runtime/Application)
+add_subdirectory(Source/Runtime/Object)
 
 # Game entrypoint module
 if (DEFINED PRIMARY_MODULE)

@@ -9,7 +9,7 @@
 
 #include "VulkanLoader.h"
 
-#include "Common/Buffer.h"
+#include "Common/RHIBuffer.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 
 #include <assert.h>
@@ -65,7 +65,7 @@ VkImageViewCreateInfo VulkanRHI::GetVkImageViewCreateInfo(VkImage Image, VkForma
     ImageViewCreateInfo.subresourceRange.levelCount = 1;
     ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
     ImageViewCreateInfo.subresourceRange.layerCount = 1;
-    ImageViewCreateInfo.subresourceRange.aspectMask = AspectFlags; // VK_IMAGE_ASPECT_COLOR_BIT
+    ImageViewCreateInfo.subresourceRange.aspectMask = AspectFlags;
     return ImageViewCreateInfo;
 }
 
@@ -77,23 +77,6 @@ VkBufferCreateInfo VulkanRHI::GetVkBufferCreateInfo(uint64_t Size, VkBufferUsage
     BufferCreateInfo.usage = UsageFlags;
     BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     return BufferCreateInfo;
-}
-
-VkImageLayout GetVulkanLayout(ERHITextureLayout layout)
-{
-    switch (layout)
-    {
-    case ERHITextureLayout::Undefined:         return VK_IMAGE_LAYOUT_UNDEFINED;
-    case ERHITextureLayout::General:           return VK_IMAGE_LAYOUT_GENERAL;
-    case ERHITextureLayout::ColorAttachment:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case ERHITextureLayout::DepthStencil:      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case ERHITextureLayout::DepthReadOnly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    case ERHITextureLayout::ShaderReadOnly:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case ERHITextureLayout::TransferSrc:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case ERHITextureLayout::TransferDst:       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    case ERHITextureLayout::Present:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    default:                                    return VK_IMAGE_LAYOUT_UNDEFINED;
-    }
 }
 
 template<typename TEnum>
@@ -174,19 +157,24 @@ VkImageUsageFlags VulkanRHI::GetVulkanUsage(ERHITextureUsage usage)
 
 VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
 {
+    // TODO: use a switch
     if (Format == ERHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
+    if (Format == ERHITextureFormat::D32_SFLOAT) { return VK_FORMAT_D32_SFLOAT; }
+    if (Format == ERHITextureFormat::D32_SFLOAT_S8_UINT) { return VK_FORMAT_D32_SFLOAT_S8_UINT; }
 
     return VK_FORMAT_UNDEFINED;
 }
 
 VkImageAspectFlags VulkanRHI::GetVkAspect(ERHITextureAspect Aspect)
 {
-    if (Aspect == ERHITextureAspect::Color)
+    switch (Aspect)
     {
-        return VK_IMAGE_ASPECT_COLOR_BIT;
+    case ERHITextureAspect::Color: return VK_IMAGE_ASPECT_COLOR_BIT;
+    case ERHITextureAspect::Depth: return VK_IMAGE_ASPECT_DEPTH_BIT;
+    case ERHITextureAspect::Stencil: return VK_IMAGE_ASPECT_STENCIL_BIT;
+    case ERHITextureAspect::DepthStencil: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    default: return VK_IMAGE_ASPECT_NONE;
     }
-
-    return VK_IMAGE_ASPECT_NONE;
 }
 
 VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(ERHIBufferUsage Usage)
@@ -197,6 +185,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(ERHIBufferUsage Usage)
     if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Index)) Flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferSrc)) Flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferDst)) Flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Storage)) Flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
     return Flags;
 }
@@ -205,6 +194,7 @@ VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
 {
     switch (Format)
     {
+    case ERHIFormat::BGRA8_SRGB:        return VK_FORMAT_B8G8R8A8_SRGB;
     case ERHIFormat::RGBA8_UNorm:        return VK_FORMAT_R8G8B8A8_UNORM;
     case ERHIFormat::BGRA8_UNorm:        return VK_FORMAT_B8G8R8A8_UNORM;
     case ERHIFormat::RGBA16_Float:       return VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -212,6 +202,8 @@ VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
     case ERHIFormat::D24S8:              return VK_FORMAT_D24_UNORM_S8_UINT;
     case ERHIFormat::D32_Float:          return VK_FORMAT_D32_SFLOAT;
     case ERHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    case ERHIFormat::Float2:             return VK_FORMAT_R32G32_SFLOAT;
+    case ERHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
     default:                             return VK_FORMAT_UNDEFINED;
     }
 }

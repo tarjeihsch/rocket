@@ -1,5 +1,8 @@
 #pragma once
+
 #include <cstdint>
+
+#include "Common/RHITexture.h"
 
 struct FRHITexture;
 

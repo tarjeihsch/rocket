@@ -32,6 +32,7 @@ target_link_libraries(Asset
     PUBLIC glm::glm
     PRIVATE vulkan::vulkan
     PRIVATE fastgltf::fastgltf
+    PRIVATE tinygltf
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

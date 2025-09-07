@@ -12,7 +12,7 @@ class FVulkanCommandListContext;
 class FVulkanDevice;
 struct FVulkanTexture;
 class FVulkanQueue;
-class VulkanPipelineManager;
+class FVulkanPipelineManager;
 class VulkanDescriptorManager;
 class VulkanResourceManager;
 
@@ -74,20 +74,20 @@ public:
     };
 
     template <typename T>
-    inline void EnqueueResource(EType Type, T Handle)
+    inline void EnqueueResource(EType Type, T Handle, DescriptorHandle BindingIndex)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
-        EnqueueGenericResource(Type, (uint64_t)Handle, nullptr);
+        EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, nullptr);
     }
 
     template <typename T>
-    inline void EnqueueResourceWithAllocation(EType Type, T Handle, VmaAllocation Allocation)
+    inline void EnqueueResourceWithAllocation(EType Type, T Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
-        EnqueueGenericResource(Type, (uint64_t)Handle, Allocation);
+        EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, Allocation);
     }
 
-    void EnqueueGenericResource(EType Type, uint64_t Handle, VmaAllocation Allocation);
+    void EnqueueGenericResource(EType Type, uint64_t Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation);
 
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
@@ -97,6 +97,7 @@ private:
         EType StructureType;
         uint64_t FrameNumber;
         uint64_t Handle;
+        DescriptorHandle m_DescriptorHandle;
         VmaAllocation Allocation;
     };
 
@@ -124,7 +125,7 @@ public:
     inline VmaAllocator GetVmaAllocator() const;
     inline VkDebugUtilsMessengerEXT GetVkDebugUtilsMessenger() const;
 
-    inline VulkanPipelineManager* GetPipelineManager() const;
+    inline FVulkanPipelineManager* GetPipelineManager() const;
     inline VulkanDescriptorManager* GetDescriptorManager() const;
 
     inline FTransientResourceAllocator* GetTransientResourceAllocator() const;
@@ -145,7 +146,7 @@ private:
 
     std::vector<FVulkanQueue*> Queues;
 
-    VulkanPipelineManager* PipelineManager;
+    FVulkanPipelineManager* PipelineManager;
 
     VulkanDescriptorManager* DescriptorManager;
 
@@ -181,7 +182,7 @@ inline VkDebugUtilsMessengerEXT FVulkanDevice::GetVkDebugUtilsMessenger() const
     return DebugUtilsMessenger;
 }
 
-inline VulkanPipelineManager* FVulkanDevice::GetPipelineManager() const
+inline FVulkanPipelineManager* FVulkanDevice::GetPipelineManager() const
 {
     return PipelineManager;
 }

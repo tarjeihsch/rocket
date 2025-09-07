@@ -4,9 +4,9 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
-struct MeshAsset
+struct FMeshAsset
 {
-    struct Vertex
+    struct FVertex
     {
         alignas(16) glm::vec3 m_Position;
         alignas(16) glm::vec3 m_Normal;
@@ -15,7 +15,7 @@ struct MeshAsset
 
     struct Primitive
     {
-        std::vector<Vertex> Vertices;
+        std::vector<FVertex> Vertices;
         std::vector<uint32_t> Indices;
 
         glm::vec3 Translation;
@@ -31,15 +31,15 @@ struct MeshAsset
     Node Node = {};
 };
 
-struct MeshAssetOptions
+struct FMeshAssetOptions
 {
 };
 
-template<> struct TAssetTag<MeshAsset> { static constexpr uint8_t Value = 1; };
-template<> struct TAssetDefaultOptions<MeshAssetOptions> { using Type = MeshAssetOptions; };
+template<> struct TAssetTag<FMeshAsset> { static constexpr uint8_t Value = 1; };
+template<> struct TAssetDefaultOptions<FMeshAssetOptions> { using Type = FMeshAssetOptions; };
 
 template<>
-struct TAssetLoader<MeshAsset, MeshAssetOptions>
+struct TAssetLoader<FMeshAsset, FMeshAssetOptions>
 {
-    static MeshAsset Load(const FAssetLoaderRequest& p_Request, const MeshAssetOptions& p_Options);
+    static FMeshAsset Load(const FAssetLoaderRequest& p_Request, const FMeshAssetOptions& p_Options);
 };

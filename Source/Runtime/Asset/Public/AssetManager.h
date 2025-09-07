@@ -35,18 +35,7 @@ struct NoOptions {};
 
 template<typename T> struct TAssetTag; // Specialized per asset type
 template<typename T> struct TAssetDefaultOptions { using Type = NoOptions; }; // Default = no options
-
-template<typename T, typename Options = typename TAssetDefaultOptions<T>::Type>
-struct TAssetLoader; // Specializations must implement function: static T Load(Request, Options);
-
-template<typename T>
-struct TAssetLoader<T, NoOptions>
-{
-    static T Load(const FAssetLoaderRequest& Request);
-};
-
-template<typename T>
-using AssetOptionsT = typename TAssetDefaultOptions<T>::Type;
+template<typename T, typename Options = typename TAssetDefaultOptions<T>::Type> struct TAssetLoader; // Specializations must implement function: static T Load(Request, Options);
 
 template<typename T>
 class FAssetPool
@@ -113,12 +102,12 @@ private:
 class FAssetManager
 {
 public:
-    template<typename T, typename Options = AssetOptionsT<T>>
-    FAssetHandle<T> Load(const FAssetLoaderRequest& Request, const Options& opts = Options{})
+    template<typename T, typename TOptions = NoOptions>
+    FAssetHandle<T> Load(const FAssetLoaderRequest& Request, const TOptions& Options = TOptions{})
     {
         auto Handle = GetPool<T>().Alloc();
         T* Slot = GetPool<T>().Get(Handle);
-        *Slot = TAssetLoader<T, Options>::Load(Request, opts);
+        *Slot = TAssetLoader<T, TOptions>::Load(Request, Options);
         return Handle;
     }
 

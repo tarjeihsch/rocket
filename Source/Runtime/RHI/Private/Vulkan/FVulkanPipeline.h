@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
-class VulkanShader
+class FVulkanShader
 {
 public:
-    VulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage);
+    FVulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage);
 
     void Create(const uint32_t *pData, const size_t pWordCount);
     void Destroy();
@@ -21,47 +21,22 @@ private:
     VkShaderModule Module;
     uint32_t Version;
 
-    friend class VulkanShaderRef;
-    friend class VulkanPipelineManager;
+    friend class FVulkanShaderRef;
+    friend class FVulkanPipelineManager;
 };
 
-struct VulkanShaderRef
+struct FVulkanShaderRef
 {
-    VulkanShader *Shader; // this is a memory-leak
+    FVulkanShader *Shader; // this is a memory-leak
     uint32_t SnapshotVersion = 0;
 
-    static VulkanShaderRef Capture(VulkanShader *pShader);
-};
-
-struct VulkanPipelineSpecification
-{
-    VkPipelineLayout Layout = VK_NULL_HANDLE;
-
-    VulkanShaderRef VertexShader;
-    VulkanShaderRef FragmentShader;
-
-    std::vector<VkFormat> ColorAttachmentFormats;
-    std::vector<VkVertexInputBindingDescription> VertexBindings;
-    std::vector<VkVertexInputAttributeDescription> VertexAttributes;
-
-    VkFormat DepthFormat = VK_FORMAT_UNDEFINED;
-    VkFormat StencilFormat = VK_FORMAT_UNDEFINED;
-    VkPrimitiveTopology Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkCullModeFlags CullMode = VK_CULL_MODE_BACK_BIT;
-    VkPolygonMode PolygonMode = VK_POLYGON_MODE_FILL;
-    uint8_t DepthTestEnable;
-    uint8_t DepthWriteEnable;
+    static FVulkanShaderRef Capture(FVulkanShader *pShader);
 };
 
 struct FVulkanPipeline : FRHIPipeline
 {
-    FVulkanPipeline(
-        VulkanShaderRef InVS,
-        VulkanShaderRef InFS,
-        VkPipeline InPipeline)
-        : VertexShaderRef(std::move(InVS))
-        , FragmentShaderRef(std::move(InFS))
-        , Pipeline(InPipeline)
+    FVulkanPipeline(FVulkanShaderRef InVS, FVulkanShaderRef InFS, VkPipeline InPipeline)
+        : VertexShaderRef(std::move(InVS)), FragmentShaderRef(std::move(InFS)), Pipeline(InPipeline)
     {
     }
 
@@ -70,29 +45,27 @@ struct FVulkanPipeline : FRHIPipeline
         return Pipeline;;
     }
 
-    VulkanShaderRef VertexShaderRef;
-    VulkanShaderRef FragmentShaderRef;
+    FVulkanShaderRef VertexShaderRef;
+    FVulkanShaderRef FragmentShaderRef;
     VkPipeline Pipeline;
 };
 
 class FVulkanDevice;
 
-class VulkanPipelineManager
+class FVulkanPipelineManager
 {
 public:
-    explicit VulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
-    ~VulkanPipelineManager();
+    explicit FVulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
+    ~FVulkanPipelineManager();
 
-    static VulkanPipelineSpecification MakeSpecification(VkPipelineLayout pLayout, VulkanShader *pVertexShader, VulkanShader *pFragmentShader);
-
-    FVulkanPipeline* GetPipeline(const VulkanPipelineSpecification &pSpec);
+    FVulkanPipeline* GetPipeline(const FRHIPipelineDesc &Desc);
 
     void GC();
     void Invalidate();
 
 private:
-    VkPipeline Compile(const VulkanPipelineSpecification &pSpec);
-    uint64_t Hash(const VulkanPipelineSpecification &pSpec);
+    VkPipeline Compile(const FRHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef);
+    uint64_t Hash(const FRHIPipelineDesc &Desc);
 
 private:
     FVulkanDevice& Device;
