@@ -5,8 +5,8 @@
 #include "Common/RHICommandList.h"
 #include "Camera.h"
 #include "FrameGraph.h"
+#include "Math.h"
 #include "Pipeline.h"
-#include "PrimitiveDrawInterface.h"
 #include "RenderTarget.h"
 #include "Scene.h"
 #include "StaticMesh.h"
@@ -32,13 +32,6 @@ void FSceneRenderer::Tick(PScene* Scene)
 
     // Apply the same concept for Instanced Static Mesh Components, same for IndexedStaticMeshComponents and IndexedIndirectStaticMeshComponent
 
-    std::vector<FMeshDrawCommand> DrawCommands;
-
-    Scene->GetRegistry()->View<FStaticMeshComponent>([&](const FStaticMeshComponent& StaticMeshComponent)
-    {
-        DrawCommands.push_back({ StaticMeshComponent.Handle });
-    });
-
     FPipeline Pipeline = FPipeline(GAME_SRC "/Shader/VertexShader.hlsl", GAME_SRC "/Shader/FragmentShader.hlsl");
     FRenderTarget RenderTarget = FRenderTarget(1280, 720);
     FAttachment DepthAttachment = FAttachment(1280, 720, ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
@@ -48,7 +41,7 @@ void FSceneRenderer::Tick(PScene* Scene)
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
     {
         GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
-        Scene->GetRegistry()->View<FStaticMeshComponent, FTransformComponent>([&](const FStaticMeshComponent& StaticMeshComponent, const FTransformComponent& TransformComponent)
+        Scene->GetRegistry()->View<StaticMeshComponent, TransformComponent>([&](const StaticMeshComponent& P_StaticMeshComponent, const TransformComponent& P_TransformComponent)
         {
             struct FInstanceData
             {
@@ -56,16 +49,16 @@ void FSceneRenderer::Tick(PScene* Scene)
                 glm::mat4 TransformInverseTranspose;
             };
 
-            FCameraData CameraData = Scene->GetCamera()->GetCameraData();
-            FInstanceData InstanceData = { TransformComponent.ToMatrix(), glm::inverseTranspose(TransformComponent.ToMatrix()) };
+            FCameraCaptureResult CameraData = Scene->GetActiveCamera()->GetCachedCapture();
+            FInstanceData InstanceData = { P_TransformComponent.M_Transform.ToMatrix(), glm::inverseTranspose(P_TransformComponent.M_Transform.ToMatrix()) };
 
-            std::shared_ptr<FRHIBuffer> CameraGPUData = GetRHI()->RHIBindBuffer(&CameraData, sizeof(FCameraData));
+            std::shared_ptr<FRHIBuffer> CameraGPUData = GetRHI()->RHIBindBuffer(&CameraData, sizeof(FCameraCaptureResult));
             std::shared_ptr<FRHIBuffer> InstanceGPUData = GetRHI()->RHIBindBuffer(&InstanceData, sizeof(FInstanceData));
 
             FRHIDrawCommand DrawCommand = {};
-            DrawCommand.VertexBuffer = StaticMeshComponent.Handle->GetVertexBuffer();
-            DrawCommand.IndexBuffer = StaticMeshComponent.Handle->GetIndexBuffer();
-            DrawCommand.IndexCount = StaticMeshComponent.Handle->GetIndexCount();
+            DrawCommand.VertexBuffer = P_StaticMeshComponent.Handle->GetVertexBuffer();
+            DrawCommand.IndexBuffer = P_StaticMeshComponent.Handle->GetIndexBuffer();
+            DrawCommand.IndexCount = P_StaticMeshComponent.Handle->GetIndexCount();
 
             FRHIDrawParams DrawParams = {};
             DrawParams.DrawParam_1 = CameraGPUData->GetBindingIndex(); // Camera ID

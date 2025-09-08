@@ -2,8 +2,8 @@
 
 class Context;
 
-class Object
+class CObject
 {
 public:
-    virtual ~Object() = default;
+    virtual ~CObject() = default;
 };

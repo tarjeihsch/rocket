@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "Camera.h"
+#include "Component.h"
 #include "Registry.h"
 
 class PScene
@@ -8,19 +9,22 @@ class PScene
 public:
     void Init()
     {
-	    Camera = new CPerspectiveCamera();
 	    Registry = new PRegistry();
     }
 
     void Cleanup()
     {
-	    delete Camera;
 	    delete Registry;
     }
 
-    [[nodiscard]] CPerspectiveCamera* GetCamera() const
+    void SetActiveCamera(ICamera* InCamera)
     {
-	    return static_cast<CPerspectiveCamera*>(Camera);
+        ActiveCamera = InCamera;
+    }
+
+    [[nodiscard]] ICamera* GetActiveCamera() const
+    {
+	    return ActiveCamera;
     }
 
     [[nodiscard]] PRegistry* GetRegistry() const
@@ -31,6 +35,7 @@ public:
     void OnImGuiRender();
 
 private:
-    ICamera* Camera;
+    ICamera* ActiveCamera;
+
     PRegistry* Registry;
 };

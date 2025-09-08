@@ -2,9 +2,9 @@
 
 #include "Context.h"
 
-static Object* NewObject(Context* Context)
+static CObject* NewObject(Context* Context)
 {
-    Object* Obj = new Object();
+    CObject* Obj = new CObject();
 
     Context->AddObject(Obj);
 
