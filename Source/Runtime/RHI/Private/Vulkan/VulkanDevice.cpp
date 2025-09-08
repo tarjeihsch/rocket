@@ -282,7 +282,7 @@ void FVulkanDevice::Initialize()
 
     CommandListContext = new FVulkanCommandListContext(*this);
 
-    TransientResourceAllocator = new FTransientResourceAllocator(*this, 64ull * 1024 * 1024);
+    TransientResourceAllocator = new FTransientResourceAllocator(*this, 256ull * 1024 * 1024);
 }
 
 void FVulkanDevice::Shutdown()

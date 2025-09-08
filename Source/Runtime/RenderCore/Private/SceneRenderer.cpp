@@ -50,21 +50,33 @@ void FSceneRenderer::Tick(PScene* Scene)
             };
 
             FCameraCaptureResult CameraData = Scene->GetActiveCamera()->GetCachedCapture();
-            FInstanceData InstanceData = { P_TransformComponent.M_Transform.ToMatrix(), glm::inverseTranspose(P_TransformComponent.M_Transform.ToMatrix()) };
 
             std::shared_ptr<FRHIBuffer> CameraGPUData = GetRHI()->RHIBindBuffer(&CameraData, sizeof(FCameraCaptureResult));
-            std::shared_ptr<FRHIBuffer> InstanceGPUData = GetRHI()->RHIBindBuffer(&InstanceData, sizeof(FInstanceData));
 
-            FRHIDrawCommand DrawCommand = {};
-            DrawCommand.VertexBuffer = P_StaticMeshComponent.Handle->GetVertexBuffer();
-            DrawCommand.IndexBuffer = P_StaticMeshComponent.Handle->GetIndexBuffer();
-            DrawCommand.IndexCount = P_StaticMeshComponent.Handle->GetIndexCount();
+            for (const auto& Section : P_StaticMeshComponent.Handle->GetMeshSections())
+            {
+                Transform transform = P_TransformComponent.M_Transform;
+                transform.M_Translation += Section.M_Translation * 2.0f;
+                transform.M_Rotation += Section.M_Rotation;
+                transform.M_Scale += Section.M_Scale;
 
-            FRHIDrawParams DrawParams = {};
-            DrawParams.DrawParam_1 = CameraGPUData->GetBindingIndex(); // Camera ID
-            DrawParams.DrawParam_2 = InstanceGPUData->GetBindingIndex(); // Instance ID
+                FInstanceData InstanceData = { transform.ToMatrix(), glm::inverseTranspose(transform.ToMatrix()) };
 
-            GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
+                std::shared_ptr<FRHIBuffer> InstanceGPUData = GetRHI()->RHIBindBuffer(&InstanceData, sizeof(FInstanceData));
+
+                FRHIDrawCommand DrawCommand = {};
+                DrawCommand.VertexBuffer = P_StaticMeshComponent.Handle->GetVertexBuffer();
+                DrawCommand.IndexBuffer = P_StaticMeshComponent.Handle->GetIndexBuffer();
+                DrawCommand.IndexCount = Section.M_IndexCount;
+                DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
+                DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
+
+                FRHIDrawParams DrawParams = {};
+                DrawParams.DrawParam_1 = CameraGPUData->GetBindingIndex(); // Camera ID
+                DrawParams.DrawParam_2 = InstanceGPUData->GetBindingIndex(); // Instance ID
+
+                GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
+            }
         });
     });
     DrawPass.AddColorAttachment(RenderTarget.GetHandle());

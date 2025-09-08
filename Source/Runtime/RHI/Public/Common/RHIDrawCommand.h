@@ -11,8 +11,12 @@ struct FRHIDrawCommand
     FRHIBuffer* IndexBuffer;
 
     uint32_t IndexCount;
+    uint32_t VertexBufferOffset;
+    uint32_t IndexBufferOffset;
 
-    glm::mat4 Transform;
+    glm::vec3 Translation;
+    glm::vec3 Rotation;
+    glm::vec3 Scale;
 };
 
 struct FRHIDrawParams

@@ -29,6 +29,7 @@ target_include_directories(Asset
 
 target_link_libraries(Asset
     PUBLIC Rocket::Core
+    PUBLIC Rocket::RenderCore
     PUBLIC glm::glm
     PRIVATE vulkan::vulkan
     PRIVATE fastgltf::fastgltf

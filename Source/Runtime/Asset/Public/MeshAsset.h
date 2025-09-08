@@ -4,23 +4,28 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
+#include "StaticMesh.h"
+
+
 struct FMeshAsset
 {
-    struct FVertex
-    {
-        alignas(16) glm::vec3 m_Position;
-        alignas(16) glm::vec3 m_Normal;
-        alignas(16) glm::vec2 m_TexCoord;
-    };
+    //struct FVertex
+    //{
+    //    alignas(16) glm::vec3 m_Position;
+    //    alignas(16) glm::vec3 m_Normal;
+    //    alignas(16) glm::vec2 m_TexCoord;
+    //};
 
     struct Primitive
     {
         std::vector<FVertex> Vertices;
         std::vector<uint32_t> Indices;
 
-        glm::vec3 Translation;
-        glm::vec3 Rotation;
-        glm::vec3 Scale;
+        glm::vec3 Translation = glm::vec3(0.0f);
+        glm::vec3 Rotation = glm::vec3(0.0f);
+        glm::vec3 Scale = glm::vec3(1.0f);
+
+        glm::vec4 Color = glm::vec4(1.0f);
     };
 
     struct Node

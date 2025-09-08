@@ -68,11 +68,16 @@ struct FRHIVertexBinding
 {
     uint32_t Binding = 0;
     uint32_t Stride = 0;
-    uint8_t bPerInstance : 1;
+    uint8_t bPerInstance : 1 = { false };
 };
 
 struct FRHIVertexAttribute
 {
+    FRHIVertexAttribute(uint32_t InLocation, uint32_t InBinding, ERHIFormat InFormat, uint32_t InOffset)
+        : Location(InLocation), Binding(InBinding), Format(InFormat), Offset(InOffset)
+    {
+    }
+
     uint32_t Location = 0;
     uint32_t Binding = 0;
     ERHIFormat Format = ERHIFormat::Unknown;
@@ -88,15 +93,12 @@ struct FRHIVertex
 
 struct FRHIPipelineDesc
 {
-    ShaderAsset* VertexShader;
-    ShaderAsset* PixelShader;
+    const char* VertexShaderPath;
+    const char* PixelShaderPath;
 
     std::vector<ERHIFormat> ColorAttachmentFormats;
     ERHIFormat DepthFormat = ERHIFormat::Unknown;
     ERHIFormat StencilFormat = ERHIFormat::Unknown;
-
-    std::vector<FRHIVertexBinding> VertexBindings;
-    std::vector<FRHIVertexAttribute> VertexAttributes;
 
     ERHIPrimitiveTopology Topology = ERHIPrimitiveTopology::TriangleList;
     ERHICullMode CullMode = ERHICullMode::None;
