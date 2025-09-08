@@ -8,69 +8,58 @@
 
 struct FRHIBuffer;
 
-class FStaticMesh : public Object
+class CStaticMesh : public CObject
 {
 public:
-    FStaticMesh(const char* InFilePath);
-    ~FStaticMesh();
+    CStaticMesh(const char* InFilePath);
+    ~CStaticMesh();
 
-    inline FRHIBuffer* GetVertexBuffer() const
-    {
-        return VertexBuffer;
-    }
-
-    inline FRHIBuffer* GetIndexBuffer() const
-    {
-        return IndexBuffer;
-    }
-
-    inline uint32_t GetVertexCount() const
-    {
-        return VertexCount;
-    }
-
-    inline uint32_t GetIndexCount() const
-    {
-        return IndexCount;
-    }
+    inline FRHIBuffer* GetVertexBuffer() const;
+    inline FRHIBuffer* GetIndexBuffer() const;
+    inline uint32_t GetVertexCount() const;
+    inline uint32_t GetIndexCount() const;
 
 private:
     void Init();
     void Shutdown();
 
 private:
-    FRHIBuffer* VertexBuffer;
-    FRHIBuffer* IndexBuffer;
+    FRHIBuffer* M_VertexBuffer;
+    FRHIBuffer* M_IndexBuffer;
 
-    uint32_t VertexCount;
-    uint32_t IndexCount;
+    uint32_t M_VertexCount;
+    uint32_t M_IndexCount;
 
+    // TODO: Handle hot-reloading of meshes
     const char* FilePath;
 };
 
-struct FStaticMeshComponent
+inline FRHIBuffer* CStaticMesh::GetVertexBuffer() const
 {
-    FStaticMesh* Handle;
-};
+    return M_VertexBuffer;
+}
 
-struct FTransformComponent
+inline FRHIBuffer* CStaticMesh::GetIndexBuffer() const
 {
-    FTransformComponent()
+    return M_IndexBuffer;
+}
+
+inline uint32_t CStaticMesh::GetVertexCount() const
+{
+    return M_VertexCount;
+}
+
+inline uint32_t CStaticMesh::GetIndexCount() const
+{
+    return M_IndexCount;
+}
+
+struct StaticMeshComponent
+{
+    StaticMeshComponent(CStaticMesh* P_StaticMesh)
+        : Handle(P_StaticMesh)
     {
-        Translation = glm::vec3(0.0f);
-        Rotation = glm::vec3(0.0f);
-        Scale = glm::vec3(1.0f);
     }
 
-    [[nodiscard]] glm::mat4 ToMatrix() const
-    {
-        glm::mat4 TranslationMatrix = glm::translate(glm::mat4(1.0f), Translation);
-        glm::mat4 RotationMatrix = glm::toMat4(glm::quat(glm::radians(Rotation)));
-        glm::mat4 ScaleMatrix = glm::scale(glm::mat4(1.0f), Scale);
-        return TranslationMatrix * RotationMatrix * ScaleMatrix;
-    }
-
-    glm::vec3 Translation;
-    glm::vec3 Rotation;
-    glm::vec3 Scale;
+    CStaticMesh* Handle;
 };

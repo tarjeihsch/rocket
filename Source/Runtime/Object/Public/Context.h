@@ -11,8 +11,8 @@ public:
 
     void Shutdown();
 
-    void AddObject(Object* Object);
-    void RemoveObject(Object* Object);
+    void AddObject(CObject* Object);
+    void RemoveObject(CObject* Object);
 
-    std::list<Object*> Data;
+    std::list<CObject*> Data;
 };

@@ -17,12 +17,12 @@ void Context::Shutdown()
     }
 }
 
-void Context::AddObject(Object* Object)
+void Context::AddObject(CObject* Object)
 {
     Data.push_back(Object);
 }
 
-void Context::RemoveObject(Object* Object)
+void Context::RemoveObject(CObject* Object)
 {
     Data.remove(Object);
 }
