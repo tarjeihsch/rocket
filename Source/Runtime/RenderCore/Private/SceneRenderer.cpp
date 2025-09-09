@@ -14,7 +14,6 @@
 #include "Common/RHIBuffer.h"
 #include "Common/RHIDrawCommand.h"
 #include "glm/gtc/matrix_inverse.hpp"
-#include "Window.h"
 
 void FSceneRenderer::Init()
 {
