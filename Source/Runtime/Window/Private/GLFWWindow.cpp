@@ -49,7 +49,6 @@ void CGLFWWindow::CreateNativeWindow()
 	    glfwWaitEvents();
 	}
 
-	//GetScene()->GetCamera()->ApplySettings();
         //GetRHI()->Resize();
     });
 

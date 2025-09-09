@@ -38,9 +38,10 @@ public:
     virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) override;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
-    virtual FRHITexture* RHIGetBackBufferRenderTarget() const override;
     virtual void RHICmdBlitImage(FRHICommandList& RHICmdList, FRHITexture* Src, FRHITexture* Dst) override;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) override;
+    virtual FRHITexture* RHIGetBackBufferRenderTarget() const override;
+    virtual std::array<uint32_t, 2> RHIGetViewportExtent() const override;
     // ~IRHI interface
 
     // IVulkanRHIMinimal interface

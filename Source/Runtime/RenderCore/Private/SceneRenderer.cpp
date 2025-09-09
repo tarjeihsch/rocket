@@ -14,6 +14,7 @@
 #include "Common/RHIBuffer.h"
 #include "Common/RHIDrawCommand.h"
 #include "glm/gtc/matrix_inverse.hpp"
+#include "Window.h"
 
 void FSceneRenderer::Init()
 {
@@ -33,14 +34,19 @@ void FSceneRenderer::Tick(PScene* Scene)
     // Apply the same concept for Instanced Static Mesh Components, same for IndexedStaticMeshComponents and IndexedIndirectStaticMeshComponent
 
     FPipeline Pipeline = FPipeline(ROCKET_SRC "/Shader/VertexShader.hlsl", ROCKET_SRC "/Shader/FragmentShader.hlsl");
-    FRenderTarget RenderTarget = FRenderTarget(1280, 720);
-    FAttachment DepthAttachment = FAttachment(1280, 720, ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
+    FRenderTarget RenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
+    FAttachment DepthAttachment = FAttachment(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1], ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
 
     FFrameGraphBuilder Builder;
 
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
     {
         GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
+
+        if (!Scene->GetActiveCamera())
+        {
+            return;
+        }
 
         FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
         CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().ViewMatrix);

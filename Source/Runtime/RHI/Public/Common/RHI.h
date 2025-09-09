@@ -88,10 +88,10 @@ public:
     virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-
-    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
     virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
+    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
+    virtual std::array<uint32_t, 2> RHIGetViewportExtent() const = 0;
 
     // virtual void RHIUploadTextureData()
 };

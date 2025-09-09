@@ -283,6 +283,11 @@ FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
     return Viewport->GetBackBufferTexture();
 }
 
+std::array<uint32_t, 2> CVulkanRHI::RHIGetViewportExtent() const
+{
+    return std::array<uint32_t, 2>{Viewport->GetExtent().width, Viewport->GetExtent().height};
+}
+
 void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
 {
     RHICmdList.Enqueue<FVulkanCommandBlitImage>(Src, Dst);

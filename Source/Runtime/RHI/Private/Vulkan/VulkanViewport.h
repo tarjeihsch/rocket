@@ -17,8 +17,6 @@ public:
     FVulkanViewport(FVulkanDevice& InDevice);
     ~FVulkanViewport();
 
-    void Tick();
-
     bool AcquireNextImageIndex();
     void Present();
 
