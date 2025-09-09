@@ -6,9 +6,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-struct Transform
+struct FTransform
 {
-    Transform()
+    FTransform()
     {
         M_Translation = glm::vec3(0.0f);
         M_Rotation = glm::vec3(0.0f);
@@ -31,10 +31,10 @@ struct Transform
 struct TransformComponent
 {
     TransformComponent() = default;
-    TransformComponent(Transform P_Transform)
+    TransformComponent(FTransform P_Transform)
     {
         M_Transform = P_Transform;
     }
 
-    Transform M_Transform;
+    FTransform M_Transform;
 };

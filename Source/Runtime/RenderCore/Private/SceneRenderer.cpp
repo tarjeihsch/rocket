@@ -41,23 +41,21 @@ void FSceneRenderer::Tick(PScene* Scene)
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
     {
         GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
+
+        FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+        CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().ViewMatrix);
+        CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().Projection);
+        std::shared_ptr<FRHIBuffer> CameraInterface_GPUBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
+
         Scene->GetRegistry()->View<StaticMeshComponent, TransformComponent>([&](const StaticMeshComponent& P_StaticMeshComponent, const TransformComponent& P_TransformComponent)
         {
-            FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-            CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().ViewMatrix);
-            CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().Projection);
-            std::shared_ptr<FRHIBuffer> CameraInterface_GPUBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
-
             for (const auto& Section : P_StaticMeshComponent.Handle->GetMeshSections())
             {
-                Transform transform = P_TransformComponent.M_Transform;
-                transform.M_Translation += Section.M_Translation * 2.0f;
-                transform.M_Rotation += Section.M_Rotation;
-                transform.M_Scale += Section.M_Scale;
+                const glm::mat4 ModelMatrix = P_TransformComponent.M_Transform.ToMatrix() * Section.M_LocalMatrix;
 
                 FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-                ObjectData.Write(transform.ToMatrix());
-                ObjectData.Write(glm::inverseTranspose(transform.ToMatrix()));
+                ObjectData.Write(ModelMatrix);
+                ObjectData.Write(glm::inverseTranspose(ModelMatrix));
                 std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
 
                 FRHIDrawCommand DrawCommand = {};

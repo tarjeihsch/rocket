@@ -25,11 +25,7 @@ struct FPrimitiveMeshSection
     uint32_t M_VertexOffset;
     uint32_t M_IndexOffset;
 
-    uint32_t M_MaterialID;
-
-    glm::vec3 M_Translation;
-    glm::vec3 M_Rotation;
-    glm::vec3 M_Scale;
+    glm::mat4 M_LocalMatrix;
 };
 
 class CStaticMesh : public CObject

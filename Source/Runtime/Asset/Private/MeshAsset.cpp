@@ -95,7 +95,7 @@ FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderR
     std::string Warning;
 
     bool bSuccess = Loader.LoadBinaryFromFile(&Model, &Error, &Warning, p_Request.Path);
-    RK_ASSERT(bSuccess, "Failed to load mesh asset");
+    RK_ASSERT(bSuccess, "Failed to load mesh asset. Did you use a correct file path?");
 
     for (const auto& Node : Model.nodes)
     {

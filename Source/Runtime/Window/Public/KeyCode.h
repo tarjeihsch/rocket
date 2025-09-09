@@ -179,7 +179,10 @@ constexpr const int RK_GAMEPAD_BUTTON_X			    = 2;
 constexpr const int RK_GAMEPAD_BUTTON_Y			    = 3;
 constexpr const int RK_GAMEPAD_AXIS_LEFT_X	        = 0;
 constexpr const int RK_GAMEPAD_AXIS_LEFT_Y	        = 1;
-constexpr const int RK_GAMEPAD_AXIS_RIGHT_X	        = 2;
-constexpr const int RK_GAMEPAD_AXIS_RIGHT_Y	        = 3;
+constexpr const int RK_GAMEPAD_AXIS_RIGHT_X	        = 3;
+constexpr const int RK_GAMEPAD_AXIS_RIGHT_Y	        = 4;
+// Uncomment these for normal axis codes
+//constexpr const int RK_GAMEPAD_AXIS_RIGHT_X	            = 2;
+//constexpr const int RK_GAMEPAD_AXIS_RIGHT_Y	        = 3;
 constexpr const int RK_GAMEPAD_AXIS_LEFT_TRIGGER    = 4;
 constexpr const int RK_GAMEPAD_AXIS_RIGHT_TRIGGER   = 5;

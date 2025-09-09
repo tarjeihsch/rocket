@@ -36,10 +36,11 @@ void CStaticMesh::Init()
         Section.M_VertexCount = Primitive.Vertices.size();
         Section.M_VertexOffset = M_VertexCount;
         Section.M_IndexOffset = M_IndexCount;
-        Section.M_MaterialID = 0;
-        Section.M_Translation = Primitive.Translation;
-        Section.M_Rotation = Primitive.Rotation;
-        Section.M_Scale = Primitive.Scale;
+        Section.M_LocalMatrix =
+            glm::translate(glm::mat4(1.0f), Primitive.Translation) *
+            glm::toMat4(glm::quat(glm::radians(Primitive.Rotation))) *
+            glm::scale(glm::mat4(1.0f), Primitive.Scale);
+
 
         Vertices.insert(Vertices.end(), Primitive.Vertices.begin(), Primitive.Vertices.end());
         Indices.insert(Indices.end(), Primitive.Indices.begin(), Primitive.Indices.end());
