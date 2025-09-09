@@ -32,7 +32,7 @@ void FSceneRenderer::Tick(PScene* Scene)
 
     // Apply the same concept for Instanced Static Mesh Components, same for IndexedStaticMeshComponents and IndexedIndirectStaticMeshComponent
 
-    FPipeline Pipeline = FPipeline(GAME_SRC "/Shader/VertexShader.hlsl", GAME_SRC "/Shader/FragmentShader.hlsl");
+    FPipeline Pipeline = FPipeline(ROCKET_SRC "/Shader/VertexShader.hlsl", ROCKET_SRC "/Shader/FragmentShader.hlsl");
     FRenderTarget RenderTarget = FRenderTarget(1280, 720);
     FAttachment DepthAttachment = FAttachment(1280, 720, ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
 
