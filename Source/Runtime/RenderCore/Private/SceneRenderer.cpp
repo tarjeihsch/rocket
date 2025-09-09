@@ -43,15 +43,10 @@ void FSceneRenderer::Tick(PScene* Scene)
         GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
         Scene->GetRegistry()->View<StaticMeshComponent, TransformComponent>([&](const StaticMeshComponent& P_StaticMeshComponent, const TransformComponent& P_TransformComponent)
         {
-            struct FInstanceData
-            {
-                glm::mat4 Transform;
-                glm::mat4 TransformInverseTranspose;
-            };
-
-            FCameraCaptureResult CameraData = Scene->GetActiveCamera()->GetCachedCapture();
-
-            std::shared_ptr<FRHIBuffer> CameraGPUData = GetRHI()->RHIBindBuffer(&CameraData, sizeof(FCameraCaptureResult));
+            FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+            CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().ViewMatrix);
+            CameraData.Write(Scene->GetActiveCamera()->GetCachedCapture().Projection);
+            std::shared_ptr<FRHIBuffer> CameraInterface_GPUBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
 
             for (const auto& Section : P_StaticMeshComponent.Handle->GetMeshSections())
             {
@@ -60,9 +55,10 @@ void FSceneRenderer::Tick(PScene* Scene)
                 transform.M_Rotation += Section.M_Rotation;
                 transform.M_Scale += Section.M_Scale;
 
-                FInstanceData InstanceData = { transform.ToMatrix(), glm::inverseTranspose(transform.ToMatrix()) };
-
-                std::shared_ptr<FRHIBuffer> InstanceGPUData = GetRHI()->RHIBindBuffer(&InstanceData, sizeof(FInstanceData));
+                FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+                ObjectData.Write(transform.ToMatrix());
+                ObjectData.Write(glm::inverseTranspose(transform.ToMatrix()));
+                std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
 
                 FRHIDrawCommand DrawCommand = {};
                 DrawCommand.VertexBuffer = P_StaticMeshComponent.Handle->GetVertexBuffer();
@@ -72,8 +68,8 @@ void FSceneRenderer::Tick(PScene* Scene)
                 DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
 
                 FRHIDrawParams DrawParams = {};
-                DrawParams.DrawParam_1 = CameraGPUData->GetBindingIndex(); // Camera ID
-                DrawParams.DrawParam_2 = InstanceGPUData->GetBindingIndex(); // Instance ID
+                DrawParams.DrawParam_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
+                DrawParams.DrawParam_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
 
                 GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
             }
