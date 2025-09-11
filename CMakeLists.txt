@@ -14,6 +14,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 
+set(RK_ENABLE_DEBUG_OVERLAY 0 CACHE BOOL "Enable Rocket debug overlay")
+set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
+set(RK_PATH_SCRIPT_DLL "" CACHE PATH "Path used by Script DLL")
+
 foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
     string(TOUPPER "${cfg}" CFG)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFG}  ${CMAKE_BINARY_DIR})
@@ -52,7 +56,6 @@ add_subdirectory(Source/ThirdParty/imgui)
 add_subdirectory(Source/ThirdParty/glm)
 add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
-add_subdirectory(Source/ThirdParty/fastgltf)
 add_subdirectory(Source/ThirdParty/tinygltf)
 
 # Rocket modules
@@ -111,13 +114,20 @@ foreach(module IN LISTS ROCKET_EXPORT_LIBS)
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 endforeach()
 
-# Game entrypoint module
-if (DEFINED CLIENT_MODULE)
-    # TODO: Monolithic builds are currently disabled
-    # add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_BUILD_DIR}")
-    # add_dependencies(Application Game)
-    message("[Rocket] Found client module -- proceeding to hook")
-endif()
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMake/RocketConfig.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
+    @ONLY
+)
+
+target_include_directories(Core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Generated>
+    $<INSTALL_INTERFACE:include>
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
+    DESTINATION include/Rocket)
+
 
 add_custom_target(copy_compile_commands ALL
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
