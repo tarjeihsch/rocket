@@ -5,8 +5,8 @@
 #include "MeshAsset.h"
 
 #include <Logger.h>
-#include <fastgltf/core.hpp>
-#include <fastgltf/types.hpp>
+//#include <fastgltf/core.hpp>
+//#include <fastgltf/types.hpp>
 #include <variant>
 
 #include <tiny_gltf.h>

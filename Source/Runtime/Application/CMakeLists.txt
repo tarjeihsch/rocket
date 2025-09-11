@@ -22,24 +22,13 @@ file(GLOB_RECURSE APPLICATION_PRIVATE_SOURCES
 target_sources(Application PRIVATE ${APPLICATION_PRIVATE_SOURCES})
 
 target_include_directories(Application
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/Application>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
-if (DEFINED PRIMARY_MODULE)
-    target_link_libraries(Application
-        PUBLIC Rocket::Engine
-        PRIVATE $<$<CONFIG:Debug>:-Wl,--whole-archive>
-        PRIVATE Game
-        PRIVATE $<$<CONFIG:Debug>:-Wl,--no-whole-archive>
-    )
-else()
-    target_link_libraries(Application
-        PUBLIC Rocket::Engine
-    )
-endif()
-
-add_custom_command(
-    TARGET Application POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+target_link_libraries(Application
+    PUBLIC Rocket::Engine
 )

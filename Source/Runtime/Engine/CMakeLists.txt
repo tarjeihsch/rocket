@@ -22,9 +22,12 @@ file(GLOB_RECURSE ENGINE_PRIVATE_SOURCES
 
 target_sources(Engine PRIVATE ${ENGINE_PRIVATE_SOURCES})
 
-target_include_directories(Engine 
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
+target_include_directories(Engine
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/Engine>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
 target_link_libraries(Engine
@@ -34,6 +37,8 @@ target_link_libraries(Engine
     PUBLIC Rocket::Object
     PRIVATE Rocket::RHI
     PRIVATE Rocket::RenderCore
+    PRIVATE $<BUILD_INTERFACE:glm::glm>
+    PRIVATE $<BUILD_INTERFACE:EnTT::EnTT>
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

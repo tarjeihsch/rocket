@@ -1,6 +1,7 @@
 #include <Subsystem.h>
 #include "Engine.h"
 
+#include "Assert.h"
 #include "AssetManager.h"
 #include "Common/RHI.h"
 #include "Logger.h"
@@ -46,7 +47,10 @@ void CEngine::Start()
 #endif
 
 #if RK_PLATFORM_LINUX
-    void* GameLib = dlopen("./libGame.so", RTLD_NOW);
+    void* GameLib = dlopen("/home/user/Workspace/Spaceship/Build/libSpaceship.so", RTLD_NOW | RTLD_GLOBAL);
+    if (!GameLib) {
+        fprintf(stderr, "dlopen failed: %s\n", dlerror());
+    }
 #endif
 
     for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
@@ -61,7 +65,7 @@ void CEngine::Run()
     {
         Timestep.Reset();
 
-	    IWindow::Get()->Poll();
+	IWindow::Get()->Poll();
 
         for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
         {

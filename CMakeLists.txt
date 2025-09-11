@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
+
+include(CMakePackageConfigHelpers)
+
 project(Rocket LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
@@ -62,9 +66,61 @@ add_subdirectory(Source/Runtime/Asset)
 add_subdirectory(Source/Runtime/Application)
 add_subdirectory(Source/Runtime/Object)
 
-# Game entrypoint module
-if (DEFINED PRIMARY_MODULE)
-    add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_DIR}")
+set(ROCKET_EXPORT_LIBS
+    Core
+    Engine
+    RHI
+    RenderCore
+    Window
+    Scene
+    Asset
+    Object
+)
 
-    message("Found Primary Module -- proceed to hook")
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMake/RocketConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/RocketConfig.cmake
+    INSTALL_DESTINATION cmake
+)
+
+install(TARGETS ${ROCKET_EXPORT_LIBS}
+    EXPORT RocketTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(TARGETS Application
+    RUNTIME DESTINATION bin
+)
+
+install(EXPORT RocketTargets
+    FILE RocketTargets.cmake
+    NAMESPACE Rocket::
+    DESTINATION cmake
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/RocketConfig.cmake
+    DESTINATION cmake
+)
+
+foreach(module IN LISTS ROCKET_EXPORT_LIBS)
+    install(DIRECTORY Source/Runtime/${module}/Public/
+        DESTINATION include/${module}
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+endforeach()
+
+# Game entrypoint module
+if (DEFINED CLIENT_MODULE)
+    # TODO: Monolithic builds are currently disabled
+    # add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_BUILD_DIR}")
+    # add_dependencies(Application Game)
+    message("[Rocket] Found client module -- proceeding to hook")
 endif()
+
+add_custom_target(copy_compile_commands ALL
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+)
+
+add_dependencies(copy_compile_commands Application)

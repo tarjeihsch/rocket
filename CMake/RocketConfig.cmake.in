@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/RocketTargets.cmake")
+
+# Pull in dependencies if you want CMake to resolve them automatically
+# e.g. find_dependency(spdlog)
+
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)

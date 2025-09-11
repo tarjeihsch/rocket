@@ -23,8 +23,11 @@ file(GLOB_RECURSE RENDERCORE_PRIVATE_SOURCES
 target_sources(RenderCore PRIVATE ${RENDERCORE_PRIVATE_SOURCES})
 
 target_include_directories(RenderCore
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/RenderCore>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
 target_link_libraries(RenderCore
@@ -32,7 +35,9 @@ target_link_libraries(RenderCore
     PUBLIC Rocket::Object
     PUBLIC Rocket::Scene
     PUBLIC Rocket::Asset
-    PRIVATE Rocket::RHI
+    PUBLIC Rocket::RHI
+    PRIVATE $<BUILD_INTERFACE:glm::glm>
+    PRIVATE $<BUILD_INTERFACE:EnTT::EnTT>
 )
 
 set_target_properties(RenderCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
