@@ -25,7 +25,7 @@ public:
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
     virtual void RHIWaitUntilIdle() const override;
-    virtual uint64_t GetFrameCounter() const noexcept;
+    virtual uint64_t GetFrameCounter() const noexcept override;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
     virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const override;
     virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const override;

@@ -17,7 +17,7 @@ struct FVulkanTexture : FRHITexture
     void Alias();
 
     virtual const FRHITextureDesc& RHIGetTextureDesc() const override;
-    virtual void* GetHandle() const;
+    virtual void* GetHandle() const override;
 
     VkImage Image;
     VmaAllocation Allocation;

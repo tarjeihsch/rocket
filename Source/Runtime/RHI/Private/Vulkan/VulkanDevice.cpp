@@ -145,6 +145,7 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
         case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
         case EType::ImageView: VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr); break;
         case EType::Buffer: VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr); break;
+        default: break;
         }
 
         if (It->Allocation != nullptr)

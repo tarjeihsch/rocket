@@ -9,6 +9,7 @@
 #include "VulkanLoader.h"
 
 #include <vulkan/vulkan_core.h>
+#include <cstring>
 
 #ifdef RK_PLATFORM_LINUX
     #include <dlfcn.h>

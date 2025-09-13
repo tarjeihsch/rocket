@@ -19,7 +19,7 @@ public:
     virtual const FRHIBufferDesc& GetBufferDesc() const override;
     virtual void* GetHandle() const override;
 
-    virtual uint32_t GetBindingIndex() const;
+    virtual uint32_t GetBindingIndex() const override;
 
     virtual void Lock(const void* Data, uint64_t Size) override;
 
