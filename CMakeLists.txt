@@ -16,7 +16,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 
 set(RK_ENABLE_DEBUG_OVERLAY 0 CACHE BOOL "Enable Rocket debug overlay")
 set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
-set(RK_PATH_SCRIPT_DLL "" CACHE PATH "Path used by Script DLL")
+set(RK_PROJECT_ROOT_DIR "${CMAKE_SOURCE_DIR}")
 
 foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
     string(TOUPPER "${cfg}" CFG)

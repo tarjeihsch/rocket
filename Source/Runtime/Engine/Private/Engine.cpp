@@ -10,14 +10,6 @@
 #include "Window.h"
 #include "Context.h"
 
-#ifdef RK_PLATFORM_LINUX
-#include <dlfcn.h>
-#endif
-
-#ifdef RK_PLATFORM_WINDOWS
-#include <windows.h>
-#endif
-
 CEngine* CEngine::GEngine = nullptr;
 
 ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
@@ -41,17 +33,6 @@ void CEngine::Start()
     IWindow::Get()->CreateNativeWindow();
     GRHI->Init();
     Scene->Init();
-
-#if RK_PLATFORM_WINDOWS
-    HMODULE GameLib = LoadLibraryA("Game.dll");
-#endif
-
-#if RK_PLATFORM_LINUX
-    void* GameLib = dlopen("/home/user/Workspace/Spaceship/Build/libSpaceship.so", RTLD_NOW | RTLD_GLOBAL);
-    if (!GameLib) {
-        fprintf(stderr, "dlopen failed: %s\n", dlerror());
-    }
-#endif
 
     for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
     {

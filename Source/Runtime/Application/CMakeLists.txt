@@ -31,4 +31,5 @@ target_include_directories(Application
 
 target_link_libraries(Application
     PUBLIC Rocket::Engine
+    PRIVATE -Wl,--export-dynamic
 )
