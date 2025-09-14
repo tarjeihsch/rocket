@@ -2,7 +2,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "Memory.h"
-#include "Object.h"
 
 #include "glm/fwd.hpp"
 #include "glm/detail/type_quat.hpp"
@@ -28,7 +27,7 @@ struct FPrimitiveMeshSection
     glm::mat4 M_LocalMatrix;
 };
 
-class CStaticMesh : public CObject
+class CStaticMesh
 {
 public:
     CStaticMesh(const char* InFilePath);

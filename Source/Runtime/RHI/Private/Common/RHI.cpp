@@ -2,16 +2,16 @@
 
 #include "Assert.h"
 
-IRHI* GRHI = nullptr;
+IRHI* G_RHI = nullptr;
 IRHIModule* GRHIModule = nullptr;
 
 void SetRHIModule(ERHIInterfaceType InInterfaceType)
 {
-    if (GRHI)
+    if (G_RHI)
     {
-        GRHI->Shutdown();
-        delete GRHI;
-        GRHI = nullptr;
+        G_RHI->Shutdown();
+        delete G_RHI;
+        G_RHI = nullptr;
     }
 
     if (GRHIModule)
@@ -29,5 +29,5 @@ void SetRHIModule(ERHIInterfaceType InInterfaceType)
         case ERHIInterfaceType::None: RK_ASSERT("Missing API backend"); break;
     }
 
-    GRHI = GRHIModule->CreateRHI();
+    G_RHI = GRHIModule->CreateRHI();
 }

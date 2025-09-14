@@ -1,6 +1,5 @@
 #include "ConfigFile.h"
 #include "Engine.h"
-#include "Logger.h"
 
 #ifdef RK_PLATFORM_LINUX
 #include <dlfcn.h>

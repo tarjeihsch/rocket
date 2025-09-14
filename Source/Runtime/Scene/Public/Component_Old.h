@@ -5,16 +5,16 @@
 
 class ICamera;
 
-struct IComponent {};
+struct IComponent_Old {};
 
-struct FUUIDComponent : IComponent
+struct FUUIDComponent : IComponent_Old
 {
     FUUIDComponent() = default;
 
     uint64_t UUID;
 };
 
-struct FTagComponent : IComponent
+struct FTagComponent : IComponent_Old
 {
     FTagComponent() = default;
     FTagComponent(const std::string& InTag) : Tag(InTag) {}
@@ -22,7 +22,7 @@ struct FTagComponent : IComponent
     std::string Tag;
 };
 
-struct FCameraComponent : IComponent
+struct FCameraComponent : IComponent_Old
 {
     FCameraComponent() = default;
     FCameraComponent(ICamera* InCamera) : Camera(InCamera) {}

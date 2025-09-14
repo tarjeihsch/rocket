@@ -1,21 +1,14 @@
 #pragma once 
 
 #include "Camera.h"
-#include "Component.h"
+#include "Delegate.h"
 #include "Registry.h"
 
-class PScene
+class CScene final
 {
 public:
-    void Init()
-    {
-	    Registry = new PRegistry();
-    }
-
-    void Cleanup()
-    {
-	    delete Registry;
-    }
+    void Init();
+    void Cleanup();
 
     void SetActiveCamera(ICamera* InCamera)
     {
@@ -24,15 +17,13 @@ public:
 
     [[nodiscard]] ICamera* GetActiveCamera() const
     {
-	    return ActiveCamera;
+	return ActiveCamera;
     }
 
     [[nodiscard]] PRegistry* GetRegistry() const
     {
-	    return Registry;
+	return Registry;
     }
-
-    void OnImGuiRender();
 
 private:
     ICamera* ActiveCamera;

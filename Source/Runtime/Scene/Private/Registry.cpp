@@ -1,13 +1,12 @@
 #include "Registry.h"
 
-#include "Component.h"
+#include "Component_Old.h"
 #include "Entity.h"
 
 FEntity PRegistry::CreateEntity()
 {
     FEntity Entity = {*this};
     Entity.EntityID = Registry.create();
-    Entity.AddComponent<FUUIDComponent>();
     return Entity;
 }
 

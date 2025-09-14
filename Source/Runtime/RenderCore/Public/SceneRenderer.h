@@ -1,10 +1,10 @@
 #pragma once
 
-class PScene;
+class CScene;
 
 class FSceneRenderer
 {
 public:
     void Init();
-    void Tick(PScene* Scene);
+    void Tick(CScene* Scene);
 };

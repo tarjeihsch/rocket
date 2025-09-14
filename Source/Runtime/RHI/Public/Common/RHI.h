@@ -104,7 +104,7 @@ public:
     virtual IRHI* CreateRHI() = 0;
 };
 
-extern IRHI* GRHI;
+extern IRHI* G_RHI;
 extern IRHIModule* GRHIModule;
 
 void SetRHIModule(ERHIInterfaceType InInterfaceType);
@@ -123,10 +123,10 @@ inline TRHI* CastRHI(IRHI* InRHI)
 template<typename TRHI>
 inline TRHI* GetRHI()
 {
-    return CastRHI<TRHI>(GRHI);
+    return CastRHI<TRHI>(G_RHI);
 }
 
 inline IRHI* GetRHI()
 {
-    return GRHI;
+    return G_RHI;
 }
