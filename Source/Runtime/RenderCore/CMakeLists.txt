@@ -37,7 +37,6 @@ target_link_libraries(RenderCore
     PUBLIC Rocket::RHI
     PUBLIC Rocket::Math
     PRIVATE $<BUILD_INTERFACE:glm::glm>
-    PRIVATE $<BUILD_INTERFACE:EnTT::EnTT>
 )
 
 set_target_properties(RenderCore PROPERTIES POSITION_INDEPENDENT_CODE ON)

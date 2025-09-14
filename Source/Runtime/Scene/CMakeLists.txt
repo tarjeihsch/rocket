@@ -32,7 +32,6 @@ target_include_directories(Scene
 
 target_link_libraries(Scene
     PUBLIC Rocket::Core
-    PRIVATE $<BUILD_INTERFACE:EnTT::EnTT>
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 

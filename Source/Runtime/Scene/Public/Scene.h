@@ -2,7 +2,6 @@
 
 #include "Camera.h"
 #include "Delegate.h"
-#include "Registry.h"
 
 class CScene final
 {
@@ -17,16 +16,9 @@ public:
 
     [[nodiscard]] ICamera* GetActiveCamera() const
     {
-	return ActiveCamera;
-    }
-
-    [[nodiscard]] PRegistry* GetRegistry() const
-    {
-	return Registry;
+    	return ActiveCamera;
     }
 
 private:
     ICamera* ActiveCamera;
-
-    PRegistry* Registry;
 };
