@@ -1,7 +1,11 @@
 {
-    "version": 3,
-    "cmakeMinimumRequired": { "major": 3, "minor": 22, "patch": 0 },
-
+    "version": 6,
+    "cmakeMinimumRequired":
+    {
+        "major": 3,
+        "minor": 23,
+        "patch": 0
+    },
     "configurePresets": [
         {
             "name": "gcc-debug",
@@ -33,7 +37,8 @@
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++",
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-ftime-trace"
             }
         },
         {
@@ -74,14 +79,31 @@
             }
         }
     ],
-
     "buildPresets": [
-        { "name": "gcc-debug",    "configurePreset": "gcc-debug" },
-        { "name": "gcc-release",  "configurePreset": "gcc-release" },
-        { "name": "clang-debug",  "configurePreset": "clang-debug" },
-        { "name": "clang-release","configurePreset": "clang-release" },
-        { "name": "mingw-debug",  "configurePreset": "mingw-debug" },
-        { "name": "mingw-release","configurePreset": "mingw-release" }
+        { 
+            "name": "gcc-debug",
+            "configurePreset": "gcc-debug" 
+        },
+        { 
+            "name": "gcc-release",
+            "configurePreset": "gcc-release"
+        },
+        { 
+            "name": "clang-debug",
+            "configurePreset": "clang-debug"
+        },
+        { 
+            "name": "clang-release",
+            "configurePreset": "clang-release"
+        },
+        { 
+            "name": "mingw-debug",
+            "configurePreset": "mingw-debug"
+        },
+        { 
+            "name": "mingw-release",
+            "configurePreset": "mingw-release"
+        }
     ]
 }
 
