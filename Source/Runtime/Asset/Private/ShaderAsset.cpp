@@ -97,7 +97,7 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
 #endif
 
 #ifdef RK_PLATFORM_WINDOWS
-    HMODULE DxcLibHandle = LoadLibraryW(ROCKET_BINARIES L"/ThirdParty/Vulkan/lib/dxcompiler.dll");
+    HMODULE DxcLibHandle = LoadLibraryW(ROCKET_BINARIES "/ThirdParty/Vulkan/lib/dxcompiler.dll");
     RK_ASSERT(DxcLibHandle, "Failed to load dxcompiler.dll (make sure DXC is installed or bundled).");
 
     using DxcCreateInstanceProc = HRESULT(__stdcall*)(REFCLSID, REFIID, LPVOID*);
