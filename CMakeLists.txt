@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.23)
 
 include(CMakePackageConfigHelpers)
 
@@ -16,7 +16,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 
 set(RK_ENABLE_DEBUG_OVERLAY 0 CACHE BOOL "Enable Rocket debug overlay")
 set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
-set(RK_PROJECT_ROOT_DIR "${CMAKE_SOURCE_DIR}")
 
 foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
     string(TOUPPER "${cfg}" CFG)
@@ -45,9 +44,9 @@ if (MINGW)
     add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
-add_compile_definitions(ROCKET_BINARIES="${CMAKE_CURRENT_SOURCE_DIR}/Binaries")
-add_compile_definitions(ROCKET_SRC="${CMAKE_CURRENT_SOURCE_DIR}/Source")
-add_compile_definitions(ROCKET_CONTENT="${CMAKE_CURRENT_SOURCE_DIR}/Content")
+add_compile_definitions(ROCKET_BINARIES=\"${CMAKE_CURRENT_SOURCE_DIR}/Binaries\")
+add_compile_definitions(ROCKET_SRC=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\")
+add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 
 # Third Party modules
 add_subdirectory(Source/ThirdParty/glfw)
@@ -127,8 +126,4 @@ target_include_directories(Core PUBLIC
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
     DESTINATION include/Rocket
-)
-
-add_custom_target(Install ALL
-    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --prefix ~/Rocket
 )
