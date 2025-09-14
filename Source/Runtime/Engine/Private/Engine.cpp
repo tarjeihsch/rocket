@@ -1,13 +1,12 @@
-#include <Subsystem.h>
 #include "Engine.h"
 
-#include "AssetManager.h"
 #include "Common/RHI.h"
 #include "Logger.h"
 #include "SceneRenderer.h"
+#include "Subsystem.h"
 #include "Window.h"
 
-CEngine* CEngine::GEngine = nullptr;
+CEngine * CEngine::GEngine = nullptr;
 
 ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
 
@@ -17,7 +16,6 @@ void CEngine::Start()
 
     FLogger::Init();
 
-    M_AssetManager = new FAssetManager();
     M_SceneRenderer = new FSceneRenderer();
 
     SetRHIModule(ERHIInterfaceType::Vulkan);
@@ -53,8 +51,5 @@ void CEngine::Stop()
 {
     G_RHI->Shutdown();
     IWindow::Get()->DestroyNativeWindow();
-
-    delete M_AssetManager;
-
     GEngine = nullptr;
 }

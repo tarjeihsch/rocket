@@ -1,9 +1,12 @@
 #pragma once
 
-#include "../../Object/Public/Component.h"
+#include "Component.h"
 
 class FStaticMeshComponent : public FComponent
 {
 public:
+    struct FStaticMeshTickProxy
+    {
 
+    };
 };
