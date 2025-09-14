@@ -59,6 +59,7 @@ add_subdirectory(Source/ThirdParty/spdlog)
 add_subdirectory(Source/ThirdParty/tinygltf)
 
 # Rocket modules
+add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Engine)
 add_subdirectory(Source/Runtime/RHI)
@@ -67,7 +68,6 @@ add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Asset)
 add_subdirectory(Source/Runtime/Application)
-add_subdirectory(Source/Runtime/Object)
 
 set(ROCKET_EXPORT_LIBS
     Core
@@ -77,7 +77,7 @@ set(ROCKET_EXPORT_LIBS
     Window
     Scene
     Asset
-    Object
+    Math
 )
 
 configure_package_config_file(
@@ -126,11 +126,9 @@ target_include_directories(Core PUBLIC
 )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
-    DESTINATION include/Rocket)
-
-
-add_custom_target(copy_compile_commands ALL
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_BINARY_DIR}/../compile_commands.json
+    DESTINATION include/Rocket
 )
 
-add_dependencies(copy_compile_commands Application)
+add_custom_target(Install ALL
+    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --prefix ~/Rocket
+)

@@ -33,3 +33,11 @@ target_link_libraries(Application
     PUBLIC Rocket::Engine
     PRIVATE -Wl,--export-dynamic
 )
+
+add_custom_command(TARGET Application
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+    ${CMAKE_BINARY_DIR}/../compile_commands.json
+    COMMENT "Copying compile_commands.json to project root"
+)
