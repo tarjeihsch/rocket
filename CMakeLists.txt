@@ -56,6 +56,7 @@ add_subdirectory(Source/ThirdParty/glm)
 add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
 add_subdirectory(Source/ThirdParty/tinygltf)
+add_subdirectory(Source/ThirdParty/rapidjson)
 
 # Rocket modules
 add_subdirectory(Source/Runtime/Math)
