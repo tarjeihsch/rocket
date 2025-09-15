@@ -161,9 +161,9 @@ if(RAPIDJSON_BUILD_DOC)
     add_subdirectory(doc)
 endif()
 
-add_custom_target(travis_doc)
-add_custom_command(TARGET travis_doc
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/travis-doxygen.sh)
+#add_custom_target(travis_doc)
+#add_custom_command(TARGET travis_doc
+#    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/travis-doxygen.sh)
 
 if(RAPIDJSON_BUILD_EXAMPLES)
     add_subdirectory(example)
