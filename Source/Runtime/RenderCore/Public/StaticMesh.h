@@ -1,7 +1,6 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "../../Engine/Public/Object.h"
 #include "Memory.h"
 
 #include "glm/detail/type_quat.hpp"
@@ -19,11 +18,11 @@ struct FVertex
 
 struct FPrimitiveMeshSection
 {
-    uint32_t M_VertexCount;
-    uint32_t M_IndexCount;
+    uint32_t M_VertexCount = 0;
+    uint32_t M_IndexCount = 0;
 
-    uint32_t M_VertexOffset;
-    uint32_t M_IndexOffset;
+    uint32_t M_VertexOffset = 0;
+    uint32_t M_IndexOffset = 0;
 
     glm::mat4 M_LocalMatrix;
 };

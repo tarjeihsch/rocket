@@ -1,5 +1,6 @@
 #pragma once
 
+#include "JsonAsset.h"
 #include "Object.h"
 #include "TransformComponent.h"
 
@@ -10,8 +11,6 @@ class RActor : public RObject
     using Super = RObject;
 
 public:
-    RActor();
-
     static RClass* StaticClass();
 
     virtual const RClass* GetClass() const override;
@@ -21,8 +20,17 @@ public:
     virtual void EndPlay() {}
     virtual void Tick(float DeltaTime) {}
 
-protected:
-    RStaticMeshComponent* StaticMeshComponent;
+    virtual void Deserialize(const FJsonAsset::Object& Obj);
 
-    RTransformComponent* TransformComponent;
+    inline RStaticMeshComponent* GetStaticMeshComponent() const;
+
+    RActor& operator<<(const FJsonAsset& json);
+
+protected:
+    TObjectPtr<RStaticMeshComponent> StaticMeshComponent;
 };
+
+inline RStaticMeshComponent *RActor::GetStaticMeshComponent() const
+{
+    return StaticMeshComponent;
+}

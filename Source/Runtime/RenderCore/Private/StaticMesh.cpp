@@ -8,6 +8,8 @@
 CStaticMesh::CStaticMesh(const char* InFilePath)
     : M_VertexBuffer(nullptr),
     M_IndexBuffer(nullptr),
+    M_VertexCount(0),
+    M_IndexCount(0),
     FilePath(InFilePath)
 {
     Init();

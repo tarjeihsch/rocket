@@ -58,6 +58,7 @@ add_subdirectory(Source/ThirdParty/tinygltf)
 add_subdirectory(Source/ThirdParty/rapidjson)
 
 # Rocket modules
+add_subdirectory(Source/Runtime/Object)
 add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Engine)
@@ -70,6 +71,7 @@ add_subdirectory(Source/Runtime/Application)
 
 set(ROCKET_EXPORT_LIBS
     Core
+    Object
     Engine
     RHI
     RenderCore
