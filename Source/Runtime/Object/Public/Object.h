@@ -7,7 +7,7 @@
 #include <vector>
 
 /*
- * Each RObject carries its own integrated RClass metadata layer. This results in boilerplate code that is neccessary to perform
+ * Each RObject carries its own integrated RClass metadata layer. This results in boilerplate code that is necessary to perform
  * statical reflection-based lookup and comparisons.
  *
  * Heap-allocated data initialized within the CTOR is not guaranteed to be deep-copied or unique.
@@ -153,7 +153,7 @@ struct TObjectPtr
     T* Get() const { return reinterpret_cast<T*>(Handle); }
     T* operator->() const { return reinterpret_cast<T*>(Handle); }
     T& operator*() const { return *reinterpret_cast<T*>(Handle); }
-    explicit operator T*() const { return reinterpret_cast<T*>(Handle); }
+    operator T*() const { return reinterpret_cast<T*>(Handle); }
     explicit operator bool() const { return Handle != nullptr; }
 
 private:
