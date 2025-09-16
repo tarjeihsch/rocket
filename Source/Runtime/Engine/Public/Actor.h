@@ -1,24 +1,28 @@
 #pragma once
 
-#include <vector>
+#include "Object.h"
+#include "TransformComponent.h"
 
-struct FComponent;
+class RStaticMeshComponent;
 
-class CActor
+class RActor : public RObject
 {
-public:
-    using Super = CActor;
+    using Super = RObject;
 
-    virtual ~CActor() = default;
+public:
+    RActor();
+
+    static RClass* StaticClass();
+
+    virtual const RClass* GetClass() const override;
+    virtual void PostConstruct() override;
 
     virtual void BeginPlay() {}
     virtual void EndPlay() {}
+    virtual void Tick(float DeltaTime) {}
 
-    virtual void Tick(float DeltaTime);
+protected:
+    RStaticMeshComponent* StaticMeshComponent;
 
-    void AddComponent(FComponent* Component);
-    void RemoveComponent(FComponent* Component);
-
-private:
-    std::vector<FComponent*> M_Components;
+    RTransformComponent* TransformComponent;
 };

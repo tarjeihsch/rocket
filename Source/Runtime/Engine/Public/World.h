@@ -2,8 +2,8 @@
 
 #include <vector>
 
-class CActor;
-class FComponent;
+class RActor;
+class RComponent;
 
 class CWorld final
 {
@@ -20,13 +20,13 @@ public:
     }
 
 private:
-    std::vector<CActor*> Actors;
+    std::vector<RActor*> Actors;
 };
 
 template <typename TActor>
 TActor* CWorld::SpawnActor() const
 {
-    static_assert(std::derived_from<TActor, CActor>, "TClass must be derived from FActor");
+    static_assert(std::derived_from<TActor, RActor>, "TClass must be derived from FActor");
 
     auto Actor = new TActor();
 

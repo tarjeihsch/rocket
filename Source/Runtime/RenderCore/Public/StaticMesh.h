@@ -1,10 +1,11 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include "../../Engine/Public/Object.h"
 #include "Memory.h"
 
-#include "glm/fwd.hpp"
 #include "glm/detail/type_quat.hpp"
+#include "glm/fwd.hpp"
 #include "glm/gtx/quaternion.hpp"
 
 struct FRHIBuffer;
@@ -80,13 +81,3 @@ inline uint32_t CStaticMesh::GetIndexCount() const
 {
     return M_IndexCount;
 }
-
-struct StaticMeshComponent
-{
-    StaticMeshComponent(CStaticMesh* P_StaticMesh)
-        : Handle(P_StaticMesh)
-    {
-    }
-
-    CStaticMesh* Handle;
-};

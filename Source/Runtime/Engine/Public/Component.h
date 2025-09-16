@@ -1,10 +1,10 @@
 #pragma once
 
-#include "World.h"
+#include "Object.h"
 
 #include <cstdint>
 
-class CActor;
+class RActor;
 
 enum class EComponentFlags : uint8_t
 {
@@ -12,35 +12,36 @@ enum class EComponentFlags : uint8_t
     Tick = 1
 };
 
-struct FComponent
+class RComponent : public RObject
 {
-    FComponent()
-        : bShouldTick(0),
-        Owner(nullptr)
-    {
-    }
+    using Super = RObject;
 
-    virtual ~FComponent() = default;
+public:
+    static RClass* StaticClass();
+
+    RComponent();
+
+    virtual const RClass* GetClass() const override;
 
     virtual void OnInit() {}
     virtual void OnDestroy() {}
     virtual void Tick(float DeltaTime) {}
 
     inline bool ShouldTick() const;
-    inline CActor* GetOwner() const;
+    inline RActor* GetOwner() const;
 
 private:
     uint8_t bShouldTick : 1;
 
-    CActor* Owner;
+    RActor* Owner;
 };
 
-inline bool FComponent::ShouldTick() const
+inline bool RComponent::ShouldTick() const
 {
     return bShouldTick;
 }
 
-inline CActor *FComponent::GetOwner() const
+inline RActor *RComponent::GetOwner() const
 {
     return Owner;
 }

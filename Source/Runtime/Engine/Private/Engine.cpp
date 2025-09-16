@@ -1,5 +1,6 @@
 #include "Engine.h"
 
+#include "Actor.h"
 #include "Common/RHI.h"
 #include "Logger.h"
 #include "SceneRenderer.h"
@@ -22,6 +23,9 @@ void CEngine::Start()
 
     IWindow::Get()->CreateNativeWindow();
     G_RHI->Init();
+
+    RActor* Actor = ConstructObject<RActor>();
+    RActor* Actor2 = ConstructObject<RActor>();
 
     for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
     {

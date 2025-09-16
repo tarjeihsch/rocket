@@ -4,7 +4,7 @@
 
 void CWorld::Tick(float DeltaTime)
 {
-    for (CActor* Actor : Actors)
+    for (RActor* Actor : Actors)
     {
         Actor->Tick(DeltaTime);
     }

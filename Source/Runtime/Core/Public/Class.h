@@ -1,76 +1,77 @@
 #pragma once
 
-#include <cstdlib>
-#include <type_traits>
+#include <cstdint>
 
-template<typename T>
-class TClass
+class RObject;
+class RActor;
+
+/*
+ * RClass is a static-initialized runtime metadata layer for its outer RObject archetype.
+ *
+ * Each Object is responsible for self-declaring its own class reflection metadata using the macro CLASS() from within object body.
+ * This approach guarantees fast type-safety lookup and comparisons, while also ensuring that each object owns their reflection data and properties.
+ * Objects are constructed and destructed using proc addresses, to ensure that the derived type size is correct.
+ * TODO: Consider using a uint32_t Type with bit masking to store Type, Flags, ID.
+ */
+
+static constexpr uint32_t C_None = 0 << 0;
+static constexpr uint32_t C_ClassDefault = 1 << 0;
+static constexpr uint32_t C_Memory_Allocator_Frame = 1 << 2;
+static constexpr uint32_t C_Memory_Allocator_Heap = 1 << 3;
+
+class RClass final
 {
 public:
-	TClass()
-	{
-		Class = (T*)malloc(sizeof(T));
-	}
+    RClass() = delete;
+    RClass(RClass* P_ParentClass, RObject* P_Archetype, uint64_t P_Size, uint64_t P_Alignment, uint32_t P_Flags);
 
-	~TClass()
-	{
-		free(Class);
-	}
+    bool IsA(const RClass* Other) const;
 
-	TClass(const TClass<T>& Other)
-	{
-		Class = (T*)malloc(sizeof(T));
-		memcpy(Class, Other.Class, sizeof(T));
-	}
+    inline const RClass* GetSuperClass() const
+    {
+        return SuperClass;
+    }
 
-	TClass<T>& operator=(const TClass<T>& Other)
-	{
-		if (this != &Other)
-		{
-			free(Class);
+    inline const RObject* GetArchetype() const
+    {
+        return Archetype;
+    }
 
-			Class = (T*)malloc(sizeof(T));
-			memcpy(Class, Other.Class, sizeof(T));
-		}
-		return *this;
-	}
+    inline uint64_t GetSize() const
+    {
+        return Size;
+    }
 
-	template<typename U>
-	TClass<T>& operator=(const TClass<U>& Other)
-	{
-		static_assert(std::is_base_of<T, U>::value, "U must be derived from T");
+    inline uint64_t GetAlignment() const
+    {
+        return Alignment;
+    }
 
-		free(Class);
-		Class = (T*)malloc(sizeof(U));
-		memcpy(Class, Other.Class, sizeof(U));
+    inline uint32_t GetFlags() const
+    {
+        return Flags;
+    }
 
-		return *this;
-	}
+protected:
+    // Live pointer to parents static class storage - allows walking up the inheritance hierarchy
+    RClass* SuperClass;
 
-	T* GetClass() const
-	{
-		return Class;
-	}
+    // Object archetype - copies values directly onto newly constructed instances
+    RObject* Archetype;
 
-	template<typename U>
-	TClass<U> StaticCast() const
-	{
-		static_assert(std::is_base_of<T, U>::value || std::is_base_of<T, U>::value, "U must be a base or derived from T");
-		TClass<U> CastedClass;
-		CastedClass.Class = static_cast<U*>(Class);
-		return CastedClass;
-	}
+    // Object size in bytes
+    uint64_t Size;
 
-private:
-	T* Class;
+    // Object alignment in bytes
+    uint64_t Alignment;
 
-	template<typename U> friend class TClass;
+    // Class flags
+    uint32_t Flags;
+
+#if RK_OBJECT_CUSTOM_ALLOCATOR
+    using FConstructFn = RObject*(*)();
+
+    // Allocate object function callback
+    FConstructFn NewFn;
+#endif
 };
-
-template<typename TObject>
-TObject* New(TClass<TObject> Class)
-{
-	void* Memory = malloc(sizeof(TObject));
-	TObject* Object = new (Memory) TObject(*reinterpret_cast<TObject*>(Class.GetClass()));
-	return Object;
-}

@@ -15,9 +15,9 @@ enum ELogCategory
 class FLogger
 {
 public:
-	static void Init();
+    static void Init();
 	
-	static void LogImpl(ELogCategory LogCat, const std::string& Message);
+    static void LogImpl(ELogCategory LogCat, const std::string& Message);
 
     template<typename... TArgs>
     static void Log(ELogCategory LogCat, const std::string& Message, TArgs&&... Args)
@@ -27,8 +27,8 @@ public:
     }
 };
 
-#define RK_LOG_TRACE(...)		FLogger::Log(ELogCategory::LOG_TRACE, __VA_ARGS__)
-#define RK_LOG_DEBUG(...)		FLogger::Log(ELogCategory::LOG_DEBUG, __VA_ARGS__)
-#define RK_LOG_INFO(...)		FLogger::Log(ELogCategory::LOG_INFO, __VA_ARGS__)
-#define RK_LOG_WARNING(...)		FLogger::Log(ELogCategory::LOG_WARNING, __VA_ARGS__)
-#define RK_LOG_ERROR(...)		FLogger::Log(ELogCategory::LOG_ERROR, __VA_ARGS__)
+#define RK_LOG_TRACE(...)		FLogger::Log(ELogCategory::LOG_TRACE, ##__VA_ARGS__)
+#define RK_LOG_DEBUG(...)		FLogger::Log(ELogCategory::LOG_DEBUG, ##__VA_ARGS__)
+#define RK_LOG_INFO(...)		FLogger::Log(ELogCategory::LOG_INFO, ##__VA_ARGS__)
+#define RK_LOG_WARNING(...)		FLogger::Log(ELogCategory::LOG_WARNING, ##__VA_ARGS__)
+#define RK_LOG_ERROR(...)		FLogger::Log(ELogCategory::LOG_ERROR, ##__VA_ARGS__)

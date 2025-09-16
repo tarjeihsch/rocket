@@ -1,35 +1,31 @@
 #include "Actor.h"
 
-#include "Component.h"
+#include "StaticMeshComponent.h"
+#include "TransformComponent.h"
 
-void CActor::Tick(float DeltaTime)
+RActor::RActor()
+    : StaticMeshComponent(nullptr),
+    TransformComponent(nullptr)
 {
-    for (auto Component : M_Components)
-    {
-        if (Component->ShouldTick())
-        {
-            Component->Tick(DeltaTime);
-        }
-    }
 }
 
-void CActor::AddComponent(FComponent *Component)
+RClass *RActor::StaticClass()
 {
-    M_Components.push_back(Component);
+    static RActor Archetype;
+
+    static RClass Class { Super::StaticClass(), &Archetype, sizeof(RActor), alignof(RActor), C_ClassDefault | C_Memory_Allocator_Heap };
+
+    return &Class;
 }
 
-void CActor::RemoveComponent(FComponent* P_Component)
+const RClass *RActor::GetClass() const
 {
-    for (uint32_t Index = 0; Index < M_Components.size(); ++Index)
-    {
-        if (M_Components[Index] == P_Component)
-        {
-            M_Components[Index] = M_Components.back();
-
-            M_Components.pop_back();
-
-            break;
-        }
-    }
+    return StaticClass();
 }
 
+void RActor::PostConstruct()
+{
+    StaticMeshComponent = ConstructObject<RStaticMeshComponent>();
+
+    TransformComponent = ConstructObject<RTransformComponent>();
+}
