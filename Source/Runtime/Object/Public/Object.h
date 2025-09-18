@@ -159,3 +159,7 @@ struct TObjectPtr
 private:
     RObject* Handle;
 };
+
+#define RCLASS()
+#define RFUNCTION()
+#define RFIELD()
