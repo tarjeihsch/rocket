@@ -35,6 +35,7 @@ target_link_libraries(RenderCore
     PUBLIC Rocket::Scene
     PUBLIC Rocket::Asset
     PUBLIC Rocket::RHI
+    PUBLIC Rocket::Window
     PUBLIC Rocket::Math
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )

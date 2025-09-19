@@ -2,8 +2,6 @@
 
 #include "../../../ThirdParty/imgui/imgui.h"
 #include "../../Engine/Public/Engine.h"
-#include "../../Window/Public/Input.h"
-#include "../../Window/Public/Window.h"
 #include "Attachment.h"
 #include "Camera.h"
 #include "Common/RHI.h"
@@ -12,11 +10,12 @@
 #include "Common/RHIDrawCommand.h"
 #include "Common/RHISampler.h"
 #include "FrameGraph.h"
+#include "Input.h"
+#include "KeyCode.h"
 #include "Pipeline.h"
 #include "RenderTarget.h"
 #include "StaticMesh.h"
 #include "Transform.h"
-#include "glm/gtc/matrix_inverse.hpp"
 
 FRHITexture* Texture;
 
@@ -34,6 +33,7 @@ void FSceneRenderer::Init()
 
     GetRHI()->RHIUploadTextureBlocking(Texture, pixels, width, height);
 }
+
 static inline float  ImFloor(float f)                                           { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
 void FSceneRenderer::Tick()
@@ -106,6 +106,7 @@ void FSceneRenderer::Tick()
     std::unique_ptr<FRHIBuffer> IndexBuffer;
     std::unique_ptr<FRHITextureView> TextureView;
     std::unique_ptr<RRHISampler> Sampler;
+
     ImGuiIO& io = ImGui::GetIO();
     const auto extent = GetRHI()->RHIGetViewportExtent(); // should be client size (w,h)
     io.DisplaySize = ImVec2((float)extent[0], (float)extent[1]); // client area ONLY
@@ -116,16 +117,17 @@ void FSceneRenderer::Tick()
     // Timing
     io.DeltaTime = GetEngine()->GetTimestep().GetDeltaTime();   // must be >0
 
-
     // Mouse
     io.MousePos = ImVec2((float)PInput::GetMouseX(), (float)PInput::GetMouseY());
-
+    io.MouseDown[0] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_LEFT);
+    io.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
 
     ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_Always);
 
-    ImGui::ShowDemoWindow(&a);
-    ImGui::Render();
+    ImGui::Begin("My Window");
+    ImGui::SameLine();
+    ImGui::Text("%f", GetEngine()->GetTimestep().GetDeltaTime());
+    ImGui::End();    ImGui::Render();
     ImDrawData* DrawData = ImGui::GetDrawData();
 
     FRHIPipelineDesc ImGuiPipelineDesc = {};
