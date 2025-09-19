@@ -43,6 +43,9 @@ public:
     virtual void PostConstruct() {}
     virtual void Load(const std::vector<uint8_t>& Data) {}
     virtual void Save(std::vector<uint8_t>& Data) {}
+
+protected:
+    static_assert(DoesImplementStaticClass<RObject>, "");
 };
 
 inline RObject* ConstructObject(RClass* Class)

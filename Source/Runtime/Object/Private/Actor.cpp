@@ -3,6 +3,7 @@
 #include "StaticMesh.h"
 #include "StaticMeshComponent.h"
 #include "TransformComponent.h"
+#include "World.h"
 
 RClass *RActor::StaticClass()
 {
@@ -21,6 +22,8 @@ const RClass *RActor::GetClass() const
 void RActor::PostConstruct()
 {
     StaticMeshComponent = ConstructObject<RStaticMeshComponent>();
+
+    GetWorld()->GetTickTaskManager()->AddTickFunction<&RActor::Tick>(ETickGroup::Default, this);
 }
 
 void RActor::Deserialize(const FJsonAsset::Object &Obj)

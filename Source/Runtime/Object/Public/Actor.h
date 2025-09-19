@@ -2,7 +2,7 @@
 
 #include "JsonAsset.h"
 #include "Object.h"
-#include "TransformComponent.h"
+#include "Tickable.h"
 
 class RStaticMeshComponent;
 

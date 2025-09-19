@@ -10,10 +10,16 @@ RClass *RSceneComponent::StaticClass()
 }
 
 RSceneComponent::RSceneComponent()
+    : bShouldTick(1)
 {
 }
 
 const RClass *RSceneComponent::GetClass() const
 {
     return StaticClass();
+}
+
+void RSceneComponent::Tick(float DeltaTime)
+{
+    Transform.M_Translation += Velocity * DeltaTime;
 }

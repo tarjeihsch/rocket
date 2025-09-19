@@ -1,15 +1,14 @@
 #include "World.h"
 
-#include "../../Engine/Public/Engine.h"
 #include "Actor.h"
 #include "AssetManager.h"
 #include "JsonAsset.h"
-
+#include "Engine/Engine.h"
 #include <dlfcn.h>
 
 RActor *CWorld::SpawnActor(RClass *Class)
 {
-    RActor* Actor = static_cast<RActor*>(ConstructObject(Class));
+    RActor* Actor = ConstructObject<RActor>();
 
     Actors.push_back(Actor);
 
@@ -37,14 +36,13 @@ void CWorld::DestroyActor(RActor *P_Actor)
 
 void CWorld::Tick(float DeltaTime)
 {
-    for (RActor* Actor : Actors)
-    {
-        Actor->Tick(DeltaTime);
-    }
+    TickTaskManager->TickFrame(DeltaTime);
 }
 
 void CWorld::Initialize()
 {
+    TickTaskManager = new RTickTaskManager();
+
     FAssetLoaderRequest Request = { "/home/user/Workspace/Spaceship/Content/World.json" };
     FJsonAssetOptions Options;
     FAssetHandle<FJsonAsset> AssetHandle = FAssetManager::Get().Load<FJsonAsset>(Request, Options);

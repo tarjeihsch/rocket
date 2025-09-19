@@ -1,5 +1,7 @@
 #include "Component.h"
 
+#include "World.h"
+
 RClass *RComponent::StaticClass()
 {
     static RComponent Archetype;
@@ -10,11 +12,20 @@ RClass *RComponent::StaticClass()
 }
 
 RComponent::RComponent()
-    : bShouldTick(0),
-    Owner(nullptr)
+    : Owner(nullptr)
 {
 }
+
 const RClass *RComponent::GetClass() const
 {
     return StaticClass();
+}
+
+void RComponent::PostConstruct()
+{
+    GetWorld()->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
+}
+
+void RComponent::Tick(float DeltaTime)
+{
 }

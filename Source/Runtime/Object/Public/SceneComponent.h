@@ -2,7 +2,7 @@
 
 #include "Component.h"
 #include "Transform.h"
-#include "glm/vec3.hpp"
+#include "Vector.h"
 
 class RSceneComponent : public RComponent
 {
@@ -15,5 +15,11 @@ public:
 
     virtual const RClass* GetClass() const override;
 
+    virtual void Tick(float DeltaTime) override;
+
     FTransform Transform;
+
+    glm::vec3 Velocity;
+
+    uint8_t bShouldTick : 1;
 };

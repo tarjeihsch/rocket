@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <concepts>
 
 class RObject;
 class RActor;
@@ -74,4 +75,10 @@ protected:
     // Allocate object function callback
     FConstructFn NewFn;
 #endif
+};
+
+template <typename T>
+concept DoesImplementStaticClass = requires()
+{
+    { T::StaticClass() } -> std::same_as<RClass*>;
 };

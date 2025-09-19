@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object.h"
+#include "Tickable.h"
 
 #include <cstdint>
 
@@ -15,6 +16,7 @@ enum class EComponentFlags : uint8_t
 class RComponent : public RObject
 {
     using Super = RObject;
+    using This = RComponent;
 
 public:
     static RClass* StaticClass();
@@ -22,24 +24,17 @@ public:
     RComponent();
 
     virtual const RClass* GetClass() const override;
+    virtual void PostConstruct() override;
 
     virtual void OnInit() {}
     virtual void OnDestroy() {}
-    virtual void Tick(float DeltaTime) {}
+    virtual void Tick(float DeltaTime);
 
-    inline bool ShouldTick() const;
     inline RActor* GetOwner() const;
 
 private:
-    uint8_t bShouldTick : 1;
-
     RActor* Owner;
 };
-
-inline bool RComponent::ShouldTick() const
-{
-    return bShouldTick;
-}
 
 inline RActor *RComponent::GetOwner() const
 {
