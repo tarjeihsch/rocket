@@ -86,22 +86,6 @@ T* ConstructObject()
     RK_ASSERT(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
 }
 
-// Helper function for ConstructObject() when type is known at compile-time
-template<typename T>
-T* ConstructObject(RClass* Class)
-{
-    if ((T::StaticClass()->GetFlags() & C_Memory_Allocator_Heap) == C_Memory_Allocator_Heap)
-    {
-        // Perform a manual raw byte copy from archetype to pass the correct vtable pointer from archetype
-        void* Block = ::operator new(T::StaticClass()->GetSize(), std::align_val_t(T::StaticClass()->GetAlignment()));
-        std::memcpy(Block, T::StaticClass()->GetArchetype(), T::StaticClass()->GetSize());
-        T* NewObj = static_cast<T*>(Block);
-        NewObj->PostConstruct();
-        return NewObj;
-    }
-    RK_ASSERT(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
-}
-
 template <typename T>
 struct TObjectPtr
 {

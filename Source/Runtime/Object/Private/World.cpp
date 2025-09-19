@@ -9,7 +9,7 @@
 
 RActor *CWorld::SpawnActor(RClass *Class)
 {
-    RActor* Actor = ConstructObject<RActor>(Class);
+    RActor* Actor = static_cast<RActor*>(ConstructObject(Class));
 
     Actors.push_back(Actor);
 
