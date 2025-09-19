@@ -1,4 +1,6 @@
 #pragma once
+#include "Common/RHIPipeline.h"
+
 #include <cstdint>
 #include <memory>
 
@@ -8,6 +10,7 @@ class FRHIPipeline;
 struct FPipeline
 {
     FPipeline(const char *InVertexShaderPath, const char *InFragmentShaderPath);
+    FPipeline(FRHIPipelineDesc PipelineDesc);
     ~FPipeline();
 
     void Compile();

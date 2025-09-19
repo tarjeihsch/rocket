@@ -11,6 +11,15 @@ FPipeline::FPipeline(const char* InVertexShaderPath, const char* InFragmentShade
     Init();
 }
 
+FPipeline::FPipeline(FRHIPipelineDesc PipelineDesc)
+{
+    PipelineDesc.bDepthTestEnable = false;
+    PipelineDesc.bDepthWriteEnable = false;
+    PipelineDesc.CullMode = ERHICullMode::None;
+    PipelineDesc.ColorAttachmentFormats.push_back(ERHIFormat::BGRA8_SRGB);
+    Handle = GetRHI()->RHICreatePipelineStateObject(PipelineDesc);
+}
+
 FPipeline::~FPipeline()
 {
     Shutdown();

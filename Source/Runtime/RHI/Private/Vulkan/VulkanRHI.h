@@ -29,7 +29,9 @@ public:
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
     virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const override;
     virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const override;
+    virtual RRHISampler* RHICreateSampler(RRHISamplerDesc Desc) const override;
     virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) override;
+    virtual void RHIUploadTextureBlocking(FRHITexture* Texture2D, const void* Data, uint32_t Width, uint32_t Height) override;
     virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) override;
     virtual IRHICommandListContext* GetCommandListContext() const override;
     virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) override;
@@ -39,6 +41,7 @@ public:
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHICmdBlitImage(FRHICommandList& RHICmdList, FRHITexture* Src, FRHITexture* Dst) override;
+    virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) override;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) override;
     virtual FRHITexture* RHIGetBackBufferRenderTarget() const override;
     virtual std::array<uint32_t, 2> RHIGetViewportExtent() const override;

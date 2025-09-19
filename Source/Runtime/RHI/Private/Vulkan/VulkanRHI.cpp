@@ -13,6 +13,7 @@
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
 #include "VulkanResourceManager.h"
+#include "VulkanSampler.h"
 #include "VulkanTexture.h"
 #include "VulkanViewport.h"
 
@@ -225,18 +226,46 @@ FRHIBuffer *CVulkanRHI::RHICreateBuffer(FRHIBufferDesc Desc) const
     return new FVulkanBuffer(*Device, Desc);
 }
 
+RRHISampler *CVulkanRHI::RHICreateSampler(RRHISamplerDesc Desc) const
+{
+    return new RVulkanSampler(*Device, Desc);
+}
+
 void CVulkanRHI::RHIUploadDataBlocking(FRHIBuffer *Buffer, void *Data, uint64_t Size)
 {
     std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Size)));
 
-    StagingBuffer->Lock(Data, Size);
+    StagingBuffer->Map(Data, Size);
 
     Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
     {
         CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
     });
+}
+void CVulkanRHI::RHIUploadTextureBlocking(FRHITexture *Texture2D, const void *Data, uint32_t Width, uint32_t Height)
+{
+    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Width * Height * 4)));
 
-    //StagingBuffer->Unlock();
+    StagingBuffer->Map(Data, Width * Height * 4);
+
+    Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
+    {
+        CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::Undefined, ERHITextureLayout::TransferDst, ERHIResourceAccess::None,
+            ERHIResourceAccess::TransferWrite, ERHIPipelineStage::TopOfPipe, ERHIPipelineStage::Transfer);
+
+        VkBufferImageCopy vkRegion = {};
+        vkRegion.bufferOffset = 0;
+        vkRegion.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        vkRegion.imageSubresource.mipLevel       = 0;
+        vkRegion.imageSubresource.baseArrayLayer = 0;
+        vkRegion.imageSubresource.layerCount     = 1;
+        vkRegion.imageOffset = {0, 0, 0};
+        vkRegion.imageExtent = { (uint32_t)Width, (uint32_t)Height, 1 };
+
+        CmdList.Enqueue<FVulkanCommandCopyBufferToImage>(StagingBuffer.get(), Texture2D, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkRegion);
+
+        CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::TransferDst, ERHITextureLayout::ShaderReadOnly, ERHIResourceAccess::TransferWrite, ERHIResourceAccess::ShaderSampledRead, ERHIPipelineStage::Transfer, ERHIPipelineStage::FragmentShader);
+    });
 }
 
 FRHIPipeline *CVulkanRHI::RHICreatePipelineStateObject(FRHIPipelineDesc Desc)
@@ -293,11 +322,16 @@ void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, 
     RHICmdList.Enqueue<FVulkanCommandBlitImage>(Src, Dst);
 }
 
+void CVulkanRHI::RHICmdSetScissor(FRHICommandList &RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
+{
+    RHICmdList.Enqueue<FVulkanCommandSetScissor>(X, Y, Width, Height);
+}
+
 std::shared_ptr<FRHIBuffer> CVulkanRHI::RHIBindBuffer(void *Data, uint64_t Size)
 {
     std::shared_ptr<FRHIBuffer> Buffer(RHICreateBuffer(FRHIBufferDesc::CreateStorageBuffer(Size)));
 
-    Buffer->Lock(Data, Size);
+    Buffer->Map(Data, Size);
 
     return Buffer;
 }

@@ -34,6 +34,7 @@ target_link_libraries(RHI
     PUBLIC Rocket::Core
     PRIVATE Rocket::Window
     PRIVATE Rocket::Asset
+    PRIVATE $<BUILD_INTERFACE:imgui::imgui>
     PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>
     PRIVATE $<BUILD_INTERFACE:glfw>
     PRIVATE $<BUILD_INTERFACE:glm::glm>

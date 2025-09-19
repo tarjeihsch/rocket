@@ -21,8 +21,10 @@ struct FRHIDrawCommand
 
 struct FRHIDrawParams
 {
-    uint32_t DrawParam_1 = 0;
-    uint32_t DrawParam_2 = 0;
-    uint32_t DrawParam_3 = 0;
-    uint32_t DrawParam_4 = 0;
+    float DrawParam_1 = 0;
+    float DrawParam_2 = 0;
+    float DrawParam_3 = 0;
+    float DrawParam_4 = 0;
+    float DrawParam_5 = 0;
+    float DrawParam_6 = 0;
 };

@@ -78,7 +78,9 @@ struct FRHIBuffer
 
     virtual uint32_t GetBindingIndex() const = 0;
 
-    virtual void Lock(const void* Data, uint64_t Size) = 0;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+
+    //virtual void* Lock() = 0;
     //virtual void Unlock() = 0;
 
     ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;

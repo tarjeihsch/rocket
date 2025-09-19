@@ -196,10 +196,10 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     std::vector<FRHIVertexBinding> VertexBindings;
     std::vector<FRHIVertexAttribute> VertexAttributes;
 
-    VertexBindings.push_back(FRHIVertexBinding(0, 48, 0));
-    VertexAttributes.push_back(FRHIVertexAttribute(0, 0, ERHIFormat::Float3, offsetof(FRHIVertex, m_Position)));
-    VertexAttributes.push_back(FRHIVertexAttribute(1, 0, ERHIFormat::Float3, offsetof(FRHIVertex, m_Normal)));
-    VertexAttributes.push_back(FRHIVertexAttribute(2, 0, ERHIFormat::Float2, offsetof(FRHIVertex, m_TexCoord)));
+    VertexBindings.push_back(FRHIVertexBinding(0, 20, 0));
+    VertexAttributes.push_back(FRHIVertexAttribute(0, 0, ERHIFormat::Float2,   0));  // pos
+    VertexAttributes.push_back(FRHIVertexAttribute(1, 0, ERHIFormat::Float2,   8));  // uv (Float2!)
+    VertexAttributes.push_back(FRHIVertexAttribute(2, 0, ERHIFormat::UNorm8x4, 16)); // color
 
     std::vector<VkVertexInputBindingDescription> VertexBindingsDescriptions;
     for (const FRHIVertexBinding& Binding : VertexBindings)
@@ -225,17 +225,19 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments(Desc.ColorAttachmentFormats.size());
     for (auto& BlendAttachment : BlendAttachments)
     {
-        BlendAttachment.blendEnable = VK_FALSE;
-
+        BlendAttachment.blendEnable         = VK_TRUE;
         BlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         BlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        BlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        BlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
 
         BlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        BlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        BlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        BlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // not ZERO
+        BlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
 
-        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                                         VK_COLOR_COMPONENT_G_BIT |
+                                         VK_COLOR_COMPONENT_B_BIT |
+                                         VK_COLOR_COMPONENT_A_BIT;
     }
 
     VkPipelineColorBlendStateCreateInfo ColorBlendCreateInfo = {};

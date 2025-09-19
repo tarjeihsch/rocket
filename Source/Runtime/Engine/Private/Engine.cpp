@@ -36,6 +36,7 @@ void CEngine::Start()
 
     IWindow::Get()->CreateNativeWindow();
     G_RHI->Init();
+    M_SceneRenderer->Init();
 
     for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
     {

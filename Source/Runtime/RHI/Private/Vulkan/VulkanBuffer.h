@@ -21,7 +21,7 @@ public:
 
     virtual uint32_t GetBindingIndex() const override;
 
-    virtual void Lock(const void* Data, uint64_t Size) override;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) override;
 
 private:
     void Alloc();

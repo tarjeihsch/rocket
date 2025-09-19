@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/RHIPipeline.h"
+#include "Common/RHISampler.h"
 #include "Common/RHITexture.h"
 
 #include <vulkan/vulkan_core.h>
@@ -122,7 +123,10 @@
     X(vkCmdPipelineBarrier2) \
     X(vkCmdBeginRendering) \
     X(vkCmdEndRendering) \
-    X(vkCmdPushConstants)
+    X(vkCmdPushConstants) \
+    X(vkCmdCopyBufferToImage) \
+    X(vkCreateSampler) \
+    X(vkDestroySampler)
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \
@@ -178,6 +182,11 @@ namespace VulkanRHI
     VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
 
     VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
+
+    VkFilter ToVkFilter(ERHIFilterMode mode);
+    VkSamplerAddressMode ToVkAddressMode(ERHIAddressMode mode);
+    VkBorderColor ToVkBorderColor(ERHIBorderColor color);
+    VkCompareOp ToVkCompareOp(ERHICompareOp op);
 }
 
 void LoadVulkanLibrary();

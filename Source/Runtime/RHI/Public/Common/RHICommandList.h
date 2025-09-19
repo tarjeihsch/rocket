@@ -7,6 +7,7 @@
 #include <span>
 #include <vector>
 
+struct RRHIRect;
 struct FRHIDrawCommand;
 struct FRHIDrawParams;
 struct FRHIBuffer;
@@ -26,7 +27,7 @@ public:
     virtual IRHICommandListContext& GetLowestLevelContext() { return *this; }
 
     virtual void RHIBindPipeline(FRHIPipeline* Pipeline) = 0;
-    virtual void RHISetScissorRect(uint32_t X, uint32_t Y) = 0;
+    virtual void RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) = 0;
     virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U)) = 0;

@@ -10,6 +10,7 @@ target_sources(imgui PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/imgui_draw.cpp
     ${CMAKE_CURRENT_LIST_DIR}/imgui_tables.cpp
     ${CMAKE_CURRENT_LIST_DIR}/imgui_widgets.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/imgui_demo.cpp
 )
 
 target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_LIST_DIR})

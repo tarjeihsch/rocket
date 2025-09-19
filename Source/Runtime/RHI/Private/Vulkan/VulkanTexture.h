@@ -44,6 +44,7 @@ struct FVulkanTextureView : FRHITextureView
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const override;
     virtual void* GetHandle() const override;
+    virtual uint32_t GetBindingIndex() const override;
 
     VkImage Image;
     VkImageView View;

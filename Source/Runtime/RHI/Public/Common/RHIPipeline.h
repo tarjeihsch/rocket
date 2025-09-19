@@ -19,6 +19,7 @@ enum class ERHIFormat : uint8_t
     Unknown,
 
     BGRA8_SRGB,
+    UNorm8x4,
 
     // Color formats
     RGBA8_UNorm,

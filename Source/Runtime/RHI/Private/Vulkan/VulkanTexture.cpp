@@ -106,6 +106,10 @@ void* FVulkanTextureView::GetHandle() const
 {
     return View;
 }
+uint32_t FVulkanTextureView::GetBindingIndex() const
+{
+    return m_DescriptorHandle.Index;
+}
 
 void FVulkanTextureView::Alloc()
 {
@@ -113,6 +117,10 @@ void FVulkanTextureView::Alloc()
 
     VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &CreateInfo, nullptr, &View);
     assert(Result == VK_SUCCESS);
+
+    // FIXME: TEMPORARY FOR IMGUI!!
+    if (Desc.Format == ERHITextureFormat::R8G8B8A8_UNORM)
+    m_DescriptorHandle = Device.GetDescriptorManager()->AddSampledImage(View, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void FVulkanTextureView::Free()

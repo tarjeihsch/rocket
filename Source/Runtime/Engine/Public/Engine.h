@@ -33,6 +33,11 @@ public:
     void* GetProjectLibrary() const;
     inline friend CEngine* GetEngine();
 
+    inline const STimestep& GetTimestep() const
+    {
+        return Timestep;
+    }
+
 private:
     FSceneRenderer* M_SceneRenderer;
 

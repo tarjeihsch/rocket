@@ -73,6 +73,7 @@ enum class ERHITextureFormat
 {
     Invalid = 0,
     B8G8R8A8_SRGB,
+    R8G8B8A8_UNORM,
     D32_SFLOAT_S8_UINT,
     D32_SFLOAT,
 };
@@ -154,4 +155,5 @@ struct FRHITextureView
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
     virtual void* GetHandle() const = 0;
+    virtual uint32_t GetBindingIndex() const = 0;
 };

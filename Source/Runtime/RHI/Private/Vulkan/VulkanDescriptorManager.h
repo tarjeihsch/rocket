@@ -73,6 +73,11 @@ private:
         std::vector<VkDescriptorImageInfo> Infos;
     };
 
+    struct RSamplerSlotArray : SlotBase
+    {
+        std::vector<VkDescriptorImageInfo> Infos;
+    };
+
     struct BufferSlotArray : SlotBase
     {
         std::vector<VkDescriptorBufferInfo> Infos;
@@ -92,7 +97,7 @@ private:
     VkPipelineLayout PipelineLayout;
 
     ImageSlotArray SampledImages;
-    ImageSlotArray Samplers;
+    RSamplerSlotArray Samplers;
     ImageSlotArray StorageImages;
     BufferSlotArray StorageBuffers;
 

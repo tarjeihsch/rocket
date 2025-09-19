@@ -159,6 +159,7 @@ VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
 {
     // TODO: use a switch
     if (Format == ERHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
+    if (Format == ERHITextureFormat::R8G8B8A8_UNORM) { return VK_FORMAT_R8G8B8A8_UNORM; }
     if (Format == ERHITextureFormat::D32_SFLOAT) { return VK_FORMAT_D32_SFLOAT; }
     if (Format == ERHITextureFormat::D32_SFLOAT_S8_UINT) { return VK_FORMAT_D32_SFLOAT_S8_UINT; }
 
@@ -204,6 +205,7 @@ VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
     case ERHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
     case ERHIFormat::Float2:             return VK_FORMAT_R32G32_SFLOAT;
     case ERHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
+    case ERHIFormat::UNorm8x4:             return VK_FORMAT_R8G8B8A8_UNORM;
     default:                             return VK_FORMAT_UNDEFINED;
     }
 }
@@ -253,6 +255,59 @@ VmaMemoryUsage VulkanRHI::ToVmaMemoryUsage(ERHIResourceMemory Memory)
     default: return VMA_MEMORY_USAGE_UNKNOWN;
     }
 }
+
+VkFilter VulkanRHI::ToVkFilter(ERHIFilterMode mode)
+{
+    switch (mode)
+    {
+    case ERHIFilterMode::Nearest: return VK_FILTER_NEAREST;
+    case ERHIFilterMode::Linear:  return VK_FILTER_LINEAR;
+    }
+    return VK_FILTER_LINEAR;
+}
+
+VkSamplerAddressMode VulkanRHI::ToVkAddressMode(ERHIAddressMode mode)
+{
+    switch (mode)
+    {
+    case ERHIAddressMode::Repeat:         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case ERHIAddressMode::MirroredRepeat: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    case ERHIAddressMode::ClampToEdge:    return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case ERHIAddressMode::ClampToBorder:  return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    }
+    return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+}
+
+VkBorderColor VulkanRHI::ToVkBorderColor(ERHIBorderColor color)
+{
+    switch (color)
+    {
+    case ERHIBorderColor::FloatTransparentBlack: return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+    case ERHIBorderColor::IntTransparentBlack:   return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+    case ERHIBorderColor::FloatOpaqueBlack:      return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    case ERHIBorderColor::IntOpaqueBlack:        return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    case ERHIBorderColor::FloatOpaqueWhite:      return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    case ERHIBorderColor::IntOpaqueWhite:        return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+    }
+    return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+}
+
+VkCompareOp VulkanRHI::ToVkCompareOp(ERHICompareOp op)
+{
+    switch (op)
+    {
+    case ERHICompareOp::Never:          return VK_COMPARE_OP_NEVER;
+    case ERHICompareOp::Less:           return VK_COMPARE_OP_LESS;
+    case ERHICompareOp::Equal:          return VK_COMPARE_OP_EQUAL;
+    case ERHICompareOp::LessOrEqual:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case ERHICompareOp::Greater:        return VK_COMPARE_OP_GREATER;
+    case ERHICompareOp::NotEqual:       return VK_COMPARE_OP_NOT_EQUAL;
+    case ERHICompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case ERHICompareOp::Always:         return VK_COMPARE_OP_ALWAYS;
+    }
+    return VK_COMPARE_OP_ALWAYS;
+}
+
 
 void LoadVulkanLibrary()
 {

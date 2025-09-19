@@ -161,7 +161,7 @@ DescriptorHandle VulkanDescriptorManager::AddSampledImage(VkImageView View, VkIm
 DescriptorHandle VulkanDescriptorManager::AddSampler(VkSampler Sampler)
 {
     DescriptorHandle Handle = AllocSlot(Samplers);
-    SampledImages.Infos[Handle.Index] = { Sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
+    Samplers.Infos[Handle.Index] = { Sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
     MarkDirty(Samplers, Handle.Index);
     return Handle;
 }
@@ -235,7 +235,7 @@ void VulkanDescriptorManager::Flush()
         }
     };
 
-    auto FlushDirtySamplers = [&](DescriptorBinding Binding, ImageSlotArray& Slots)
+    auto FlushDirtySamplers = [&](DescriptorBinding Binding, RSamplerSlotArray& Slots)
     {
         const auto BindingValue = static_cast<uint32_t>(Binding);
         for (uint32_t Index = 0; Index < Slots.Dirty.size(); ++Index)
