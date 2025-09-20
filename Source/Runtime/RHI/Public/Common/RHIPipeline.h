@@ -85,6 +85,56 @@ struct FRHIVertexAttribute
     uint32_t Offset = 0;
 };
 
+enum class ERHIBlendFactor : uint8_t
+{
+    Zero,
+    One,
+    SrcColor,
+    OneMinusSrcColor,
+    DstColor,
+    OneMinusDstColor,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+    ConstantColor,
+    OneMinusConstantColor,
+    ConstantAlpha,
+    OneMinusConstantAlpha,
+    SrcAlphaSaturate,
+    Src1Color,
+    OneMinusSrc1Color,
+    Src1Alpha,
+    OneMinusSrc1Alpha,
+};
+
+enum class ERHIBlendOp : uint8_t
+{
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+};
+
+struct FRHIBlendAttachment
+{
+    bool bEnableBlend = false;
+
+    // Color blending
+    ERHIBlendFactor SrcColorFactor = ERHIBlendFactor::One;
+    ERHIBlendFactor DstColorFactor = ERHIBlendFactor::Zero;
+    ERHIBlendOp ColorOp = ERHIBlendOp::Add;
+
+    // Alpha blending
+    ERHIBlendFactor SrcAlphaFactor = ERHIBlendFactor::One;
+    ERHIBlendFactor DstAlphaFactor = ERHIBlendFactor::Zero;
+    ERHIBlendOp AlphaOp = ERHIBlendOp::Add;
+
+    // Write mask
+    uint8_t ColorWriteMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
+};
+
 struct FRHIVertex
 {
     alignas(16) glm::vec3 m_Position;

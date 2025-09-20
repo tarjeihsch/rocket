@@ -99,7 +99,7 @@ inline VkImage FVulkanViewport::GetImage() const
 
 inline VkImageView FVulkanViewport::GetImageView() const
 {
-    return BackBufferView[CurrentImageIndex]->View;
+    return BackBufferView[CurrentImageIndex]->ImageView;
 }
 
 inline FVulkanTexture * FVulkanViewport::GetBackBufferTexture() const

@@ -22,7 +22,7 @@ public:
 
     FVulkanDevice& Device;
 
-    DescriptorHandle M_DescriptorHandle;
+    RDescriptorHandle M_DescriptorHandle;
 };
 
 inline void RVulkanSampler::Alloc()

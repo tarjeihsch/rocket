@@ -117,7 +117,7 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;

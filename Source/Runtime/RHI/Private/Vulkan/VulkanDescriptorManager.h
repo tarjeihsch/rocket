@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-struct DescriptorHandle
+struct RDescriptorHandle
 {
     uint32_t Index = UINT32_MAX;
     uint32_t Generation = UINT32_MAX;
@@ -39,15 +39,15 @@ public:
     explicit VulkanDescriptorManager(FVulkanDevice& p_Device, uint32_t p_MaxSampledImages = 16384, uint32_t p_MaxSamplers = 1024, uint32_t p_MaxStorageImages = 2048, uint32_t p_MaxStorageBuffers = 4096);
     ~VulkanDescriptorManager();
 
-    DescriptorHandle AddSampledImage(VkImageView View, VkImageLayout Layout);
-    DescriptorHandle AddSampler(VkSampler Sampler);
-    DescriptorHandle AddStorageImage(VkImageView View, VkImageLayout Layout);
-    DescriptorHandle AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size);
+    RDescriptorHandle AddSampledImage(VkImageView View, VkImageLayout Layout);
+    RDescriptorHandle AddSampler(VkSampler Sampler);
+    RDescriptorHandle AddStorageImage(VkImageView View, VkImageLayout Layout);
+    RDescriptorHandle AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size);
 
-    void RemoveSampledImage(DescriptorHandle Handle);
-    void RemoveSampler(DescriptorHandle Handle);
-    void RemoveStorageImage(DescriptorHandle Handle);
-    void RemoveStorageBuffer(DescriptorHandle Handle);
+    void RemoveSampledImage(RDescriptorHandle Handle);
+    void RemoveSampler(RDescriptorHandle Handle);
+    void RemoveStorageImage(RDescriptorHandle Handle);
+    void RemoveStorageBuffer(RDescriptorHandle Handle);
 
     void Flush();
 
@@ -84,8 +84,8 @@ private:
     };
 
 private:
-    DescriptorHandle AllocSlot(SlotBase& Slot);
-    void FreeSlot(SlotBase& Slot, DescriptorHandle Handle);
+    RDescriptorHandle AllocSlot(SlotBase& Slot);
+    void FreeSlot(SlotBase& Slot, RDescriptorHandle Handle);
     void MarkDirty(SlotBase& Slot, uint32_t Index);
 
 private:

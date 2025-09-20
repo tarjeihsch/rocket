@@ -218,7 +218,7 @@ FRHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
 
 FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture *Texture) const
 {
-    return new FVulkanTextureView(*Device, TextureViewDesc, static_cast<VkImage>(Texture->GetHandle()));
+    return new FVulkanTextureView(*Device, TextureViewDesc, Texture);
 }
 
 FRHIBuffer *CVulkanRHI::RHICreateBuffer(FRHIBufferDesc Desc) const

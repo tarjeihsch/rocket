@@ -141,7 +141,7 @@ void FVulkanViewport::CreateSwapchain()
         FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
         BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
-        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Images[Index]));
+        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, BackBuffer.back()));
     }
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};

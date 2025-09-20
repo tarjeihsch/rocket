@@ -155,6 +155,46 @@ VkImageUsageFlags VulkanRHI::GetVulkanUsage(ERHITextureUsage usage)
     return flags;
 }
 
+VkBlendFactor VulkanRHI::GetVkBlendFactor(ERHIBlendFactor Factor)
+{
+    switch (Factor)
+    {
+    case ERHIBlendFactor::Zero:                  return VK_BLEND_FACTOR_ZERO;
+    case ERHIBlendFactor::One:                   return VK_BLEND_FACTOR_ONE;
+    case ERHIBlendFactor::SrcColor:              return VK_BLEND_FACTOR_SRC_COLOR;
+    case ERHIBlendFactor::OneMinusSrcColor:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+    case ERHIBlendFactor::DstColor:              return VK_BLEND_FACTOR_DST_COLOR;
+    case ERHIBlendFactor::OneMinusDstColor:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+    case ERHIBlendFactor::SrcAlpha:              return VK_BLEND_FACTOR_SRC_ALPHA;
+    case ERHIBlendFactor::OneMinusSrcAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    case ERHIBlendFactor::DstAlpha:              return VK_BLEND_FACTOR_DST_ALPHA;
+    case ERHIBlendFactor::OneMinusDstAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    case ERHIBlendFactor::ConstantColor:         return VK_BLEND_FACTOR_CONSTANT_COLOR;
+    case ERHIBlendFactor::OneMinusConstantColor: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+    case ERHIBlendFactor::ConstantAlpha:         return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+    case ERHIBlendFactor::OneMinusConstantAlpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+    case ERHIBlendFactor::SrcAlphaSaturate:      return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+    case ERHIBlendFactor::Src1Color:             return VK_BLEND_FACTOR_SRC1_COLOR;
+    case ERHIBlendFactor::OneMinusSrc1Color:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+    case ERHIBlendFactor::Src1Alpha:             return VK_BLEND_FACTOR_SRC1_ALPHA;
+    case ERHIBlendFactor::OneMinusSrc1Alpha:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+    default:                                     return VK_BLEND_FACTOR_ONE;
+    }
+}
+
+VkBlendOp VulkanRHI::GetVkBlendOp(ERHIBlendOp Op)
+{
+    switch (Op)
+    {
+    case ERHIBlendOp::Add:             return VK_BLEND_OP_ADD;
+    case ERHIBlendOp::Subtract:        return VK_BLEND_OP_SUBTRACT;
+    case ERHIBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+    case ERHIBlendOp::Min:             return VK_BLEND_OP_MIN;
+    case ERHIBlendOp::Max:             return VK_BLEND_OP_MAX;
+    default:                           return VK_BLEND_OP_ADD;
+    }
+}
+
 VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
 {
     // TODO: use a switch

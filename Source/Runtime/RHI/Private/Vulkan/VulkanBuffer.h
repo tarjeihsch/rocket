@@ -32,7 +32,7 @@ private:
     VmaAllocation Allocation;
     VkDeviceSize Offset;
 
-    DescriptorHandle m_DescriptorHandle;
+    RDescriptorHandle m_DescriptorHandle;
 
     FRHIBufferDesc Desc;
 

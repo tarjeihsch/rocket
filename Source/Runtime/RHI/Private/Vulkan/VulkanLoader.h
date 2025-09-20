@@ -187,6 +187,9 @@ namespace VulkanRHI
     VkSamplerAddressMode ToVkAddressMode(ERHIAddressMode mode);
     VkBorderColor ToVkBorderColor(ERHIBorderColor color);
     VkCompareOp ToVkCompareOp(ERHICompareOp op);
+
+    VkBlendFactor GetVkBlendFactor(ERHIBlendFactor Factor);
+    VkBlendOp GetVkBlendOp(ERHIBlendOp Op);
 }
 
 void LoadVulkanLibrary();
