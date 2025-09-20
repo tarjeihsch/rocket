@@ -22,7 +22,7 @@ public:
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) override;
     virtual void RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) override;
-    virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView) override;
+    virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor) override;
     virtual void RHIEndRendering() override;
     virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) override;
     virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) override;
@@ -72,16 +72,17 @@ struct FVulkanCommandBeginRendering : TRHICommand<FVulkanCommandBeginRendering>
 {
     std::span<FRHITextureView*> ColorAttachmentsView;
     FRHITextureView* DepthAttachmentView;
+    bool bClearColor;
 
-    FVulkanCommandBeginRendering(std::span<FRHITextureView*> InViews, FRHITextureView* InDepthAttachmentView)
-        : ColorAttachmentsView(InViews), DepthAttachmentView(InDepthAttachmentView)
+    FVulkanCommandBeginRendering(std::span<FRHITextureView*> InViews, FRHITextureView* InDepthAttachmentView, bool InClearColor)
+        : ColorAttachmentsView(InViews), DepthAttachmentView(InDepthAttachmentView), bClearColor(InClearColor)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
         auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
-        Ctx.RHIBeginRendering(ColorAttachmentsView, DepthAttachmentView);
+        Ctx.RHIBeginRendering(ColorAttachmentsView, DepthAttachmentView, bClearColor);
     }
 };
 

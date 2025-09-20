@@ -12,12 +12,14 @@ struct VSOut {
 
 struct FDrawParams
 {
+    uint texId;
+    uint sampId;
+    uint tras;
+    uint th;
     float uScaleX;
     float uScaleY;
     float uTranslateX;
     float uTranslateY;
-    float texId;
-    float sampId;
 };
 
 [[vk::push_constant]]

@@ -119,7 +119,7 @@ enum class ERHIBlendOp : uint8_t
 
 struct FRHIBlendAttachment
 {
-    bool bEnableBlend = false;
+    uint32_t bEnableBlend = false;
 
     // Color blending
     ERHIBlendFactor SrcColorFactor = ERHIBlendFactor::One;
@@ -144,10 +144,14 @@ struct FRHIVertex
 
 struct FRHIPipelineDesc
 {
+    std::vector<ERHIFormat> ColorAttachmentFormats;
+    std::vector<FRHIVertexBinding> VertexBindings;
+    std::vector<FRHIVertexAttribute> VertexAttributes;
+    std::vector<FRHIBlendAttachment> BlendAttachments;
+
     const char* VertexShaderPath;
     const char* PixelShaderPath;
 
-    std::vector<ERHIFormat> ColorAttachmentFormats;
     ERHIFormat DepthFormat = ERHIFormat::Unknown;
     ERHIFormat StencilFormat = ERHIFormat::Unknown;
 

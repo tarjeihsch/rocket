@@ -125,7 +125,7 @@ void FFrameGraphBuilder::Execute()
         }
 
         std::vector<FRHITextureView*> ColorAttachments;
-        FRHITextureView* DepthAttachmentView;
+        FRHITextureView* DepthAttachmentView = nullptr;
 
         for (const FFGTextureRef& Resource : Pass.TextureWrites)
         {
@@ -183,7 +183,7 @@ void FFrameGraphBuilder::Execute()
 
         if ((Pass.Flags & EFGPassFlags::Dynamic) == EFGPassFlags::Dynamic)
         {
-            GetRHI()->RHICmdBeginRendering(&CmdList, ColorAttachments, DepthAttachmentView);
+            GetRHI()->RHICmdBeginRendering(&CmdList, ColorAttachments, DepthAttachmentView, ((Pass.Flags & EFGPassFlags::ClearColor) == EFGPassFlags::ClearColor));
         }
 
         if (Pass.Callback)

@@ -36,6 +36,9 @@ enum class EFGPassFlags : uint8_t
 
     // Use dynamic rendering
     Dynamic = 1 << 5,
+
+    // Clear color on attachments
+    ClearColor = 1 << 6
 };
 
 inline EFGPassFlags operator|(EFGPassFlags Lhs, EFGPassFlags Rhs) { return static_cast<EFGPassFlags>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }

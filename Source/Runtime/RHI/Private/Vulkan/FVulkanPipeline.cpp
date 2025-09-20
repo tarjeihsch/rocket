@@ -193,51 +193,43 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     FSElement.pName = "main";
     ShaderStages.push_back(FSElement);
 
-    std::vector<FRHIVertexBinding> VertexBindings;
-    std::vector<FRHIVertexAttribute> VertexAttributes;
-
-    VertexBindings.push_back(FRHIVertexBinding(0, 20, 0));
-    VertexAttributes.push_back(FRHIVertexAttribute(0, 0, ERHIFormat::Float2,   0));  // pos
-    VertexAttributes.push_back(FRHIVertexAttribute(1, 0, ERHIFormat::Float2,   8));  // uv (Float2!)
-    VertexAttributes.push_back(FRHIVertexAttribute(2, 0, ERHIFormat::UNorm8x4, 16)); // color
-
     std::vector<VkVertexInputBindingDescription> VertexBindingsDescriptions;
-    for (const FRHIVertexBinding& Binding : VertexBindings)
+    for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
     {
-        VkVertexInputBindingDescription VkBinding = {};
+        VkVertexInputBindingDescription& VkBinding = VertexBindingsDescriptions.emplace_back();
         VkBinding.binding = Binding.Binding;
         VkBinding.stride = Binding.Stride;
         VkBinding.inputRate = Binding.bPerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-        VertexBindingsDescriptions.push_back(VkBinding);
     }
 
     std::vector<VkVertexInputAttributeDescription> VertexAttributeDescriptions;
-    for (const FRHIVertexAttribute& Attr : VertexAttributes)
+    for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
     {
-        VkVertexInputAttributeDescription VkAttr = {};
+        VkVertexInputAttributeDescription& VkAttr = VertexAttributeDescriptions.emplace_back();
         VkAttr.location = Attr.Location;
         VkAttr.binding = Attr.Binding;
         VkAttr.format = VulkanRHI::ToVkFormat(Attr.Format);
         VkAttr.offset = Attr.Offset;
-        VertexAttributeDescriptions.push_back(VkAttr);
     }
 
-    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments(Desc.ColorAttachmentFormats.size());
-    for (auto& BlendAttachment : BlendAttachments)
+    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments;
+    for (const FRHIBlendAttachment& BlendAttachment : Desc.BlendAttachments)
     {
-        BlendAttachment.blendEnable         = VK_TRUE;
-        BlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        BlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        BlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+        VkPipelineColorBlendAttachmentState& VkBlendAttachment = BlendAttachments.emplace_back();
+        VkBlendAttachment.blendEnable = static_cast<VkBool32>(BlendAttachment.bEnableBlend);
+        VkBlendAttachment.srcColorBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.SrcColorFactor);
+        VkBlendAttachment.dstColorBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.DstColorFactor);
+        VkBlendAttachment.colorBlendOp = VulkanRHI::GetVkBlendOp(BlendAttachment.ColorOp);
 
-        BlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        BlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // not ZERO
-        BlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+        VkBlendAttachment.srcAlphaBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.SrcAlphaFactor);
+        VkBlendAttachment.dstAlphaBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.DstAlphaFactor);
+        VkBlendAttachment.alphaBlendOp = VulkanRHI::GetVkBlendOp(BlendAttachment.AlphaOp);
 
-        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                         VK_COLOR_COMPONENT_G_BIT |
-                                         VK_COLOR_COMPONENT_B_BIT |
-                                         VK_COLOR_COMPONENT_A_BIT;
+        VkBlendAttachment.colorWriteMask = 0;
+        if (BlendAttachment.ColorWriteMask & (1 << 0)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 1)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 2)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 3)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
     }
 
     VkPipelineColorBlendStateCreateInfo ColorBlendCreateInfo = {};
@@ -277,7 +269,7 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     DepthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     DepthStencilCreateInfo.depthTestEnable = Desc.bDepthTestEnable ? VK_TRUE : VK_FALSE;
     DepthStencilCreateInfo.depthWriteEnable = Desc.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-    DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
     std::vector<VkFormat> ColorAttachmentFormats;
     for (ERHIFormat Format : Desc.ColorAttachmentFormats)

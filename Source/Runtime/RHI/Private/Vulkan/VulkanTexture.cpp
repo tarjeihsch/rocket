@@ -134,7 +134,6 @@ void FVulkanTextureView::Alloc()
                 ImageView, VK_IMAGE_LAYOUT_GENERAL);
         }
     }
-
 }
 
 void FVulkanTextureView::Free()

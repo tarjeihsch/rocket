@@ -43,9 +43,9 @@ void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawComman
     VkBuffer IndexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.IndexBuffer->GetHandle());
 
     VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, (VkDeviceSize[]){0});
-    VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), IndexBufferPtr, 0, VK_INDEX_TYPE_UINT16);
+    VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), IndexBufferPtr, 0, DrawCommand.IndexType == FRHIDrawCommand::EIndexType::U32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
     VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &InDrawParams);
-    VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCommand.IndexCount, 1, DrawCommand.IndexBufferOffset, (int32_t)DrawCommand.VertexBufferOffset, 0);
+    VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCommand.IndexCount, 1, DrawCommand.IndexBufferOffset, static_cast<int32_t>(DrawCommand.VertexBufferOffset), 0);
 }
 
 void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex)
@@ -81,10 +81,8 @@ void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHIT
     VulkanRHI::vkCmdPipelineBarrier2(GetCurrentCommandBuffer()->GetHandle(), &DependencyInfo);
 }
 
-void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView)
+void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor)
 {
-    //RK_ASSERT(DepthStencilAttachmentView, "DSV must point to a live object.");
-
     std::vector<VkRenderingAttachmentInfoKHR> AttachmentInfos = {};
 
     for (uint32_t Index = 0; Index < ColorAttachmentsView.size(); ++Index)
@@ -93,29 +91,36 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         AttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
         AttachmentInfo.imageView = static_cast<VkImageView>(ColorAttachmentsView[Index]->GetHandle());
         AttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        AttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        AttachmentInfo.loadOp = bClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         AttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         AttachmentInfo.clearValue.color = {{ 1, 1, 1, 1 }};
         AttachmentInfos.push_back(AttachmentInfo);
     }
 
-    //VkRenderingAttachmentInfoKHR DepthStencilAttachmentInfo{};
-    //DepthStencilAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    //DepthStencilAttachmentInfo.imageView = static_cast<VkImageView>(DepthStencilAttachmentView->GetHandle());
-    //DepthStencilAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //DepthStencilAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    //DepthStencilAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    //DepthStencilAttachmentInfo.clearValue.depthStencil = { 1.0f, 0 };
-
     VkRenderingInfo RenderingInfo = {};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
     RenderingInfo.colorAttachmentCount = AttachmentInfos.size();
     RenderingInfo.pColorAttachments = AttachmentInfos.data();
-    //RenderingInfo.pDepthAttachment = &DepthStencilAttachmentInfo;
     RenderingInfo.layerCount = 1;
     RenderingInfo.viewMask = 0;
     RenderingInfo.renderArea.extent.width = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
     RenderingInfo.renderArea.extent.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
+
+    if (DepthStencilAttachmentView)
+    {
+        VkRenderingAttachmentInfoKHR DepthStencilAttachmentInfo{};
+        DepthStencilAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        DepthStencilAttachmentInfo.imageView = static_cast<VkImageView>(DepthStencilAttachmentView->GetHandle());
+        DepthStencilAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        DepthStencilAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        DepthStencilAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        DepthStencilAttachmentInfo.clearValue.depthStencil = { 1.0f, 0 };
+        RenderingInfo.pDepthAttachment = &DepthStencilAttachmentInfo;
+    }
+    else
+    {
+        RenderingInfo.pDepthAttachment = nullptr;
+    }
 
     VkViewport viewport = {};
     viewport.x = 0.0f;
@@ -131,6 +136,7 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
 
     VulkanRHI::vkCmdBeginRendering(GetCurrentCommandBuffer()->GetHandle(), &RenderingInfo);
     VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &viewport);
+    // todo: call this separetely
     VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &scissor);
 }
 
