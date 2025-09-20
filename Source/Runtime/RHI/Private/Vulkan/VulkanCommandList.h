@@ -27,13 +27,9 @@ public:
     virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) override;
     virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) override;
 
-    void RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, VkBufferImageCopy BufferImageCopy);
+    void RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset);
     void RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex);
     void RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth);
-    void RHISetScissor(int32_t p_OffsetX, int32_t p_OffsetY, uint32_t p_ExtentWidth, uint32_t p_ExtentHeight);
-    void RHIBindDescriptorSets(VkPipelineBindPoint p_PipelineBindPoint, VkPipelineLayout p_PipelineLayout, uint32_t p_FirstSet, uint32_t p_DescriptorSetCount, const VkDescriptorSet* p_DescriptorSets);
-    void RHIBindVertexBuffer(VkBuffer pBuffer);
-    void RHIBindIndexBuffer(VkBuffer pBuffer);
 };
 
 struct FVulkanCommandPipelineBarrier : TRHICommand<FVulkanCommandPipelineBarrier>
@@ -114,25 +110,6 @@ struct VulkanCommandSetViewport : TRHICommand<VulkanCommandSetViewport>
     }
 };
 
-struct VulkanCommandSetScissor : TRHICommand<VulkanCommandSetScissor>
-{
-    int32_t m_OffsetX;
-    int32_t m_OffsetY;
-    uint32_t m_ExtentWidth;
-    uint32_t m_ExtentHeight;
-
-    VulkanCommandSetScissor(int32_t p_OffsetX, int32_t p_OffsetY, uint32_t p_ExtentWidth, uint32_t p_ExtentHeight)
-            : m_OffsetX(p_OffsetX), m_OffsetY(p_OffsetY), m_ExtentWidth(p_ExtentWidth), m_ExtentHeight(p_ExtentHeight)
-    {
-    }
-
-    void Execute_Internal(IRHICommandListContext& CmdListCtx)
-    {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
-        Ctx.RHISetScissor(m_OffsetX, m_OffsetY, m_ExtentWidth, m_ExtentHeight);
-    }
-};
-
 struct FVulkanCommandBindPipeline : TRHICommand<FVulkanCommandBindPipeline>
 {
     FRHIPipeline* Pipeline;
@@ -208,17 +185,22 @@ struct FVulkanCommandCopyBufferToImage : TRHICommand<FVulkanCommandCopyBufferToI
     FRHIBuffer* SrcBuffer;
     FRHITexture* DstTexture;
     VkImageLayout DstImageLayout;
-    VkBufferImageCopy BufferImageCopy;
+    uint32_t Width;
+    uint32_t Height;
+    uint32_t MipLevel;
+    uint32_t BaseArrayLayer;
+    uint32_t LayerCount;
+    uint64_t BufferOffset;
 
-    FVulkanCommandCopyBufferToImage(FRHIBuffer* InSrcBuffer, FRHITexture* InDstBuffer, VkImageLayout InDstImageLayout, VkBufferImageCopy InBufferImageCopy)
-        : SrcBuffer(InSrcBuffer), DstTexture(InDstBuffer), DstImageLayout(InDstImageLayout), BufferImageCopy(InBufferImageCopy)
+    FVulkanCommandCopyBufferToImage(FRHIBuffer* InSrcBuffer, FRHITexture* InDstBuffer, VkImageLayout InDstImageLayout, uint32_t InWidth, uint32_t InHeight, uint32_t InMipLevel = 0, uint32_t InBaseArrayLayer = 0, uint32_t InLayerCount = 1, uint64_t InBufferOffset = 0)
+        : SrcBuffer(InSrcBuffer), DstTexture(InDstBuffer), DstImageLayout(InDstImageLayout), Width(InWidth), Height(InHeight), MipLevel(InMipLevel), BaseArrayLayer(InBaseArrayLayer), LayerCount(InLayerCount), BufferOffset(InBufferOffset)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
         auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
-        Ctx.RHICopyBufferToImage(SrcBuffer, DstTexture, DstImageLayout, BufferImageCopy);
+        Ctx.RHICopyBufferToImage(SrcBuffer, DstTexture, DstImageLayout, Width, Height, MipLevel, BaseArrayLayer, LayerCount, BufferOffset);
     }
 };
 

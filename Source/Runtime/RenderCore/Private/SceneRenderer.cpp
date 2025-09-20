@@ -18,7 +18,7 @@
 #include "Transform.h"
 #include "glm/gtc/matrix_inverse.hpp"
 
-FRHITexture * Texture;
+std::unique_ptr<FRHITexture> Texture;
 
 void FSceneRenderer::Init()
 {
@@ -30,9 +30,9 @@ void FSceneRenderer::Init()
     int width, height;
     ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
-    Texture = GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0));
+    Texture.reset(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0)));
 
-    GetRHI()->RHIUploadTextureBlocking(Texture, pixels, width, height);
+    GetRHI()->RHIUploadTextureBlocking(Texture.get(), pixels, width, height);
 }
 
 static inline float  ImFloor(float f)                                           { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
@@ -49,6 +49,8 @@ void FSceneRenderer::Tick()
 
     // Apply the same concept for Instanced Static Mesh Components, same for IndexedStaticMeshComponents and IndexedIndirectStaticMeshComponent
 
+    FFrameGraphBuilder Builder;
+
     FRHIPipelineDesc PipelineSpec = {};
     PipelineSpec.PixelShaderPath = ROCKET_SRC "/Shader/FragmentShader.hlsl";
     PipelineSpec.VertexShaderPath = ROCKET_SRC "/Shader/VertexShader.hlsl";
@@ -62,13 +64,11 @@ void FSceneRenderer::Tick()
     PipelineSpec.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float3, offsetof(FRHIVertex, m_Normal));
     PipelineSpec.VertexAttributes.emplace_back(2, 0, ERHIFormat::Float2, offsetof(FRHIVertex, m_TexCoord));
     PipelineSpec.BlendAttachments.emplace_back(FRHIBlendAttachment(false, ERHIBlendFactor::SrcAlpha, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, ERHIBlendFactor::One, ERHIBlendFactor::Zero, ERHIBlendOp::Add, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)));
-//
+
     FPipeline Pipeline(PipelineSpec);
     FRenderTarget RenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
     FAttachment DepthAttachment = FAttachment(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1], ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
-//
-    FFrameGraphBuilder Builder;
-//
+
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
     {
         GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
@@ -212,7 +212,7 @@ void FSceneRenderer::Tick()
                 TextureViewDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
                 TextureViewDesc.Aspect = ERHITextureAspect::Color;
                 TextureViewDesc.Lifetime = ERHIResourceLifetime::Transient;
-                TextureView.reset (GetRHI()->RHICreateTextureView(TextureViewDesc, Texture));
+                TextureView.reset (GetRHI()->RHICreateTextureView(TextureViewDesc, Texture.get()));
                 Sampler.reset (GetRHI()->RHICreateSampler(desc));
 
                 ImVec2 clipMin = (ImVec2(ImFloor((cmd.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
@@ -222,11 +222,11 @@ void FSceneRenderer::Tick()
                 GetRHI()->RHICmdSetScissor(RHICmdList, (int32_t)clipMin.x, (int32_t)clipMin.y, (uint32_t)(clipMax.x - clipMin.x), (uint32_t)(clipMax.y - clipMin.y));
 
                 FRHIDrawCommand dc = {};
-                dc.IndexCount        = cmd.ElemCount;
-                dc.IndexBuffer       = IndexBuffer.get();
-                dc.VertexBuffer      = VertexBuffer.get();
-                dc.IndexBufferOffset     = cmd.IdxOffset + listIdxBase[n];  // in indices
-                dc.VertexBufferOffset   = cmd.VtxOffset + listVtxBase[n];  // in vertices
+                dc.IndexCount = cmd.ElemCount;
+                dc.IndexBuffer = IndexBuffer.get();
+                dc.VertexBuffer = VertexBuffer.get();
+                dc.IndexBufferOffset = cmd.IdxOffset + listIdxBase[n];
+                dc.VertexBufferOffset = cmd.VtxOffset + listVtxBase[n];
                 dc.IndexType = FRHIDrawCommand::EIndexType::U16;
 
                 FRHIDrawParams dp = {};

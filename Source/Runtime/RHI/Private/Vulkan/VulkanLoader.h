@@ -161,9 +161,9 @@ namespace VulkanRHI
     // Opaque handle to dynamic library
     extern void* Library;
 
-    #define DECLARE_PFN(name) extern PFN_##name name;
+#define DECLARE_PFN(name) extern PFN_##name name;
     VULKAN_ALL_FUNCTIONS(DECLARE_PFN)
-    #undef DECLARE_PFN
+#undef DECLARE_PFN
 
     VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
     VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);

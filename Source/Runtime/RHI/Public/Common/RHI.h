@@ -83,7 +83,7 @@ public:
     virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
     virtual RRHISampler* RHICreateSampler(RRHISamplerDesc Desc) const = 0;
     virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
-    virtual void RHIUploadTextureBlocking(FRHITexture* Texture2D, const void* Data, uint32_t Width, uint32_t Height) = 0;
+    virtual void RHIUploadTextureBlocking(FRHITexture* Texture2D, const uint8_t* Data, uint32_t Width, uint32_t Height) = 0;
     virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
     virtual IRHICommandListContext* GetCommandListContext() const = 0;
     virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;

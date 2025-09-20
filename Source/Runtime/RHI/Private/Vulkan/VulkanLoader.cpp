@@ -33,6 +33,13 @@ namespace VulkanRHI
     #undef DEFINE_PFN
 };
 
+template <typename TEnum>
+inline bool EnumHasAnyFlags(TEnum Value, TEnum Flags)
+{
+    using T = std::underlying_type_t<TEnum>;
+    return (static_cast<T>(Value) & static_cast<T>(Flags)) != 0;
+}
+
 VkImageCreateInfo VulkanRHI::GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags)
 {
     VkImageCreateInfo ImageCreateInfo = {};
@@ -77,13 +84,6 @@ VkBufferCreateInfo VulkanRHI::GetVkBufferCreateInfo(uint64_t Size, VkBufferUsage
     BufferCreateInfo.usage = UsageFlags;
     BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     return BufferCreateInfo;
-}
-
-template<typename TEnum>
-inline bool EnumHasAnyFlags(TEnum Value, TEnum Flags)
-{
-    using T = std::underlying_type_t<TEnum>;
-    return (static_cast<T>(Value) & static_cast<T>(Flags)) != 0;
 }
 
 VkAccessFlags VulkanRHI::GetVulkanAccess(ERHIResourceAccess access)

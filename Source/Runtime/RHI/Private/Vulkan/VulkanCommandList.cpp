@@ -60,18 +60,27 @@ void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHIT
     ImageBarrier.newLayout = VulkanRHI::GetVulkanLayout(InNewLayout);
     ImageBarrier.srcQueueFamilyIndex = InSrcQueueFamilyIndex;
     ImageBarrier.dstQueueFamilyIndex = InDstQueueFamilyIndex;
-    ImageBarrier.image = reinterpret_cast<VkImage>(InTexture->GetHandle());
-
-    // TODO: use a switch
-    if (InTexture->RHIGetTextureDesc().Format == ERHITextureFormat::B8G8R8A8_SRGB) ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    else if (InTexture->RHIGetTextureDesc().Format == ERHITextureFormat::R8G8B8A8_UNORM) ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    else if (InTexture->RHIGetTextureDesc().Format == ERHITextureFormat::D32_SFLOAT) ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (InTexture->RHIGetTextureDesc().Format == ERHITextureFormat::D32_SFLOAT_S8_UINT) ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
+    ImageBarrier.image = static_cast<VkImage>(InTexture->GetHandle());
     ImageBarrier.subresourceRange.baseMipLevel = 0;
     ImageBarrier.subresourceRange.levelCount = 1;
     ImageBarrier.subresourceRange.baseArrayLayer = 0;
     ImageBarrier.subresourceRange.layerCount = 1;
+
+    switch (InTexture->RHIGetTextureDesc().Format)
+    {
+    case ERHITextureFormat::B8G8R8A8_SRGB:
+    case ERHITextureFormat::R8G8B8A8_UNORM:
+        ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        break;
+    case ERHITextureFormat::D32_SFLOAT:
+        ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        break;
+    case ERHITextureFormat::D32_SFLOAT_S8_UINT:
+        ImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        break;
+    default:
+        break;
+    }
 
     VkDependencyInfo DependencyInfo = {};
     DependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -117,10 +126,6 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         DepthStencilAttachmentInfo.clearValue.depthStencil = { 1.0f, 0 };
         RenderingInfo.pDepthAttachment = &DepthStencilAttachmentInfo;
     }
-    else
-    {
-        RenderingInfo.pDepthAttachment = nullptr;
-    }
 
     VkViewport viewport = {};
     viewport.x = 0.0f;
@@ -136,7 +141,6 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
 
     VulkanRHI::vkCmdBeginRendering(GetCurrentCommandBuffer()->GetHandle(), &RenderingInfo);
     VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &viewport);
-    // todo: call this separetely
     VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &scissor);
 }
 
@@ -175,25 +179,23 @@ void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *D
     VulkanRHI::vkCmdBlitImage(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkImage>(Src->GetHandle()), VulkanRHI::GetVulkanLayout(Src->CurrentLayout), reinterpret_cast<VkImage>(Dst->GetHandle()), VulkanRHI::GetVulkanLayout(Dst->CurrentLayout), 1, &BlitRegion, VK_FILTER_NEAREST);
 }
 
-void FVulkanCommandListContext::RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, VkBufferImageCopy BufferImageCopy)
+void FVulkanCommandListContext::RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset)
 {
-    VkBuffer srcBuffer = reinterpret_cast<VkBuffer>(SrcBuffer->GetHandle());
-    VkImage  dstImage  = reinterpret_cast<VkImage>(DstTexture->GetHandle());
+    VkBuffer SrcBufferPtr = static_cast<VkBuffer>(SrcBuffer->GetHandle());
+    VkImage DstImagePtr = static_cast<VkImage>(DstTexture->GetHandle());
 
-    VkBufferImageCopy vkRegion = {};
-    vkRegion.bufferOffset                    = BufferImageCopy.bufferOffset;
-    vkRegion.bufferRowLength                 = 0; // tightly packed
-    vkRegion.bufferImageHeight               = 0;
+    VkBufferImageCopy Buffer = {};
+    Buffer.bufferOffset = BufferOffset;
+    Buffer.bufferRowLength = 0;
+    Buffer.bufferImageHeight = 0;
+    Buffer.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    Buffer.imageSubresource.mipLevel = MipLevel;
+    Buffer.imageSubresource.baseArrayLayer = BaseArrayLayer;
+    Buffer.imageSubresource.layerCount = LayerCount;
+    Buffer.imageOffset = { 0, 0, 0 };
+    Buffer.imageExtent = { Width, Height, 1 };
 
-    vkRegion.imageSubresource.aspectMask     = (VkImageAspectFlags)BufferImageCopy.imageSubresource.aspectMask;
-    vkRegion.imageSubresource.mipLevel       = BufferImageCopy.imageSubresource.mipLevel;
-    vkRegion.imageSubresource.baseArrayLayer = BufferImageCopy.imageSubresource.baseArrayLayer;
-    vkRegion.imageSubresource.layerCount     = BufferImageCopy.imageSubresource.layerCount;
-
-    vkRegion.imageOffset = { BufferImageCopy.imageOffset.x, BufferImageCopy.imageOffset.y, BufferImageCopy.imageOffset.z };
-    vkRegion.imageExtent = { BufferImageCopy.imageExtent.width, BufferImageCopy.imageExtent.height, BufferImageCopy.imageExtent.depth };
-
-    VulkanRHI::vkCmdCopyBufferToImage(GetCurrentCommandBuffer()->GetHandle(), srcBuffer, dstImage, DstImageLayout, 1, &vkRegion);
+    VulkanRHI::vkCmdCopyBufferToImage(GetCurrentCommandBuffer()->GetHandle(), SrcBufferPtr, DstImagePtr, DstImageLayout, 1, &Buffer);
 }
 
 void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
@@ -230,16 +232,6 @@ void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout
     VulkanRHI::vkCmdPipelineBarrier2(GetCurrentCommandBuffer()->GetHandle(), &dependencyInfo);
 }
 
-void FVulkanCommandListContext::RHIBindVertexBuffer(VkBuffer pBuffer)
-{
-    VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &pBuffer,  nullptr); // potential issue?
-}
-
-void FVulkanCommandListContext::RHIBindIndexBuffer(VkBuffer pBuffer)
-{
-    VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), pBuffer, 0, VK_INDEX_TYPE_UINT32);
-}
-
 void FVulkanCommandListContext::RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth)
 {
     VkViewport Viewport;
@@ -250,19 +242,4 @@ void FVulkanCommandListContext::RHISetViewport(float p_X, float p_Y, float p_Wid
     Viewport.minDepth = p_MinDepth;
     Viewport.maxDepth = p_MaxDepth;
     VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Viewport);
-}
-
-void FVulkanCommandListContext::RHISetScissor(int32_t p_OffsetX, int32_t p_OffsetY, uint32_t p_ExtentWidth, uint32_t p_ExtentHeight)
-{
-    VkRect2D Scissor;
-    Scissor.offset.x = p_OffsetX;
-    Scissor.offset.y = p_OffsetY;
-    Scissor.extent.width = p_ExtentWidth;
-    Scissor.extent.height = p_ExtentHeight;
-    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
-}
-
-void FVulkanCommandListContext::RHIBindDescriptorSets(VkPipelineBindPoint p_PipelineBindPoint, VkPipelineLayout p_PipelineLayout, uint32_t p_FirstSet, uint32_t p_DescriptorSetCount, const VkDescriptorSet *p_DescriptorSets)
-{
-    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), p_PipelineBindPoint, p_PipelineLayout, p_FirstSet, p_DescriptorSetCount, p_DescriptorSets, 0, nullptr);
 }

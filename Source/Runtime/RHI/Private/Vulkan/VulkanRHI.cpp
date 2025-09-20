@@ -242,28 +242,17 @@ void CVulkanRHI::RHIUploadDataBlocking(FRHIBuffer *Buffer, void *Data, uint64_t 
         CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
     });
 }
-void CVulkanRHI::RHIUploadTextureBlocking(FRHITexture *Texture2D, const void *Data, uint32_t Width, uint32_t Height)
-{
-    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Width * Height * 4)));
 
-    StagingBuffer->Map(Data, Width * Height * 4);
+void CVulkanRHI::RHIUploadTextureBlocking(FRHITexture *Texture2D, const uint8_t *Data, uint32_t Width, uint32_t Height)
+{
+    std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Width * Height * GetTextureFormatPixelByteSize(Texture2D->RHIGetTextureDesc().Format))));
+
+    StagingBuffer->Map(Data, Width * Height * GetTextureFormatPixelByteSize(Texture2D->RHIGetTextureDesc().Format));
 
     Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
     {
-        CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::Undefined, ERHITextureLayout::TransferDst, ERHIResourceAccess::None,
-            ERHIResourceAccess::TransferWrite, ERHIPipelineStage::TopOfPipe, ERHIPipelineStage::Transfer);
-
-        VkBufferImageCopy vkRegion = {};
-        vkRegion.bufferOffset = 0;
-        vkRegion.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        vkRegion.imageSubresource.mipLevel       = 0;
-        vkRegion.imageSubresource.baseArrayLayer = 0;
-        vkRegion.imageSubresource.layerCount     = 1;
-        vkRegion.imageOffset = {0, 0, 0};
-        vkRegion.imageExtent = { (uint32_t)Width, (uint32_t)Height, 1 };
-
-        CmdList.Enqueue<FVulkanCommandCopyBufferToImage>(StagingBuffer.get(), Texture2D, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, vkRegion);
-
+        CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::Undefined, ERHITextureLayout::TransferDst, ERHIResourceAccess::None, ERHIResourceAccess::TransferWrite, ERHIPipelineStage::TopOfPipe, ERHIPipelineStage::Transfer);
+        CmdList.Enqueue<FVulkanCommandCopyBufferToImage>(StagingBuffer.get(), Texture2D, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Width, Height);
         CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::TransferDst, ERHITextureLayout::ShaderReadOnly, ERHIResourceAccess::TransferWrite, ERHIResourceAccess::ShaderSampledRead, ERHIPipelineStage::Transfer, ERHIPipelineStage::FragmentShader);
     });
 }
