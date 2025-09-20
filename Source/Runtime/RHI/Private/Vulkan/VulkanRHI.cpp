@@ -163,7 +163,7 @@ void CVulkanRHI::Shutdown()
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
-void CVulkanRHI::EndFrame()
+void CVulkanRHI::Tick(float DeltaTime)
 {
     Device->GetDescriptorManager()->Flush();
 

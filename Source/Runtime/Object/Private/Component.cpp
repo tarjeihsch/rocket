@@ -1,5 +1,6 @@
 #include "Component.h"
 
+#include "../../Engine/Public/EngineBase.h"
 #include "World.h"
 
 RClass *RComponent::StaticClass()
@@ -23,7 +24,7 @@ const RClass *RComponent::GetClass() const
 
 void RComponent::PostConstruct()
 {
-    GetWorld()->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
+    GEngine->GetWorld()->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
 }
 
 void RComponent::Tick(float DeltaTime)

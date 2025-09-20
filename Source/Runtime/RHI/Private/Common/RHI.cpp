@@ -2,16 +2,16 @@
 
 #include "Assert.h"
 
-IRHI* G_RHI = nullptr;
+IRHI* GRHI = nullptr;
 IRHIModule* GRHIModule = nullptr;
 
 void SetRHIModule(ERHIInterfaceType InInterfaceType)
 {
-    if (G_RHI)
+    if (GRHI)
     {
-        G_RHI->Shutdown();
-        delete G_RHI;
-        G_RHI = nullptr;
+        GRHI->Shutdown();
+        delete GRHI;
+        GRHI = nullptr;
     }
 
     if (GRHIModule)
@@ -26,8 +26,10 @@ void SetRHIModule(ERHIInterfaceType InInterfaceType)
         case ERHIInterfaceType::D3D12: RK_ASSERT("Missing API backend"); break;
         case ERHIInterfaceType::Metal: RK_ASSERT("Missing API backend"); break;
         case ERHIInterfaceType::WebGL: RK_ASSERT("Missing API backend"); break;
-        case ERHIInterfaceType::None: RK_ASSERT("Missing API backend"); break;
     }
 
-    G_RHI = GRHIModule->CreateRHI();
+    if (InInterfaceType != ERHIInterfaceType::None)
+    {
+        GRHI = GRHIModule->CreateRHI();
+    }
 }

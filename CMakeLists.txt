@@ -58,6 +58,9 @@ add_subdirectory(Source/ThirdParty/tinygltf)
 add_subdirectory(Source/ThirdParty/rapidjson)
 
 # Rocket modules
+add_subdirectory(Source/Editor/Application)
+add_subdirectory(Source/Editor/EditorCore)
+
 add_subdirectory(Source/Runtime/Object)
 add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
@@ -121,10 +124,10 @@ configure_file(
     @ONLY
 )
 
-target_include_directories(Core PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Generated>
-    $<INSTALL_INTERFACE:include>
-)
+#target_include_directories(Core PUBLIC
+#    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Generated>
+#    $<INSTALL_INTERFACE:include>
+#)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
     DESTINATION include/Rocket

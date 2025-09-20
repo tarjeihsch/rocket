@@ -1,5 +1,6 @@
 #include "Actor.h"
 
+#include "../../Engine/Public/EngineBase.h"
 #include "StaticMesh.h"
 #include "StaticMeshComponent.h"
 #include "TransformComponent.h"
@@ -23,7 +24,7 @@ void RActor::PostConstruct()
 {
     StaticMeshComponent = ConstructObject<RStaticMeshComponent>();
 
-    GetWorld()->GetTickTaskManager()->AddTickFunction<&RActor::Tick>(ETickGroup::Default, this);
+    GEngine->GetWorld()->GetTickTaskManager()->AddTickFunction<&RActor::Tick>(ETickGroup::Default, this);
 }
 
 void RActor::Deserialize(const FJsonAsset::Object &Obj)

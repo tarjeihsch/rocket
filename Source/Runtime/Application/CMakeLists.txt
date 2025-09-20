@@ -30,7 +30,9 @@ target_include_directories(Application
 )
 
 target_link_libraries(Application
-    PUBLIC Rocket::Engine
+    PRIVATE Rocket::Engine
+    PRIVATE Rocket::Core
+    PRIVATE Rocket::Window
     PRIVATE -Wl,--export-dynamic
 )
 

@@ -1,51 +1,32 @@
 #pragma once
 
-#include <cstdint>
+#include "EngineBase.h"
 
 #include "Timer.h"
+#include "World.h"
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+// #define GLM_FORCE_RADIANS
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-class FSceneRenderer;
+class RSceneRenderer;
 
-static const char* VIEWPORT_NAME = "Rocket Engine";
-static constexpr uint32_t VIEWPORT_WIDTH = 1280;
-static constexpr uint32_t VIEWPORT_HEIGHT = 720;
-
-struct RApplicationInfo
-{
-    std::string ProjectName;
-    std::string ProjectRootPath;
-    std::string ProjectLibraryPath;
-    double ProjectVersion;
-};
-
-class CEngine
+class REngine : public IEngineBase
 {
 public:
-    CEngine(RApplicationInfo AppInfo);
-
-    void Start();
-    void Run();
-    void Stop();
+    virtual void Start(REngineInitParams& InitParams) override;
+    virtual void Tick(float DeltaTime) override;
+    virtual void Stop() override;
+    virtual void LoadWorld(const char* Path) override;
+    virtual void UnloadWorld() override;
+    virtual RWorld* GetWorld() const override;
 
     void* GetProjectLibrary() const;
-    inline friend CEngine* GetEngine();
+    RSceneRenderer* GetSceneRenderer() const;
 
 private:
-    FSceneRenderer* M_SceneRenderer;
+    RSceneRenderer* SceneRenderer;
 
-    STimestep Timestep;
-
-    RApplicationInfo AppInfo;
+    RWorld* World;
 
     void* ProjectLibrary;
-
-    static CEngine* GEngine;
 };
-
-inline CEngine* GetEngine()
-{
-    return CEngine::GEngine;
-}

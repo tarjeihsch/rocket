@@ -19,19 +19,19 @@ struct RRenderCamera
     ICamera* Camera;
 };
 
-class FSceneRenderer
+class RSceneRenderer
 {
 public:
     void Init();
-    void Tick();
+    void Tick(float DeltaTime);
 
     void RegisterProxy(CStaticMesh* StaticMesh, FTransform* Transform);
 
     void SetCamera(ICamera* InCamera);
 
-    static FSceneRenderer& Get()
+    static RSceneRenderer& Get()
     {
-        static FSceneRenderer Instance;
+        static RSceneRenderer Instance;
         return Instance;
     }
 

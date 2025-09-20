@@ -13,12 +13,12 @@
 #include "Transform.h"
 #include "glm/gtc/matrix_inverse.hpp"
 
-void FSceneRenderer::Init()
+void RSceneRenderer::Init()
 {
 
 }
 
-void FSceneRenderer::Tick()
+void RSceneRenderer::Tick(float DeltaTime)
 {
     // Traverse the scene
     // Gather all Static Mesh Components
@@ -96,13 +96,13 @@ void FSceneRenderer::Tick()
     Builder.Execute();
 }
 
-void FSceneRenderer::RegisterProxy(CStaticMesh *StaticMesh, FTransform* Transform)
+void RSceneRenderer::RegisterProxy(CStaticMesh *StaticMesh, FTransform* Transform)
 {
     RRenderProxy Proxy = { StaticMesh, Transform};
 
     Proxies.push_back(Proxy);
 }
-void FSceneRenderer::SetCamera(ICamera *InCamera)
+void RSceneRenderer::SetCamera(ICamera *InCamera)
 {
     Camera = InCamera;
 
