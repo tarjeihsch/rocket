@@ -69,7 +69,7 @@ public:
 
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
-    virtual void EndFrame() = 0;
+    virtual void Tick(float DeltaTime) = 0;
 
     [[nodiscard]] virtual const char* GetName() const  = 0;
     [[nodiscard]] virtual const char* GetVersion() const  = 0;
@@ -109,7 +109,7 @@ public:
     virtual IRHI* CreateRHI() = 0;
 };
 
-extern IRHI* G_RHI;
+extern IRHI* GRHI;
 extern IRHIModule* GRHIModule;
 
 void SetRHIModule(ERHIInterfaceType InInterfaceType);
@@ -128,10 +128,10 @@ inline TRHI* CastRHI(IRHI* InRHI)
 template<typename TRHI>
 inline TRHI* GetRHI()
 {
-    return CastRHI<TRHI>(G_RHI);
+    return CastRHI<TRHI>(GRHI);
 }
 
 inline IRHI* GetRHI()
 {
-    return G_RHI;
+    return GRHI;
 }

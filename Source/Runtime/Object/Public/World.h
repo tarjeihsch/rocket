@@ -10,7 +10,7 @@
 
 class ITickable;
 
-class CWorld final
+class RWorld final
 {
 public:
     RActor* SpawnActor(RClass* Class);
@@ -24,12 +24,6 @@ public:
     void Initialize();
     void Deinitialize();
 
-    static CWorld& Get()
-    {
-        static CWorld Instance;
-        return Instance;
-    }
-
     inline RTickTaskManager* GetTickTaskManager() const;
 
 private:
@@ -38,20 +32,15 @@ private:
     RTickTaskManager* TickTaskManager;
 };
 
-inline CWorld* GetWorld()
-{
-    return &CWorld::Get();
-}
-
 template <typename TActor>
-TActor* CWorld::SpawnActor() const
+TActor* RWorld::SpawnActor() const
 {
     static_assert(std::derived_from<TActor, RActor>, "TClass must be derived from FActor");
 
     return static_cast<TActor*>(SpawnActor(TActor::StaticClass()));
 }
 
-inline RTickTaskManager *CWorld::GetTickTaskManager() const
+inline RTickTaskManager *RWorld::GetTickTaskManager() const
 {
     return TickTaskManager;
 }

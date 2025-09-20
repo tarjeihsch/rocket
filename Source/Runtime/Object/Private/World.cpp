@@ -3,10 +3,9 @@
 #include "Actor.h"
 #include "AssetManager.h"
 #include "JsonAsset.h"
-#include "Engine/Engine.h"
 #include <dlfcn.h>
 
-RActor *CWorld::SpawnActor(RClass *Class)
+RActor *RWorld::SpawnActor(RClass *Class)
 {
     RActor* Actor = ConstructObject<RActor>();
 
@@ -17,7 +16,7 @@ RActor *CWorld::SpawnActor(RClass *Class)
     return Actor;
 }
 
-void CWorld::DestroyActor(RActor *P_Actor)
+void RWorld::DestroyActor(RActor *P_Actor)
 {
     P_Actor->EndPlay();
 
@@ -34,12 +33,12 @@ void CWorld::DestroyActor(RActor *P_Actor)
     }
 }
 
-void CWorld::Tick(float DeltaTime)
+void RWorld::Tick(float DeltaTime)
 {
     TickTaskManager->TickFrame(DeltaTime);
 }
 
-void CWorld::Initialize()
+void RWorld::Initialize()
 {
     TickTaskManager = new RTickTaskManager();
 
@@ -58,33 +57,33 @@ void CWorld::Initialize()
 
         for (auto& actorVal : actors)
         {
-            auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
-
-            std::string className = std::get<std::string>(actorObj["Class"].Value);
-            std::string symbolName = "Z_Class_" + className + "_StaticClass";
-
-            using GetStaticClassFun = RClass* (*)();
-            GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(dlsym(GetEngine()->GetProjectLibrary(), symbolName.c_str()));
-
-            if (GetStaticClass)
-            {
-                RClass* Class = GetStaticClass();
-                RActor* Actor = SpawnActor(Class);
-                Actor->Deserialize(actorObj);
-            }
-            else
-            {
-                RClass* Class = RActor::StaticClass();
-                RActor* Actor = SpawnActor(Class);
-                Actor->Deserialize(actorObj);
-            }
+            //auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
+//
+            //std::string className = std::get<std::string>(actorObj["Class"].Value);
+            //std::string symbolName = "Z_Class_" + className + "_StaticClass";
+//
+            //using GetStaticClassFun = RClass* (*)();
+            //GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(dlsym(GetEngine()->GetProjectLibrary(), symbolName.c_str()));
+//
+            //if (GetStaticClass)
+            //{
+            //    RClass* Class = GetStaticClass();
+            //    RActor* Actor = SpawnActor(Class);
+            //    Actor->Deserialize(actorObj);
+            //}
+            //else
+            //{
+            //    RClass* Class = RActor::StaticClass();
+            //    RActor* Actor = SpawnActor(Class);
+            //    Actor->Deserialize(actorObj);
+            //}
         }
     }
 
     //RClass* Class = GetStaticClass();
     //RActor* Actor = GetWorld()->SpawnActor(Class);
 }
-void CWorld::Deinitialize()
+void RWorld::Deinitialize()
 {
     for (auto Actor : Actors)
     {

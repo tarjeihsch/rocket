@@ -17,7 +17,7 @@ public:
     // IRHI interface
     virtual void Init() override;
     virtual void Shutdown() override;
-    virtual void EndFrame() override;
+    virtual void Tick(float DeltaTime) override;
 
     [[nodiscard]] virtual const char* GetName() const override;
     [[nodiscard]] virtual const char* GetVersion() const override;

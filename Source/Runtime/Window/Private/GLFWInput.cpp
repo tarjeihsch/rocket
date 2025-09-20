@@ -1,8 +1,8 @@
-#include "GLFWInput.h"
+#include "../Public/GLFWInput.h"
 
 #include "KeyCode.h"
+#include "WindowBase.h"
 #include <GLFW/glfw3.h>
-#include "Window.h"
 
 #if defined(RK_PLATFORM_WINDOWS) || defined(RK_PLATFORM_LINUX)
 PInput* PInput::GInput = new CGLFWInput();
@@ -10,7 +10,7 @@ PInput* PInput::GInput = new CGLFWInput();
 
 bool CGLFWInput::GetKeyPressedImpl(int32_t KeyCode)
 {
-    auto Window = static_cast<GLFWwindow*>(IWindow::Get()->GetNativeWindow());
+    auto Window = static_cast<GLFWwindow*>(GWindow->GetNativeWindow());
     auto State = glfwGetKey(Window, KeyCode);
 
     return State == GLFW_PRESS || State == GLFW_REPEAT;
@@ -18,7 +18,7 @@ bool CGLFWInput::GetKeyPressedImpl(int32_t KeyCode)
 
 bool CGLFWInput::GetMouseButtonPressedImpl(int32_t KeyCode)
 {
-    auto Window = static_cast<GLFWwindow*>(IWindow::Get()->GetNativeWindow());
+    auto Window = static_cast<GLFWwindow*>(GWindow->GetNativeWindow());
     auto State = glfwGetMouseButton(Window, KeyCode);
 
     return State == GLFW_PRESS;
@@ -38,7 +38,7 @@ float CGLFWInput::GetMouseYImpl()
 
 std::pair<float, float> CGLFWInput::GetMousePositionImpl()
 {
-    auto Window = static_cast<GLFWwindow*>(IWindow::Get()->GetNativeWindow());
+    auto Window = static_cast<GLFWwindow*>(GWindow->GetNativeWindow());
     double MouseX, MouseY;
     glfwGetCursorPos(Window, &MouseX, &MouseY);
     return { (float)MouseX, (float)MouseY };

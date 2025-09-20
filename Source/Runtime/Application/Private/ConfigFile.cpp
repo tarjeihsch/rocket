@@ -5,7 +5,6 @@
 #include <utility>
 
 #include "Assert.h"
-#include "RocketConfig.h"
 
 namespace PrivateUtils
 {

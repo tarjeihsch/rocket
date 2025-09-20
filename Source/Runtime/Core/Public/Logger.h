@@ -5,11 +5,11 @@
 
 enum ELogCategory
 {
-	LOG_TRACE,
-	LOG_DEBUG,
-	LOG_INFO,
-	LOG_WARNING,
-	LOG_ERROR
+    LOG_TRACE,
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARNING,
+    LOG_ERROR
 };
 
 class FLogger

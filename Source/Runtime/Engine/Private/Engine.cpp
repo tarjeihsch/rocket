@@ -1,93 +1,51 @@
 #include "Engine.h"
 
 #include "Common/RHI.h"
-#include "Logger.h"
 #include "SceneRenderer.h"
-#include "Subsystem.h"
-#include "Window.h"
 #include "World.h"
 
-#ifdef RK_PLATFORM_LINUX
-#include <dlfcn.h>
-#endif
-
-#ifdef RK_PLATFORM_WINDOWS
-#include <windows.h>
-#endif
-
-CEngine * CEngine::GEngine = nullptr;
-
-ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
-
-CEngine::CEngine(RApplicationInfo InAppInfo)
-    : AppInfo(InAppInfo)
+void REngine::Start(REngineInitParams& InitParams)
 {
+    SceneRenderer = new RSceneRenderer();
 }
 
-void CEngine::Start()
+void REngine::Tick(float DeltaTime)
 {
-    GEngine = this;
+    World->Tick(DeltaTime);
 
-    FLogger::Init();
-
-    M_SceneRenderer = new FSceneRenderer();
-
-    SetRHIModule(ERHIInterfaceType::Vulkan);
-
-    IWindow::Get()->CreateNativeWindow();
-    G_RHI->Init();
-    M_SceneRenderer->Init();
-
-    for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
-    {
-        Subsystem->OnInit();
-    }
-
-#if RK_PLATFORM_WINDOWS
-    ProjectLibrary = LoadLibraryA((AppInfo.ProjectRootPath + "/" + AppInfo.ProjectLibraryPath).c_str());
-#endif
-
-#if RK_PLATFORM_LINUX
-    ProjectLibrary = dlopen((AppInfo.ProjectRootPath + "/" + AppInfo.ProjectLibraryPath).c_str(), RTLD_NOW | RTLD_GLOBAL);
-#endif
-
-    for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
-    {
-        Subsystem->OnInit();
-    }
-
-    GetWorld()->Initialize();
+    SceneRenderer->Tick(DeltaTime);
 }
 
-void CEngine::Run()
+void REngine::Stop()
 {
-    while (!IWindow::Get()->ShouldClose())
-    {
-        Timestep.Reset();
-
-	IWindow::Get()->Poll();
-
-        for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
-        {
-            Subsystem->OnTick(Timestep.GetDeltaTime());
-        }
-
-        GetWorld()->Tick(Timestep.GetDeltaTime());
-
-        FSceneRenderer::Get().Tick();
-        G_RHI->EndFrame();
-    }
+    delete SceneRenderer;
 }
 
-void CEngine::Stop()
+void *REngine::GetProjectLibrary() const
 {
-    GetWorld()->Deinitialize();
-    G_RHI->Shutdown();
-    IWindow::Get()->DestroyNativeWindow();
-    GEngine = nullptr;
+    return ProjectLibrary;
 }
 
-void *CEngine::GetProjectLibrary() const
+RWorld *REngine::GetWorld() const
 {
-    return ProjectLibrary;;
+    return World;
+}
+
+RSceneRenderer *REngine::GetSceneRenderer() const
+{
+    return SceneRenderer;
+}
+
+void REngine::LoadWorld(const char *Path)
+{
+    World = new RWorld();
+
+    World->Initialize();
+}
+
+void REngine::UnloadWorld()
+{
+    World->Deinitialize();
+
+    delete World;
 }

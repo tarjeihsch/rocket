@@ -38,7 +38,7 @@ const RClass *RStaticMeshComponent::GetClass() const
 
 void RStaticMeshComponent::SetStaticMesh(CStaticMesh *NewStaticMesh)
 {
-    FSceneRenderer::Get().RegisterProxy(NewStaticMesh, &Transform);
+    RSceneRenderer::Get().RegisterProxy(NewStaticMesh, &Transform);
 
     StaticMesh = NewStaticMesh;
 }
