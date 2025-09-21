@@ -23,3 +23,5 @@ private:
 
     uint16_t Generation;
 };
+
+extern RModule* GScriptModule;

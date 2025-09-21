@@ -1,5 +1,6 @@
 #pragma once
 #include "Camera.h"
+#include "Renderer.h"
 #include "Transform.h"
 
 #include <vector>
@@ -19,21 +20,16 @@ struct RRenderCamera
     ICamera* Camera;
 };
 
-class RSceneRenderer
+class RSceneRenderer : public IRenderer
 {
 public:
-    void Init();
-    void Tick(float DeltaTime);
+    virtual void Init() override;
+    virtual void Tick(float DeltaTime) override;
+    virtual void Shutdown() override;
 
     void RegisterProxy(CStaticMesh* StaticMesh, FTransform* Transform);
 
     void SetCamera(ICamera* InCamera);
-
-    static RSceneRenderer& Get()
-    {
-        static RSceneRenderer Instance;
-        return Instance;
-    }
 
 private:
     std::vector<RRenderProxy> Proxies;

@@ -20,7 +20,7 @@
 
 std::unique_ptr<FRHITexture> Texture;
 
-void FSceneRenderer::Init()
+void RSceneRenderer::Init()
 {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -37,7 +37,7 @@ void FSceneRenderer::Init()
 
 static inline float  ImFloor(float f)                                           { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
-void FSceneRenderer::Tick()
+void RSceneRenderer::Tick(float DeltaTime)
 {
     // Traverse the scene
     // Gather all Static Mesh Components
@@ -119,7 +119,7 @@ void FSceneRenderer::Tick()
     const auto extent = GetRHI()->RHIGetViewportExtent();
     io.DisplaySize = ImVec2((float)extent[0], (float)extent[1]);
     io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-    io.DeltaTime = GetEngine()->GetTimestep().GetDeltaTime();
+    io.DeltaTime = DeltaTime;
     io.MousePos = ImVec2((float)PInput::GetMouseX(), (float)PInput::GetMouseY());
     io.MouseDown[0] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_LEFT);
     io.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
@@ -257,14 +257,18 @@ void FSceneRenderer::Tick()
 
     Builder.Execute();
 }
+void RSceneRenderer::Shutdown()
+{
+}
 
-void FSceneRenderer::RegisterProxy(CStaticMesh *StaticMesh, FTransform* Transform)
+void RSceneRenderer::RegisterProxy(CStaticMesh *StaticMesh, FTransform* Transform)
 {
     RRenderProxy Proxy = { StaticMesh, Transform};
 
     Proxies.push_back(Proxy);
 }
-void FSceneRenderer::SetCamera(ICamera *InCamera)
+
+void RSceneRenderer::SetCamera(ICamera *InCamera)
 {
     Camera = InCamera;
 

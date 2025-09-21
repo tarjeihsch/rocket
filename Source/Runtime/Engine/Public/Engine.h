@@ -2,13 +2,8 @@
 
 #include "EngineBase.h"
 
-#include "Timer.h"
-#include "World.h"
-
-// #define GLM_FORCE_RADIANS
-//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-
 class RSceneRenderer;
+class RWorld;
 
 class REngine : public IEngineBase
 {
@@ -20,18 +15,10 @@ public:
     virtual void UnloadWorld() override;
     virtual RWorld* GetWorld() const override;
 
-    void* GetProjectLibrary() const;
     RSceneRenderer* GetSceneRenderer() const;
-
-    inline const STimestep& GetTimestep() const
-    {
-        return Timestep;
-    }
 
 private:
     RSceneRenderer* SceneRenderer;
 
     RWorld* World;
-
-    void* ProjectLibrary;
 };

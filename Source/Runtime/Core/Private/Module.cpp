@@ -10,6 +10,8 @@
 #include <windows.h>
 #endif
 
+RModule* GScriptModule = nullptr;
+
 RModule::RModule(const char* InPath)
     : Path(InPath)
 {
@@ -42,9 +44,12 @@ void RModule::Load()
 
 #if RK_PLATFORM_LINUX
     Library = dlopen(Path, RTLD_NOW | RTLD_GLOBAL);
+    if (!Library)
+    {
+        RK_LOG_ERROR("Error: {}", dlerror());
+        RK_ASSERT(false, "Failed to load library from given path");
+    }
 #endif
-
-    RK_ASSERT(Library, "Failed to load library from given path");
 
     Generation += 1;
 }
