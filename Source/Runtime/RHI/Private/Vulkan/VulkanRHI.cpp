@@ -303,7 +303,7 @@ FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
 
 std::array<uint32_t, 2> CVulkanRHI::RHIGetViewportExtent() const
 {
-    return std::array<uint32_t, 2>{Viewport->GetExtent().width, Viewport->GetExtent().height};
+    return std::array<uint32_t, 2>{Viewport->GetFramebufferExtent().width, Viewport->GetFramebufferExtent().height};
 }
 
 void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
@@ -397,7 +397,7 @@ VkSwapchainKHR CVulkanRHI::RHIGetVkSwapchain() const
 
 VkExtent2D CVulkanRHI::RHIGetSwapchainExtent() const
 {
-    return Viewport->GetExtent();
+    return Viewport->GetFramebufferExtent();
 }
 
 VkPresentModeKHR CVulkanRHI::RHIGetSwapchainPresentMode() const

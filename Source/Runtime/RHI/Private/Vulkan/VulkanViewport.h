@@ -22,7 +22,7 @@ public:
 
     inline VkSurfaceKHR GetVkSurface() const;
     inline VkSwapchainKHR GetVkSwapchain() const;
-    inline VkExtent2D GetExtent() const;
+    inline VkExtent2D GetFramebufferExtent() const;
     inline VkPresentModeKHR GetPresentMode() const;
     inline VkSurfaceFormatKHR GetSurfaceFormat() const;
 
@@ -67,7 +67,7 @@ inline VkSwapchainKHR FVulkanViewport::GetVkSwapchain() const
     return Swapchain;
 }
 
-inline VkExtent2D FVulkanViewport::GetExtent() const
+inline VkExtent2D FVulkanViewport::GetFramebufferExtent() const
 {
     return Extent;
 }

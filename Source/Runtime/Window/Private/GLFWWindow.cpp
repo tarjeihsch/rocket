@@ -121,7 +121,7 @@ int32_t RGLFWWindow::GetWindowWidth() const
 int32_t RGLFWWindow::GetWindowHeight() const
 {
     int32_t Height;
-    glfwGetWindowSize(static_cast<GLFWwindow*>(NativeWindow), &Height, nullptr);
+    glfwGetWindowSize(static_cast<GLFWwindow*>(NativeWindow), nullptr, &Height);
     return Height;
 }
 
@@ -135,7 +135,7 @@ int32_t RGLFWWindow::GetFramebufferWidth() const
 int32_t RGLFWWindow::GetFramebufferHeight() const
 {
     int32_t Height;
-    glfwGetFramebufferSize((GLFWwindow*)GWindow->GetNativeWindow(), &Height, nullptr);
+    glfwGetFramebufferSize((GLFWwindow*)GWindow->GetNativeWindow(), nullptr, &Height);
     return Height;
 }
 
@@ -146,7 +146,7 @@ void RGLFWWindow::WaitEventOrTimeout(float TimeoutSeconds)
 
 float RGLFWWindow::GetAspectRatio() const
 {
-    return static_cast<float>(GetWindowWidth()) / static_cast<float>(GetWindowHeight());
+    return static_cast<float>(GetFramebufferWidth()) / static_cast<float>(GetFramebufferHeight());
 }
 void *RGLFWWindow::GetNativeWindow() const
 {

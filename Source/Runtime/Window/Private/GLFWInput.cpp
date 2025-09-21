@@ -41,7 +41,17 @@ std::pair<float, float> CGLFWInput::GetMousePositionImpl()
     auto Window = static_cast<GLFWwindow*>(GWindow->GetNativeWindow());
     double MouseX, MouseY;
     glfwGetCursorPos(Window, &MouseX, &MouseY);
-    return { (float)MouseX, (float)MouseY };
+
+    int WindowWidth, WindowHeight;
+    glfwGetWindowSize(Window, &WindowWidth, &WindowHeight);
+
+    int FramebufferWidth, FramebufferHeight;
+    glfwGetFramebufferSize(Window, &FramebufferWidth, &FramebufferHeight);
+
+    float ScaleX = static_cast<float>(FramebufferWidth) / WindowWidth;
+    float ScaleY = static_cast<float>(FramebufferHeight) / WindowHeight;
+
+    return { static_cast<float>(MouseX) * ScaleX, static_cast<float>(MouseY) * ScaleY };
 }
 
 int32_t CGLFWInput::GetFirstJoystickIDImpl() const
