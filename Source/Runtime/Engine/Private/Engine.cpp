@@ -1,12 +1,13 @@
 #include "Engine.h"
 
-#include "Common/RHI.h"
 #include "SceneRenderer.h"
 #include "World.h"
 
 void REngine::Start(REngineInitParams& InitParams)
 {
     SceneRenderer = new RSceneRenderer();
+
+    SceneRenderer->Init();
 }
 
 void REngine::Tick(float DeltaTime)
@@ -19,11 +20,6 @@ void REngine::Tick(float DeltaTime)
 void REngine::Stop()
 {
     delete SceneRenderer;
-}
-
-void *REngine::GetProjectLibrary() const
-{
-    return ProjectLibrary;
 }
 
 RWorld *REngine::GetWorld() const

@@ -3,6 +3,8 @@
 #include "Actor.h"
 #include "AssetManager.h"
 #include "JsonAsset.h"
+#include "Module.h"
+
 #include <dlfcn.h>
 
 RActor *RWorld::SpawnActor(RClass *Class)
@@ -57,26 +59,26 @@ void RWorld::Initialize()
 
         for (auto& actorVal : actors)
         {
-            //auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
-//
-            //std::string className = std::get<std::string>(actorObj["Class"].Value);
-            //std::string symbolName = "Z_Class_" + className + "_StaticClass";
-//
-            //using GetStaticClassFun = RClass* (*)();
-            //GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(dlsym(GetEngine()->GetProjectLibrary(), symbolName.c_str()));
-//
-            //if (GetStaticClass)
-            //{
-            //    RClass* Class = GetStaticClass();
-            //    RActor* Actor = SpawnActor(Class);
-            //    Actor->Deserialize(actorObj);
-            //}
-            //else
-            //{
-            //    RClass* Class = RActor::StaticClass();
-            //    RActor* Actor = SpawnActor(Class);
-            //    Actor->Deserialize(actorObj);
-            //}
+            auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
+
+            std::string className = std::get<std::string>(actorObj["Class"].Value);
+            std::string symbolName = "Z_Class_" + className + "_StaticClass";
+
+            using GetStaticClassFun = RClass* (*)();
+            GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(GScriptModule->GetSymbol((GScriptModule, symbolName.c_str())));
+
+            if (GetStaticClass)
+            {
+                RClass* Class = GetStaticClass();
+                RActor* Actor = SpawnActor(Class);
+                Actor->Deserialize(actorObj);
+            }
+            else
+            {
+                RClass* Class = RActor::StaticClass();
+                RActor* Actor = SpawnActor(Class);
+                Actor->Deserialize(actorObj);
+            }
         }
     }
 

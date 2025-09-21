@@ -1,5 +1,10 @@
 #pragma once
 
+struct FView
+{
+
+};
+
 class IRenderer
 {
 public:

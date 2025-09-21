@@ -7,6 +7,7 @@
 struct FRHIBuffer;
 class FRHIPipeline;
 
+// TODO: Remove this. We do not have a need for this. It is tied directly to Material class.
 struct FPipeline
 {
     FPipeline(const char *InVertexShaderPath, const char *InFragmentShaderPath);

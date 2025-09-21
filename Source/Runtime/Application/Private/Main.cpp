@@ -6,9 +6,8 @@
 #include "GLFWWindow.h"
 #include "Logger.h"
 #include "Module.h"
+#include "Timer.h"
 #include "WindowBase.h"
-
-RModule * GameModule = nullptr;
 
 STimestep Timestep;
 
@@ -36,7 +35,7 @@ int main(int P_Argc, char* P_Argv[])
 
     FLogger::Init();
 
-    GameModule = new RModule(P_Argv[1]);
+    GScriptModule = new RModule((EngineInitParams.ProjectRoot + "/" + EngineInitParams.ProjectBuild).c_str());
 
     GWindow = new RGLFWWindow();
     GWindow->CreateNativeWindow(WindowInitParams);
