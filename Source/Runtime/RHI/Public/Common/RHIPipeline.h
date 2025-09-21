@@ -19,6 +19,7 @@ enum class ERHIFormat : uint8_t
     Unknown,
 
     BGRA8_SRGB,
+    UNorm8x4,
 
     // Color formats
     RGBA8_UNorm,
@@ -68,15 +69,70 @@ struct FRHIVertexBinding
 {
     uint32_t Binding = 0;
     uint32_t Stride = 0;
-    uint8_t bPerInstance : 1;
+    uint8_t bPerInstance : 1 = { false };
 };
 
 struct FRHIVertexAttribute
 {
+    FRHIVertexAttribute(uint32_t InLocation, uint32_t InBinding, ERHIFormat InFormat, uint32_t InOffset)
+        : Location(InLocation), Binding(InBinding), Format(InFormat), Offset(InOffset)
+    {
+    }
+
     uint32_t Location = 0;
     uint32_t Binding = 0;
     ERHIFormat Format = ERHIFormat::Unknown;
     uint32_t Offset = 0;
+};
+
+enum class ERHIBlendFactor : uint8_t
+{
+    Zero,
+    One,
+    SrcColor,
+    OneMinusSrcColor,
+    DstColor,
+    OneMinusDstColor,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+    ConstantColor,
+    OneMinusConstantColor,
+    ConstantAlpha,
+    OneMinusConstantAlpha,
+    SrcAlphaSaturate,
+    Src1Color,
+    OneMinusSrc1Color,
+    Src1Alpha,
+    OneMinusSrc1Alpha,
+};
+
+enum class ERHIBlendOp : uint8_t
+{
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+};
+
+struct FRHIBlendAttachment
+{
+    uint32_t bEnableBlend = false;
+
+    // Color blending
+    ERHIBlendFactor SrcColorFactor = ERHIBlendFactor::One;
+    ERHIBlendFactor DstColorFactor = ERHIBlendFactor::Zero;
+    ERHIBlendOp ColorOp = ERHIBlendOp::Add;
+
+    // Alpha blending
+    ERHIBlendFactor SrcAlphaFactor = ERHIBlendFactor::One;
+    ERHIBlendFactor DstAlphaFactor = ERHIBlendFactor::Zero;
+    ERHIBlendOp AlphaOp = ERHIBlendOp::Add;
+
+    // Write mask
+    uint8_t ColorWriteMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
 };
 
 struct FRHIVertex
@@ -88,15 +144,16 @@ struct FRHIVertex
 
 struct FRHIPipelineDesc
 {
-    ShaderAsset* VertexShader;
-    ShaderAsset* PixelShader;
-
     std::vector<ERHIFormat> ColorAttachmentFormats;
-    ERHIFormat DepthFormat = ERHIFormat::Unknown;
-    ERHIFormat StencilFormat = ERHIFormat::Unknown;
-
     std::vector<FRHIVertexBinding> VertexBindings;
     std::vector<FRHIVertexAttribute> VertexAttributes;
+    std::vector<FRHIBlendAttachment> BlendAttachments;
+
+    const char* VertexShaderPath;
+    const char* PixelShaderPath;
+
+    ERHIFormat DepthFormat = ERHIFormat::Unknown;
+    ERHIFormat StencilFormat = ERHIFormat::Unknown;
 
     ERHIPrimitiveTopology Topology = ERHIPrimitiveTopology::TriangleList;
     ERHICullMode CullMode = ERHICullMode::None;

@@ -5,15 +5,14 @@
 #include "MeshAsset.h"
 
 #include <Logger.h>
-#include <fastgltf/core.hpp>
-#include <fastgltf/types.hpp>
+//#include <fastgltf/core.hpp>
+//#include <fastgltf/types.hpp>
 #include <variant>
 
 #include <tiny_gltf.h>
 
 #include "Assert.h"
 #include "glm/fwd.hpp"
-#include "glm/detail/func_trigonometric.inl"
 
 FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderRequest &p_Request, const FMeshAssetOptions &p_Options)
 {
@@ -96,7 +95,7 @@ FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderR
     std::string Warning;
 
     bool bSuccess = Loader.LoadBinaryFromFile(&Model, &Error, &Warning, p_Request.Path);
-    RK_ASSERT(bSuccess, "Failed to load mesh asset");
+    RK_ASSERT(bSuccess, "Failed to load mesh asset. Did you use a correct file path?");
 
     for (const auto& Node : Model.nodes)
     {
@@ -111,26 +110,26 @@ FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderR
         {
             FMeshAsset::Primitive Submesh;
 
-            //if (Node.translation.size())
-            //{
-            //    glm::vec3 Translation = glm::vec3(Node.translation[0], Node.translation[1], Node.translation[2]);
-            //
-            //    Submesh.Transform.Translation = Translation;
-            //}
-            //
-            //if (Node.rotation.size())
-            //{
-            //    glm::quat Rotation = glm::quat(Node.rotation[3], Node.rotation[0], Node.rotation[1], Node.rotation[2]);
-            //
-            //    Submesh.Transform.Rotation = glm::degrees(glm::eulerAngles(Rotation));
-            //}
-            //
-            //if (Node.scale.size())
-            //{
-            //    glm::vec3 Scale = glm::vec3(Node.scale[0], Node.scale[1], Node.scale[2]);
-            //
-            //    Submesh.Transform.Scale = Scale;
-            //}
+            if (Node.translation.size())
+            {
+                glm::vec3 Translation = glm::vec3(Node.translation[0], Node.translation[1], Node.translation[2]);
+
+                Submesh.Translation = Translation;
+            }
+
+            if (Node.rotation.size())
+            {
+                glm::quat Rotation = glm::quat(Node.rotation[3], Node.rotation[0], Node.rotation[1], Node.rotation[2]);
+
+                Submesh.Rotation = glm::degrees(glm::eulerAngles(Rotation));
+            }
+
+            if (Node.scale.size())
+            {
+                glm::vec3 Scale = glm::vec3(Node.scale[0], Node.scale[1], Node.scale[2]);
+
+                Submesh.Scale = Scale;
+            }
 
             size_t VertexOffset = Submesh.Vertices.size();
 
@@ -181,24 +180,24 @@ FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderR
 
             for (size_t Index = 0; Index < VertexCount; ++Index)
             {
-                FMeshAsset::FVertex Vertex;
+                FVertex Vertex;
 
                 if (Positions)
                 {
                     const float* Position = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Positions) + Index * PositionStride);
-                    Vertex.m_Position = glm::vec3(Position[0], Position[1], Position[2]);
+                    Vertex.M_Position = glm::vec3(Position[0], Position[1], Position[2]);
                 }
 
                 if (TexCoords)
                 {
                     const float* TexCoord = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(TexCoords) + Index * TexCoordStride);
-                    Vertex.m_TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
+                    Vertex.M_TexCoord = glm::vec2(TexCoord[0], TexCoord[1]);
                 }
 
                 if (Normals)
                 {
                     const float* Normal = reinterpret_cast<const float*>(reinterpret_cast<const uint8_t*>(Normals) + Index * NormalStride);
-                    Vertex.m_Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
+                    Vertex.M_Normal = glm::vec3(Normal[0], Normal[1], Normal[2]);
                 }
 
                 Submesh.Vertices.push_back(Vertex);

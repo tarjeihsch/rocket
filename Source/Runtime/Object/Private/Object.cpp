@@ -1,12 +1,6 @@
 #include "Object.h"
 
-#include "Context.h"
-
-static CObject* NewObject(Context* Context)
+const RClass* RObject::GetClass() const
 {
-    CObject* Obj = new CObject();
-
-    Context->AddObject(Obj);
-
-    return Obj;
+    return StaticClass();
 }

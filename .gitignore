@@ -8,6 +8,7 @@
 !/Config/
 !/Source/
 !/Plugins/
+!/CMake/
 
 # Do not ignore source, config and plugins dirs.
 !/Binaries/**
@@ -22,3 +23,4 @@
 !.clangd
 !.clang-format
 !Dockerfile
+!setup.sh

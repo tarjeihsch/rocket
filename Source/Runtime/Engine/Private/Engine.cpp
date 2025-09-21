@@ -1,87 +1,51 @@
-#include <Subsystem.h>
 #include "Engine.h"
 
-#include "AssetManager.h"
 #include "Common/RHI.h"
-#include "Logger.h"
-#include "Scene.h"
 #include "SceneRenderer.h"
-#include "Window.h"
-#include "Context.h"
+#include "World.h"
 
-#ifdef RK_PLATFORM_LINUX
-#include <dlfcn.h>
-#endif
-
-#ifdef RK_PLATFORM_WINDOWS
-#include <windows.h>
-#endif
-
-CEngine* CEngine::GEngine = nullptr;
-
-ERHIInterfaceType RHIType = ERHIInterfaceType::Vulkan;
-
-void CEngine::Start()
+void REngine::Start(REngineInitParams& InitParams)
 {
-    GEngine = this;
-
-    M_Context = new Context();
-
-    FLogger::Init();
-
-    SWindowSpecification WindowSpecification { VIEWPORT_NAME, VIEWPORT_WIDTH, VIEWPORT_HEIGHT };
-
-    Scene = new PScene();
-    mAssetManager = new FAssetManager();
-    SceneRenderer = new FSceneRenderer();
-
-    SetRHIModule(ERHIInterfaceType::Vulkan);
-
-    IWindow::Get()->CreateNativeWindow();
-    GRHI->Init();
-    Scene->Init();
-
-#if RK_PLATFORM_WINDOWS
-    HMODULE GameLib = LoadLibraryA("Game.dll");
-#endif
-
-#if RK_PLATFORM_LINUX
-    void* GameLib = dlopen("./libGame.so", RTLD_NOW);
-#endif
-
-    for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
-    {
-        Subsystem->OnInit();
-    }
+    SceneRenderer = new RSceneRenderer();
 }
 
-void CEngine::Run()
+void REngine::Tick(float DeltaTime)
 {
-    while (!IWindow::Get()->ShouldClose())
-    {
-        Timestep.Reset();
+    World->Tick(DeltaTime);
 
-	    IWindow::Get()->Poll();
-
-        for (ISubsystem* Subsystem : SSubsystemStaticRegistry::Get().All())
-        {
-            Subsystem->OnTick(Timestep.GetDeltaTime());
-        }
-
-        SceneRenderer->Tick(Scene);
-        GRHI->EndFrame();
-    }
+    SceneRenderer->Tick(DeltaTime);
 }
 
-void CEngine::Stop()
+void REngine::Stop()
 {
-    M_Context->Shutdown();
-    GRHI->Shutdown();
-    Scene->Cleanup();
-    IWindow::Get()->DestroyNativeWindow();
+    delete SceneRenderer;
+}
 
-    delete Scene;
-    delete mAssetManager;
+void *REngine::GetProjectLibrary() const
+{
+    return ProjectLibrary;
+}
 
-    GEngine = nullptr;
+RWorld *REngine::GetWorld() const
+{
+    return World;
+}
+
+RSceneRenderer *REngine::GetSceneRenderer() const
+{
+    return SceneRenderer;
+}
+
+void REngine::LoadWorld(const char *Path)
+{
+    World = new RWorld();
+
+    World->Initialize();
+}
+
+void REngine::UnloadWorld()
+{
+    World->Deinitialize();
+
+    delete World;
 }

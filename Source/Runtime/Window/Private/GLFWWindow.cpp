@@ -1,22 +1,28 @@
-#include "GLFWWindow.h"
+#include "../Public/GLFWWindow.h"
 
 #include "Assert.h"
 #include "KeyCode.h"
 
 #include <GLFW/glfw3.h>
 
-void CGLFWWindow::CreateNativeWindow()
+RGLFWWindow::RGLFWWindow()
+    : NativeWindow(nullptr), bIsMinimized(0), bIsFocused(0)
 {
-    glfwSetErrorCallback([](int code, const char* desc)
+}
+
+void RGLFWWindow::CreateNativeWindow(RWindowInitParams& InitParams)
+{
+    glfwSetErrorCallback([](int Code, const char* Desc)
     {
-	fprintf(stderr, "GLFW error %d: %s\n", code, desc);
+        RK_LOG_ERROR("(GLFW) Window Error: \n\tCode: {}\n\tDescription:{}", Code, Desc);
     });
 
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    NativeWindow = glfwCreateWindow(WindowSpecification.Width, WindowSpecification.Height, WindowSpecification.Name, nullptr, nullptr);
+    NativeWindow = glfwCreateWindow(InitParams.Width, InitParams.Height, InitParams.Title, nullptr, nullptr);
     RK_ASSERT(NativeWindow, "Failed to create GLFW window");
+
+    glfwSetWindowUserPointer((GLFWwindow*)NativeWindow, this);
 
     glfwSetKeyCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t KeyCode, int32_t ScanCode, int32_t Action, int32_t Mod)
     {
@@ -28,7 +34,7 @@ void CGLFWWindow::CreateNativeWindow()
 
     glfwSetFramebufferSizeCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* GlfwWindow, int Width, int Height)
     {
-	IWindow* Window = IWindow::Get();
+	RGLFWWindow* Window = static_cast<RGLFWWindow*>(glfwGetWindowUserPointer(GlfwWindow));
 
 	// Handle edgecase where framebuffer size is 0 (minimized)
 	if (Width == 0 || Height == 0)
@@ -40,95 +46,114 @@ void CGLFWWindow::CreateNativeWindow()
 	    if (Window->IsMinimized()) Window->SetIsMinimized(false);
 	}
 
-	Window->GetWindowSpecification().Width = Width;
-	Window->GetWindowSpecification().Height = Height;
-
 	while (Window->IsMinimized())
 	{
 	    // Rough handling of window minimization.
 	    glfwWaitEvents();
 	}
 
-	//GetScene()->GetCamera()->ApplySettings();
         //GetRHI()->Resize();
     });
 
-    glfwSetWindowFocusCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t Focused)
+    glfwSetWindowFocusCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* GlfwWindow, int32_t bFocused)
     {
-	IWindow* GWindow = IWindow::Get();
+	RGLFWWindow* Window = static_cast<RGLFWWindow*>(glfwGetWindowUserPointer(GlfwWindow));
 
-	if (Focused)
+	if (bFocused)
 	{
-	    GWindow->OnWindowFocusDelegate.Broadcast(Focused);
-	    GWindow->SetIsFocused(true);
+	    Window->OnWindowFocusDelegate.Broadcast(bFocused);
+	    Window->SetIsFocused(true);
 	}
 	else
 	{
-	    GWindow->OnWindowFocusDelegate.Broadcast(Focused);
-	    GWindow->SetIsFocused(false);
+	    Window->OnWindowFocusDelegate.Broadcast(bFocused);
+	    Window->SetIsFocused(false);
 	}
     });
 
-    glfwSetWindowPosCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* Window, int32_t PositionX, int32_t PositionY)
+    glfwSetWindowPosCallback((GLFWwindow*)NativeWindow, [](GLFWwindow* GlfwWindow, int32_t InPositionX, int32_t InPositionY)
     {
-	IWindow* GWindow = IWindow::Get();
-
-	GWindow->GetWindowSpecification().PositionX = PositionX;
-	GWindow->GetWindowSpecification().PositionY = PositionY;
+	RGLFWWindow* Window = static_cast<RGLFWWindow*>(glfwGetWindowUserPointer(GlfwWindow));
     });
 
     OnWindowFocusDelegate.Broadcast(1);
     SetIsFocused(true);
 }
 
-void CGLFWWindow::DestroyNativeWindow()
+void RGLFWWindow::DestroyNativeWindow()
 {
     glfwDestroyWindow((GLFWwindow*)NativeWindow);
     glfwTerminate();
 }
 
-void CGLFWWindow::Poll()
+void RGLFWWindow::Poll()
 {
     glfwPollEvents();
 }
 
-bool CGLFWWindow::ShouldClose() const
+bool RGLFWWindow::ShouldClose() const
 {
     return glfwWindowShouldClose((GLFWwindow*)NativeWindow);
 }
 
-bool CGLFWWindow::IsMinimized() const
+bool RGLFWWindow::IsMinimized() const
 {
     return bIsMinimized;
 }
 
-void CGLFWWindow::SetIsMinimized(bool bMinimized)
+void RGLFWWindow::SetIsMinimized(bool InMinimized)
 {
-    bIsMinimized = bMinimized;
+    bIsMinimized = InMinimized;
 }
 
-void CGLFWWindow::SetIsFocused(bool bFocused)
+void RGLFWWindow::SetIsFocused(bool bFocused)
 {
     bIsFocused = bFocused;
 }
 
-void CGLFWWindow::WaitEventOrTimeout(float TimeoutSeconds)
+int32_t RGLFWWindow::GetWindowWidth() const
+{
+    int32_t Width;
+    glfwGetWindowSize(static_cast<GLFWwindow*>(NativeWindow), &Width, nullptr);
+    return Width;
+}
+
+int32_t RGLFWWindow::GetWindowHeight() const
+{
+    int32_t Height;
+    glfwGetWindowSize(static_cast<GLFWwindow*>(NativeWindow), &Height, nullptr);
+    return Height;
+}
+
+int32_t RGLFWWindow::GetFramebufferWidth() const
+{
+    int32_t Width;
+    glfwGetFramebufferSize((GLFWwindow*)GWindow->GetNativeWindow(), &Width, nullptr);
+    return Width;
+}
+
+int32_t RGLFWWindow::GetFramebufferHeight() const
+{
+    int32_t Height;
+    glfwGetFramebufferSize((GLFWwindow*)GWindow->GetNativeWindow(), &Height, nullptr);
+    return Height;
+}
+
+void RGLFWWindow::WaitEventOrTimeout(float TimeoutSeconds)
 {
     glfwWaitEventsTimeout(TimeoutSeconds);
 }
 
-bool CGLFWWindow::IsFocused() const
+float RGLFWWindow::GetAspectRatio() const
+{
+    return static_cast<float>(GetWindowWidth()) / static_cast<float>(GetWindowHeight());
+}
+void *RGLFWWindow::GetNativeWindow() const
+{
+    return NativeWindow;
+}
+
+bool RGLFWWindow::IsFocused() const
 {
     return bIsFocused;
-}
-
-void CGLFWWindow::SetFocus(bool bFocus)
-{
-    glfwFocusWindow((GLFWwindow*)NativeWindow);
-}
-
-IWindow* IWindow::Get()
-{
-    static CGLFWWindow* Window = new CGLFWWindow({ "Rocket", 1280, 720 });
-    return Window;
 }

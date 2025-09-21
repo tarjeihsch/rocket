@@ -73,6 +73,7 @@ enum class ERHITextureFormat
 {
     Invalid = 0,
     B8G8R8A8_SRGB,
+    R8G8B8A8_UNORM,
     D32_SFLOAT_S8_UINT,
     D32_SFLOAT,
 };
@@ -88,6 +89,22 @@ enum class ERHITextureAspect
 
 inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
 inline ERHITextureUsage operator&(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+
+inline uint32_t GetTextureFormatPixelByteSize(ERHITextureFormat Format)
+{
+    switch (Format)
+    {
+    case ERHITextureFormat::B8G8R8A8_SRGB:
+    case ERHITextureFormat::R8G8B8A8_UNORM:
+        return 4;
+    case ERHITextureFormat::D32_SFLOAT:
+        return 4;
+    case ERHITextureFormat::D32_SFLOAT_S8_UINT:
+        return 8;
+    default:
+        return 0;
+    }
+}
 
 struct FRHITextureDesc
 {
@@ -154,4 +171,5 @@ struct FRHITextureView
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
     virtual void* GetHandle() const = 0;
+    virtual uint32_t GetBindingIndex() const = 0;
 };

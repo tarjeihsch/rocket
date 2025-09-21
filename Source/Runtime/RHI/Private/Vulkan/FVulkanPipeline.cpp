@@ -9,6 +9,7 @@
 #include "VulkanLoader.h"
 
 #include <vulkan/vulkan_core.h>
+#include <cstring>
 
 #ifdef RK_PLATFORM_LINUX
     #include <dlfcn.h>
@@ -19,7 +20,7 @@ static constexpr uint64_t FNV_OFFSET = 1469598103934665603ull;
 static constexpr uint64_t FNV_PRIME  = 1099511628211ull;
 
 // FNV-1a 64-bit
-static inline void HashBytes(uint64_t& pHash, const void* pData, size_t pSize)
+inline void HashBytes(uint64_t& pHash, const void* pData, size_t pSize)
 {
     const uint8_t* Data = reinterpret_cast<const uint8_t*>(pData);
     for (size_t Index = 0; Index < pSize; ++Index)
@@ -30,11 +31,21 @@ static inline void HashBytes(uint64_t& pHash, const void* pData, size_t pSize)
 }
 
 template <typename TObject>
-static inline void HashObject(uint64_t& pHash, const TObject& pObject)
+inline void HashObject(uint64_t& pHash, const TObject& pObject)
 {
     static_assert(std::is_trivially_copyable_v<TObject>);
     auto bytes = std::as_bytes(std::span<const TObject>(&pObject, 1));
     HashBytes(pHash, bytes.data(), bytes.size());
+}
+
+inline void HashObject(uint64_t& pHash, std::string_view StringView)
+{
+    HashBytes(pHash, StringView.data(), StringView.size());
+}
+
+inline void HashObject(uint64_t& pHash, const char* StringLiteral)
+{
+    HashBytes(pHash, StringLiteral, std::strlen(StringLiteral));
 }
 
 FVulkanShader::FVulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
@@ -98,11 +109,24 @@ FVulkanPipeline* FVulkanPipelineManager::GetPipeline(const FRHIPipelineDesc &Des
         return It->second;
     }
 
+    FAssetLoaderRequest VSRequest = { Desc.VertexShaderPath };
+    ShaderAssetOptions VSOptions = { "main", "vs_6_6" };
+    FAssetHandle<ShaderAsset> VertexShader = FAssetManager::Get().Load<ShaderAsset>(VSRequest, VSOptions);
+    ShaderAsset* VertexShaderAsset = FAssetManager::Get().GetAsset(VertexShader);
+
+    FAssetLoaderRequest PSRequest = { Desc.PixelShaderPath };
+    ShaderAssetOptions PSOptions = { "main", "ps_6_6" };
+    FAssetHandle<ShaderAsset> PixelShader = FAssetManager::Get().Load<ShaderAsset>(PSRequest, PSOptions);
+    ShaderAsset* PixelShaderAsset = FAssetManager::Get().GetAsset(PixelShader);
+
     FVulkanShaderRef VertexShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT));
     FVulkanShaderRef PixelShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT));
 
-    VertexShaderRef.Shader->Create(Desc.VertexShader->Data(), Desc.VertexShader->WordCount());
-    PixelShaderRef.Shader->Create(Desc.PixelShader->Data(), Desc.PixelShader->WordCount());
+    VertexShaderRef.Shader->Create(VertexShaderAsset->Data(), VertexShaderAsset->WordCount());
+    PixelShaderRef.Shader->Create(PixelShaderAsset->Data(), PixelShaderAsset->WordCount());
+
+    FAssetManager::Get().Unload(VertexShader);
+    FAssetManager::Get().Unload(PixelShader);
 
     VkPipeline Pipeline = Compile(Desc, VertexShaderRef, PixelShaderRef);
     FVulkanPipeline* PSO = new FVulkanPipeline(VertexShaderRef, PixelShaderRef, Pipeline);
@@ -169,41 +193,43 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     FSElement.pName = "main";
     ShaderStages.push_back(FSElement);
 
-    std::vector<VkVertexInputBindingDescription> VertexBindings;
+    std::vector<VkVertexInputBindingDescription> VertexBindingsDescriptions;
     for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
     {
-        VkVertexInputBindingDescription VkBinding = {};
+        VkVertexInputBindingDescription& VkBinding = VertexBindingsDescriptions.emplace_back();
         VkBinding.binding = Binding.Binding;
         VkBinding.stride = Binding.Stride;
         VkBinding.inputRate = Binding.bPerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
-        VertexBindings.push_back(VkBinding);
     }
 
-    std::vector<VkVertexInputAttributeDescription> VertexAttributes;
+    std::vector<VkVertexInputAttributeDescription> VertexAttributeDescriptions;
     for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
     {
-        VkVertexInputAttributeDescription VkAttr = {};
+        VkVertexInputAttributeDescription& VkAttr = VertexAttributeDescriptions.emplace_back();
         VkAttr.location = Attr.Location;
         VkAttr.binding = Attr.Binding;
         VkAttr.format = VulkanRHI::ToVkFormat(Attr.Format);
         VkAttr.offset = Attr.Offset;
-        VertexAttributes.push_back(VkAttr);
     }
 
-    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments(Desc.ColorAttachmentFormats.size());
-    for (auto& BlendAttachment : BlendAttachments)
+    std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments;
+    for (const FRHIBlendAttachment& BlendAttachment : Desc.BlendAttachments)
     {
-        BlendAttachment.blendEnable = VK_FALSE;
+        VkPipelineColorBlendAttachmentState& VkBlendAttachment = BlendAttachments.emplace_back();
+        VkBlendAttachment.blendEnable = static_cast<VkBool32>(BlendAttachment.bEnableBlend);
+        VkBlendAttachment.srcColorBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.SrcColorFactor);
+        VkBlendAttachment.dstColorBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.DstColorFactor);
+        VkBlendAttachment.colorBlendOp = VulkanRHI::GetVkBlendOp(BlendAttachment.ColorOp);
 
-        BlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        BlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        BlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+        VkBlendAttachment.srcAlphaBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.SrcAlphaFactor);
+        VkBlendAttachment.dstAlphaBlendFactor = VulkanRHI::GetVkBlendFactor(BlendAttachment.DstAlphaFactor);
+        VkBlendAttachment.alphaBlendOp = VulkanRHI::GetVkBlendOp(BlendAttachment.AlphaOp);
 
-        BlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        BlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        BlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-        BlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        VkBlendAttachment.colorWriteMask = 0;
+        if (BlendAttachment.ColorWriteMask & (1 << 0)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 1)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 2)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+        if (BlendAttachment.ColorWriteMask & (1 << 3)) VkBlendAttachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
     }
 
     VkPipelineColorBlendStateCreateInfo ColorBlendCreateInfo = {};
@@ -213,10 +239,10 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
 
     VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo = {};
     VertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    VertexInputStateCreateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(VertexBindings.size());
-    VertexInputStateCreateInfo.pVertexBindingDescriptions = VertexBindings.data();
-    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(VertexAttributes.size());
-    VertexInputStateCreateInfo.pVertexAttributeDescriptions = VertexAttributes.data();
+    VertexInputStateCreateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(VertexBindingsDescriptions.size());
+    VertexInputStateCreateInfo.pVertexBindingDescriptions = VertexBindingsDescriptions.data();
+    VertexInputStateCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(VertexAttributeDescriptions.size());
+    VertexInputStateCreateInfo.pVertexAttributeDescriptions = VertexAttributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCreateInfo = {};
     InputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -243,7 +269,7 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     DepthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     DepthStencilCreateInfo.depthTestEnable = Desc.bDepthTestEnable ? VK_TRUE : VK_FALSE;
     DepthStencilCreateInfo.depthWriteEnable = Desc.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-    DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
     std::vector<VkFormat> ColorAttachmentFormats;
     for (ERHIFormat Format : Desc.ColorAttachmentFormats)
@@ -289,23 +315,22 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     return Pipeline;
 }
 
-uint64_t FVulkanPipelineManager::Hash(const FRHIPipelineDesc &pSpec)
+uint64_t FVulkanPipelineManager::Hash(const FRHIPipelineDesc &P_Spec)
 {
     uint64_t Hash = FNV_OFFSET;
 
-    //HashObject(Hash, pSpec.Layout);
-    //HashObject(Hash, pSpec.VertexShader.SnapshotVersion);
-    //HashObject(Hash, pSpec.FragmentShader.SnapshotVersion);
-    HashObject(Hash, pSpec.DepthFormat);
-    HashObject(Hash, pSpec.StencilFormat);
-    HashObject(Hash, pSpec.Topology);
-    HashObject(Hash, pSpec.CullMode);
-    HashObject(Hash, pSpec.PolygonMode);
-    HashObject(Hash, pSpec.bDepthTestEnable);
-    HashObject(Hash, pSpec.bDepthWriteEnable);
-    HashBytes(Hash, pSpec.ColorAttachmentFormats.data(), pSpec.ColorAttachmentFormats.size() * sizeof(ERHIFormat));
-    HashBytes(Hash, pSpec.VertexBindings.data(), pSpec.VertexBindings.size() * sizeof(FRHIVertexBinding));
-    HashBytes(Hash, pSpec.VertexAttributes.data(), pSpec.VertexAttributes.size() * sizeof(FRHIVertexAttribute));
+    HashObject(Hash, P_Spec.VertexShaderPath);
+    HashObject(Hash, P_Spec.PixelShaderPath);
+    HashObject(Hash, P_Spec.DepthFormat);
+    HashObject(Hash, P_Spec.StencilFormat);
+    HashObject(Hash, P_Spec.Topology);
+    HashObject(Hash, P_Spec.CullMode);
+    HashObject(Hash, P_Spec.PolygonMode);
+    HashObject(Hash, P_Spec.bDepthTestEnable);
+    HashObject(Hash, P_Spec.bDepthWriteEnable);
+    //HashBytes(Hash, P_Spec.ColorAttachmentFormats.data(), P_Spec.ColorAttachmentFormats.size() * sizeof(ERHIFormat));
+    //HashBytes(Hash, P_Spec.VertexBindings.data(), P_Spec.VertexBindings.size() * sizeof(FRHIVertexBinding));
+    //HashBytes(Hash, P_Spec.VertexAttributes.data(), P_Spec.VertexAttributes.size() * sizeof(FRHIVertexAttribute));
 
     return Hash;
 }

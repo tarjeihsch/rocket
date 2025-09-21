@@ -22,12 +22,21 @@ file(GLOB_RECURSE OBJECT_PRIVATE_SOURCES
 
 target_sources(Object PRIVATE ${OBJECT_PRIVATE_SOURCES})
 
-target_include_directories(Object 
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
+target_include_directories(Object
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/Object>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
 target_link_libraries(Object
+    PUBLIC Rocket::Core
+    PUBLIC Rocket::Window
+    PUBLIC Rocket::Scene
+    PUBLIC $<BUILD_INTERFACE:glm::glm>
+    PRIVATE Rocket::RHI
+    PRIVATE Rocket::RenderCore
 )
 
 set_target_properties(Object PROPERTIES POSITION_INDEPENDENT_CODE ON)

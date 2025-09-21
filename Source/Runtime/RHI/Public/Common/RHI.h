@@ -7,6 +7,8 @@
 #include <memory>
 #include <span>
 
+struct RRHISamplerDesc;
+class RRHISampler;
 struct FRHIDrawCommand;
 struct FRHIBufferDesc;
 struct FRHIBuffer;
@@ -67,7 +69,7 @@ public:
 
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
-    virtual void EndFrame() = 0;
+    virtual void Tick(float DeltaTime) = 0;
 
     [[nodiscard]] virtual const char* GetName() const  = 0;
     [[nodiscard]] virtual const char* GetVersion() const  = 0;
@@ -79,19 +81,22 @@ public:
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
     virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const = 0;
     virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
+    virtual RRHISampler* RHICreateSampler(RRHISamplerDesc Desc) const = 0;
     virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
+    virtual void RHIUploadTextureBlocking(FRHITexture* Texture2D, const uint8_t* Data, uint32_t Width, uint32_t Height) = 0;
     virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
     virtual IRHICommandListContext* GetCommandListContext() const = 0;
     virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;
-    virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments, FRHITextureView* DepthAttachmentView) = 0;
+    virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments, FRHITextureView* DepthAttachmentView, bool bClearColor) = 0;
     virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) = 0;
     virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-
-    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
     virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
+    virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
+    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
+    virtual std::array<uint32_t, 2> RHIGetViewportExtent() const = 0;
 
     // virtual void RHIUploadTextureData()
 };

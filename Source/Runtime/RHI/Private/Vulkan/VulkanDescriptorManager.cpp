@@ -121,7 +121,7 @@ void VulkanDescriptorManager::Shutdown()
     VulkanRHI::vkDestroyPipelineLayout(Device.GetVkDevice(), PipelineLayout, nullptr);
 }
 
-DescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::SlotBase &Slot)
+RDescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::SlotBase &Slot)
 {
     RK_ASSERT(!Slot.FreeList.empty(), "Out of slots.");
     uint32_t Index = Slot.FreeList.back();
@@ -129,7 +129,7 @@ DescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::Slo
     return { Index, Slot.Generation[Index] };
 }
 
-void VulkanDescriptorManager::FreeSlot(VulkanDescriptorManager::SlotBase &Slot, DescriptorHandle Handle)
+void VulkanDescriptorManager::FreeSlot(VulkanDescriptorManager::SlotBase &Slot, RDescriptorHandle Handle)
 {
     if (!Handle.IsValid())
     {
@@ -150,57 +150,57 @@ void VulkanDescriptorManager::MarkDirty(VulkanDescriptorManager::SlotBase &Slot,
     Slot.Dirty[Index] = 1;
 }
 
-DescriptorHandle VulkanDescriptorManager::AddSampledImage(VkImageView View, VkImageLayout Layout)
+RDescriptorHandle VulkanDescriptorManager::AddSampledImage(VkImageView View, VkImageLayout Layout)
 {
-    DescriptorHandle Handle = AllocSlot(SampledImages);
+    RDescriptorHandle Handle = AllocSlot(SampledImages);
     SampledImages.Infos[Handle.Index] = { VK_NULL_HANDLE, View, Layout };
     MarkDirty(SampledImages, Handle.Index);
     return Handle;
 }
 
-DescriptorHandle VulkanDescriptorManager::AddSampler(VkSampler Sampler)
+RDescriptorHandle VulkanDescriptorManager::AddSampler(VkSampler Sampler)
 {
-    DescriptorHandle Handle = AllocSlot(Samplers);
-    SampledImages.Infos[Handle.Index] = { Sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
+    RDescriptorHandle Handle = AllocSlot(Samplers);
+    Samplers.Infos[Handle.Index] = { Sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
     MarkDirty(Samplers, Handle.Index);
     return Handle;
 }
 
-DescriptorHandle VulkanDescriptorManager::AddStorageImage(VkImageView View, VkImageLayout Layout)
+RDescriptorHandle VulkanDescriptorManager::AddStorageImage(VkImageView View, VkImageLayout Layout)
 {
-    DescriptorHandle Handle = AllocSlot(StorageImages);
+    RDescriptorHandle Handle = AllocSlot(StorageImages);
     StorageImages.Infos[Handle.Index] = { VK_NULL_HANDLE, View, Layout };
     MarkDirty(StorageImages, Handle.Index);
     return Handle;
 }
 
-DescriptorHandle VulkanDescriptorManager::AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size)
+RDescriptorHandle VulkanDescriptorManager::AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size)
 {
-    DescriptorHandle Handle = AllocSlot(StorageBuffers);
+    RDescriptorHandle Handle = AllocSlot(StorageBuffers);
     StorageBuffers.Infos[Handle.Index] = { Buffer, 0, Size };
     MarkDirty(StorageBuffers, Handle.Index);
     return Handle;
 }
 
-void VulkanDescriptorManager::RemoveSampledImage(DescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveSampledImage(RDescriptorHandle Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(SampledImages, Handle);
 }
 
-void VulkanDescriptorManager::RemoveSampler(DescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveSampler(RDescriptorHandle Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(Samplers, Handle);
 }
 
-void VulkanDescriptorManager::RemoveStorageImage(DescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveStorageImage(RDescriptorHandle Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(StorageImages, Handle);
 }
 
-void VulkanDescriptorManager::RemoveStorageBuffer(DescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveStorageBuffer(RDescriptorHandle Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(StorageBuffers, Handle);
@@ -235,7 +235,7 @@ void VulkanDescriptorManager::Flush()
         }
     };
 
-    auto FlushDirtySamplers = [&](DescriptorBinding Binding, ImageSlotArray& Slots)
+    auto FlushDirtySamplers = [&](DescriptorBinding Binding, RSamplerSlotArray& Slots)
     {
         const auto BindingValue = static_cast<uint32_t>(Binding);
         for (uint32_t Index = 0; Index < Slots.Dirty.size(); ++Index)

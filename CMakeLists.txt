@@ -1,14 +1,21 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.23)
+
+include(CMakePackageConfigHelpers)
+
 project(Rocket LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
+
+set(RK_ENABLE_DEBUG_OVERLAY 0 CACHE BOOL "Enable Rocket debug overlay")
+set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
 
 foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
     string(TOUPPER "${cfg}" CFG)
@@ -37,21 +44,25 @@ if (MINGW)
     add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
-add_compile_definitions(ROCKET_BINARIES="${CMAKE_CURRENT_SOURCE_DIR}/Binaries")
-add_compile_definitions(ROCKET_SRC="${CMAKE_CURRENT_SOURCE_DIR}/Source")
-add_compile_definitions(ROCKET_CONTENT="${CMAKE_CURRENT_SOURCE_DIR}/Content")
+add_compile_definitions(ROCKET_BINARIES=\"${CMAKE_CURRENT_SOURCE_DIR}/Binaries\")
+add_compile_definitions(ROCKET_SRC=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\")
+add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 
 # Third Party modules
 add_subdirectory(Source/ThirdParty/glfw)
 add_subdirectory(Source/ThirdParty/vulkan)
 add_subdirectory(Source/ThirdParty/imgui)
 add_subdirectory(Source/ThirdParty/glm)
-add_subdirectory(Source/ThirdParty/entt)
 add_subdirectory(Source/ThirdParty/spdlog)
-add_subdirectory(Source/ThirdParty/fastgltf)
 add_subdirectory(Source/ThirdParty/tinygltf)
+add_subdirectory(Source/ThirdParty/rapidjson)
 
 # Rocket modules
+add_subdirectory(Source/Editor/Application)
+add_subdirectory(Source/Editor/EditorCore)
+
+add_subdirectory(Source/Runtime/Object)
+add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Engine)
 add_subdirectory(Source/Runtime/RHI)
@@ -60,11 +71,64 @@ add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Asset)
 add_subdirectory(Source/Runtime/Application)
-add_subdirectory(Source/Runtime/Object)
 
-# Game entrypoint module
-if (DEFINED PRIMARY_MODULE)
-    add_subdirectory("${PRIMARY_MODULE}" "${PRIMARY_MODULE_DIR}")
+set(ROCKET_EXPORT_LIBS
+    Core
+    Object
+    Engine
+    RHI
+    RenderCore
+    Window
+    Scene
+    Asset
+    Math
+)
 
-    message("Found Primary Module -- proceed to hook")
-endif()
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMake/RocketConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/RocketConfig.cmake
+    INSTALL_DESTINATION cmake
+)
+
+install(TARGETS ${ROCKET_EXPORT_LIBS}
+    EXPORT RocketTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(TARGETS Application
+    RUNTIME DESTINATION bin
+)
+
+install(EXPORT RocketTargets
+    FILE RocketTargets.cmake
+    NAMESPACE Rocket::
+    DESTINATION cmake
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/RocketConfig.cmake
+    DESTINATION cmake
+)
+
+foreach(module IN LISTS ROCKET_EXPORT_LIBS)
+    install(DIRECTORY Source/Runtime/${module}/Public/
+        DESTINATION include/${module}
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+endforeach()
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/CMake/RocketConfig.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
+    @ONLY
+)
+
+#target_include_directories(Core PUBLIC
+#    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Generated>
+#    $<INSTALL_INTERFACE:include>
+#)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
+    DESTINATION include/Rocket
+)

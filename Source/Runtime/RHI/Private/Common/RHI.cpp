@@ -26,8 +26,10 @@ void SetRHIModule(ERHIInterfaceType InInterfaceType)
         case ERHIInterfaceType::D3D12: RK_ASSERT("Missing API backend"); break;
         case ERHIInterfaceType::Metal: RK_ASSERT("Missing API backend"); break;
         case ERHIInterfaceType::WebGL: RK_ASSERT("Missing API backend"); break;
-        case ERHIInterfaceType::None: RK_ASSERT("Missing API backend"); break;
     }
 
-    GRHI = GRHIModule->CreateRHI();
+    if (InInterfaceType != ERHIInterfaceType::None)
+    {
+        GRHI = GRHIModule->CreateRHI();
+    }
 }

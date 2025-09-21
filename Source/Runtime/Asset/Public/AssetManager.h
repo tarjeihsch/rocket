@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+#include "Logger.h"
+#include "Timer.h"
+
 using FAssetID = uint32_t;
 constexpr FAssetID InvalidAssetID = 0xFFFFFFFFu;
 
@@ -105,9 +108,11 @@ public:
     template<typename T, typename TOptions = NoOptions>
     FAssetHandle<T> Load(const FAssetLoaderRequest& Request, const TOptions& Options = TOptions{})
     {
+        STimer Timer;
         auto Handle = GetPool<T>().Alloc();
         T* Slot = GetPool<T>().Get(Handle);
         *Slot = TAssetLoader<T, TOptions>::Load(Request, Options);
+        RK_LOG_DEBUG("TAssetLoader::Load():\n\t\tPath: {}\n\t\tTime: {}s", Request.Path, Timer.GetElapsedTimeAsSeconds());
         return Handle;
     }
 

@@ -33,6 +33,13 @@ namespace VulkanRHI
     #undef DEFINE_PFN
 };
 
+template <typename TEnum>
+inline bool EnumHasAnyFlags(TEnum Value, TEnum Flags)
+{
+    using T = std::underlying_type_t<TEnum>;
+    return (static_cast<T>(Value) & static_cast<T>(Flags)) != 0;
+}
+
 VkImageCreateInfo VulkanRHI::GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags)
 {
     VkImageCreateInfo ImageCreateInfo = {};
@@ -77,13 +84,6 @@ VkBufferCreateInfo VulkanRHI::GetVkBufferCreateInfo(uint64_t Size, VkBufferUsage
     BufferCreateInfo.usage = UsageFlags;
     BufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     return BufferCreateInfo;
-}
-
-template<typename TEnum>
-inline bool EnumHasAnyFlags(TEnum Value, TEnum Flags)
-{
-    using T = std::underlying_type_t<TEnum>;
-    return (static_cast<T>(Value) & static_cast<T>(Flags)) != 0;
 }
 
 VkAccessFlags VulkanRHI::GetVulkanAccess(ERHIResourceAccess access)
@@ -155,10 +155,51 @@ VkImageUsageFlags VulkanRHI::GetVulkanUsage(ERHITextureUsage usage)
     return flags;
 }
 
+VkBlendFactor VulkanRHI::GetVkBlendFactor(ERHIBlendFactor Factor)
+{
+    switch (Factor)
+    {
+    case ERHIBlendFactor::Zero:                  return VK_BLEND_FACTOR_ZERO;
+    case ERHIBlendFactor::One:                   return VK_BLEND_FACTOR_ONE;
+    case ERHIBlendFactor::SrcColor:              return VK_BLEND_FACTOR_SRC_COLOR;
+    case ERHIBlendFactor::OneMinusSrcColor:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+    case ERHIBlendFactor::DstColor:              return VK_BLEND_FACTOR_DST_COLOR;
+    case ERHIBlendFactor::OneMinusDstColor:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+    case ERHIBlendFactor::SrcAlpha:              return VK_BLEND_FACTOR_SRC_ALPHA;
+    case ERHIBlendFactor::OneMinusSrcAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    case ERHIBlendFactor::DstAlpha:              return VK_BLEND_FACTOR_DST_ALPHA;
+    case ERHIBlendFactor::OneMinusDstAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    case ERHIBlendFactor::ConstantColor:         return VK_BLEND_FACTOR_CONSTANT_COLOR;
+    case ERHIBlendFactor::OneMinusConstantColor: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+    case ERHIBlendFactor::ConstantAlpha:         return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+    case ERHIBlendFactor::OneMinusConstantAlpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+    case ERHIBlendFactor::SrcAlphaSaturate:      return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+    case ERHIBlendFactor::Src1Color:             return VK_BLEND_FACTOR_SRC1_COLOR;
+    case ERHIBlendFactor::OneMinusSrc1Color:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+    case ERHIBlendFactor::Src1Alpha:             return VK_BLEND_FACTOR_SRC1_ALPHA;
+    case ERHIBlendFactor::OneMinusSrc1Alpha:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+    default:                                     return VK_BLEND_FACTOR_ONE;
+    }
+}
+
+VkBlendOp VulkanRHI::GetVkBlendOp(ERHIBlendOp Op)
+{
+    switch (Op)
+    {
+    case ERHIBlendOp::Add:             return VK_BLEND_OP_ADD;
+    case ERHIBlendOp::Subtract:        return VK_BLEND_OP_SUBTRACT;
+    case ERHIBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+    case ERHIBlendOp::Min:             return VK_BLEND_OP_MIN;
+    case ERHIBlendOp::Max:             return VK_BLEND_OP_MAX;
+    default:                           return VK_BLEND_OP_ADD;
+    }
+}
+
 VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
 {
     // TODO: use a switch
     if (Format == ERHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
+    if (Format == ERHITextureFormat::R8G8B8A8_UNORM) { return VK_FORMAT_R8G8B8A8_UNORM; }
     if (Format == ERHITextureFormat::D32_SFLOAT) { return VK_FORMAT_D32_SFLOAT; }
     if (Format == ERHITextureFormat::D32_SFLOAT_S8_UINT) { return VK_FORMAT_D32_SFLOAT_S8_UINT; }
 
@@ -204,6 +245,7 @@ VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
     case ERHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
     case ERHIFormat::Float2:             return VK_FORMAT_R32G32_SFLOAT;
     case ERHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
+    case ERHIFormat::UNorm8x4:             return VK_FORMAT_R8G8B8A8_UNORM;
     default:                             return VK_FORMAT_UNDEFINED;
     }
 }
@@ -253,6 +295,59 @@ VmaMemoryUsage VulkanRHI::ToVmaMemoryUsage(ERHIResourceMemory Memory)
     default: return VMA_MEMORY_USAGE_UNKNOWN;
     }
 }
+
+VkFilter VulkanRHI::ToVkFilter(ERHIFilterMode mode)
+{
+    switch (mode)
+    {
+    case ERHIFilterMode::Nearest: return VK_FILTER_NEAREST;
+    case ERHIFilterMode::Linear:  return VK_FILTER_LINEAR;
+    }
+    return VK_FILTER_LINEAR;
+}
+
+VkSamplerAddressMode VulkanRHI::ToVkAddressMode(ERHIAddressMode mode)
+{
+    switch (mode)
+    {
+    case ERHIAddressMode::Repeat:         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    case ERHIAddressMode::MirroredRepeat: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    case ERHIAddressMode::ClampToEdge:    return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    case ERHIAddressMode::ClampToBorder:  return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    }
+    return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+}
+
+VkBorderColor VulkanRHI::ToVkBorderColor(ERHIBorderColor color)
+{
+    switch (color)
+    {
+    case ERHIBorderColor::FloatTransparentBlack: return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+    case ERHIBorderColor::IntTransparentBlack:   return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+    case ERHIBorderColor::FloatOpaqueBlack:      return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    case ERHIBorderColor::IntOpaqueBlack:        return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    case ERHIBorderColor::FloatOpaqueWhite:      return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    case ERHIBorderColor::IntOpaqueWhite:        return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+    }
+    return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+}
+
+VkCompareOp VulkanRHI::ToVkCompareOp(ERHICompareOp op)
+{
+    switch (op)
+    {
+    case ERHICompareOp::Never:          return VK_COMPARE_OP_NEVER;
+    case ERHICompareOp::Less:           return VK_COMPARE_OP_LESS;
+    case ERHICompareOp::Equal:          return VK_COMPARE_OP_EQUAL;
+    case ERHICompareOp::LessOrEqual:    return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case ERHICompareOp::Greater:        return VK_COMPARE_OP_GREATER;
+    case ERHICompareOp::NotEqual:       return VK_COMPARE_OP_NOT_EQUAL;
+    case ERHICompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case ERHICompareOp::Always:         return VK_COMPARE_OP_ALWAYS;
+    }
+    return VK_COMPARE_OP_ALWAYS;
+}
+
 
 void LoadVulkanLibrary()
 {

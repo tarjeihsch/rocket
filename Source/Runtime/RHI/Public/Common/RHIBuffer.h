@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+#include <glm/glm.hpp>
+
 enum class ERHIBufferUsage : uint32_t
 {
     Vertex = 1 << 0,
@@ -76,10 +78,171 @@ struct FRHIBuffer
 
     virtual uint32_t GetBindingIndex() const = 0;
 
-    virtual void Lock(const void* Data, uint64_t Size) = 0;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+
+    //virtual void* Lock() = 0;
     //virtual void Unlock() = 0;
 
     ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
     ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
     uint32_t CurrentQueueFamilyIndex = ~(0U);
 };
+
+enum class ERHIBufferMemoryPackerAlignmentLayout
+{
+    // No layout
+    None = 0,
+
+    // UBO
+    STD140,
+
+    // SSBO
+    STD430
+};
+
+struct FRHIBufferMemoryPackerTypeLayout
+{
+    // Required alignment for elements of same type (cursor must start at this value)
+    uint64_t Alignment;
+
+    // Distance between elements of same type (array stride or full size)
+    uint64_t Stride;
+};
+
+class FRHIBufferMemoryPacker
+{
+public:
+    explicit FRHIBufferMemoryPacker(ERHIBufferMemoryPackerAlignmentLayout P_AlignmentLayout)
+        : M_AlignmentLayout(P_AlignmentLayout)
+    {
+    }
+
+    template<typename T>
+    void Write(const T& P_Object);
+
+    template<typename T>
+    void Write(const T* P_Objects, uint32_t P_Count);
+
+    uint8_t* GetData();
+    uint64_t GetSize() const;
+
+private:
+    void Align(uint64_t P_Alignment);
+
+    ERHIBufferMemoryPackerAlignmentLayout M_AlignmentLayout;
+    std::vector<uint8_t> M_Data;
+    uint64_t M_Offset = 0;
+};
+
+inline uint8_t* FRHIBufferMemoryPacker::GetData()
+{
+    return M_Data.data();
+}
+
+inline uint64_t FRHIBufferMemoryPacker::GetSize() const
+{
+    return M_Offset;
+}
+
+inline void FRHIBufferMemoryPacker::Align(uint64_t P_Alignment)
+{
+    uint64_t Misalignment = M_Offset % P_Alignment;
+
+    // Exceeding padding bounds, realign offset to correct padding
+    if (Misalignment != 0)
+    {
+        uint64_t Padding = P_Alignment - Misalignment;
+        M_Data.insert(M_Data.end(), Padding, 0);
+        M_Offset += Padding;
+    }
+}
+
+template<typename T>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout(ERHIBufferMemoryPackerAlignmentLayout P_Layout);
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<float>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {4, 4};
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<int>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {4, 4};
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec2>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {8, 8};
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec3>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {16, 16};
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec4>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {16, 16};
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat2>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    if (P_Layout == ERHIBufferMemoryPackerAlignmentLayout::STD140)
+    {
+        return {16, 32}; // 2 vec4 columns
+    }
+    else
+    {
+        return {8, 16};  // 2 vec2 columns
+    }
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat3>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    if (P_Layout == ERHIBufferMemoryPackerAlignmentLayout::STD140)
+    {
+        return {16, 48}; // 3 vec4 columns
+    }
+    else
+    {
+        return {16, 48}; // 3 vec3 where each aligns as vec4. NB: still 48
+    }
+}
+
+template<>
+constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat4>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+    return {16, 64}; // 4 vec4 columns
+}
+
+template <typename T>
+void FRHIBufferMemoryPacker::Write(const T& P_Object)
+{
+    const FRHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
+    Align(Layout.Alignment);
+
+    const uint8_t* Bytes = reinterpret_cast<const uint8_t*>(&P_Object);
+    M_Data.insert(M_Data.end(), Bytes, Bytes + sizeof(T));
+    M_Offset += Layout.Stride;
+}
+
+template <typename T>
+void FRHIBufferMemoryPacker::Write(const T* P_Objects, uint32_t P_Count)
+{
+    const FRHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
+    Align(Layout.Alignment);
+
+    for (uint32_t Index = 0; Index < P_Count; Index++)
+    {
+        const uint8_t* Bytes = reinterpret_cast<const uint8_t*>(&P_Objects[Index]);
+        M_Data.insert(M_Data.end(), Bytes, Bytes + sizeof(T));
+        M_Offset += Layout.Stride;
+    }
+}

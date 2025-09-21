@@ -1,0 +1,42 @@
+#pragma once
+
+#include "Object.h"
+#include "Tickable.h"
+
+#include <cstdint>
+
+class RActor;
+
+enum class EComponentFlags : uint8_t
+{
+    None = 0,
+    Tick = 1
+};
+
+class RComponent : public RObject
+{
+    using Super = RObject;
+    using This = RComponent;
+
+public:
+    static RClass* StaticClass();
+
+    RComponent();
+
+    virtual const RClass* GetClass() const override;
+    virtual void PostConstruct() override;
+
+    virtual void OnInit() {}
+    virtual void OnDestroy() {}
+    virtual void Tick(float DeltaTime);
+
+    inline RActor* GetOwner() const;
+
+private:
+    RActor* Owner;
+};
+
+inline RActor *RComponent::GetOwner() const
+{
+    return Owner;
+}

@@ -81,14 +81,14 @@ void FVulkanTexture::Free()
     }
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, VkImage InImage)
-    : Device(InDevice), Desc(InDesc), Image(InImage)
+FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, FRHITexture* InTexture)
+    : Device(InDevice), Desc(InDesc), Texture(InTexture)
 {
     Alloc();
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, VkImage InImage, VkImageView InImageView)
-    : Device(InDevice), Desc(InDesc), Image(InImage), View(InImageView)
+FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, FRHITexture* InTexture, VkImageView InImageView)
+    : Device(InDevice), Desc(InDesc), Texture(InTexture), ImageView(InImageView)
 {
 }
 
@@ -104,19 +104,39 @@ const FRHITextureViewDesc& FVulkanTextureView::RHIGetTextureViewDesc() const
 
 void* FVulkanTextureView::GetHandle() const
 {
-    return View;
+    return ImageView;
+}
+uint32_t FVulkanTextureView::GetBindingIndex() const
+{
+    return DescriptorHandle.Index;
 }
 
 void FVulkanTextureView::Alloc()
 {
-    VkImageViewCreateInfo CreateInfo = VulkanRHI::GetVkImageViewCreateInfo(Image, VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVkAspect(Desc.Aspect));
+    VkImageViewCreateInfo CreateInfo = VulkanRHI::GetVkImageViewCreateInfo(static_cast<VkImage>(Texture->GetHandle()), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVkAspect(Desc.Aspect));
 
-    VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &CreateInfo, nullptr, &View);
+    VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &CreateInfo, nullptr, &ImageView);
     assert(Result == VK_SUCCESS);
+
+    if ((Texture->RHIGetTextureDesc().Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
+    {
+        if (Desc.Aspect == ERHITextureAspect::Color || Desc.Aspect == ERHITextureAspect::Depth)
+        {
+            DescriptorHandle = Device.GetDescriptorManager()->AddSampledImage(
+                ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+    }
+    else if ((Texture->RHIGetTextureDesc().Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
+    {
+        if (Desc.Aspect == ERHITextureAspect::Color)
+        {
+            DescriptorHandle = Device.GetDescriptorManager()->AddStorageImage(
+                ImageView, VK_IMAGE_LAYOUT_GENERAL);
+        }
+    }
 }
 
 void FVulkanTextureView::Free()
 {
-    //VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), View, nullptr);
-    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::ImageView, View, m_DescriptorHandle);
+    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::ImageView, ImageView, DescriptorHandle);
 }

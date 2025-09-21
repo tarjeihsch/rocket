@@ -1,69 +1,37 @@
 #pragma once
 
-#include "Context.h"
-#include <cstdint>
+#include "EngineBase.h"
 
 #include "Timer.h"
+#include "World.h"
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+// #define GLM_FORCE_RADIANS
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-class Context;
-class FSceneRenderer;
-class PScene;
-class IWindow;
-class FAssetManager;
+class RSceneRenderer;
 
-static const char* VIEWPORT_NAME = "Rocket Engine";
-static constexpr uint32_t VIEWPORT_WIDTH = 1280;
-static constexpr uint32_t VIEWPORT_HEIGHT = 720;
-
-class CEngine
+class REngine : public IEngineBase
 {
 public:
-    void Start();
-    void Run();
-    void Stop();
+    virtual void Start(REngineInitParams& InitParams) override;
+    virtual void Tick(float DeltaTime) override;
+    virtual void Stop() override;
+    virtual void LoadWorld(const char* Path) override;
+    virtual void UnloadWorld() override;
+    virtual RWorld* GetWorld() const override;
 
-    inline PScene* GetScene();
-    inline Context* GetContext();
-    inline IWindow* GetWindow();
-    inline FAssetManager* GetAssetManager();
-    inline friend CEngine* GetEngine();
+    void* GetProjectLibrary() const;
+    RSceneRenderer* GetSceneRenderer() const;
+
+    inline const STimestep& GetTimestep() const
+    {
+        return Timestep;
+    }
 
 private:
-    Context* M_Context;
-    PScene* Scene;
-    IWindow* Window;
-    FAssetManager* mAssetManager;
-    FSceneRenderer* SceneRenderer;
+    RSceneRenderer* SceneRenderer;
 
-    STimestep Timestep;
+    RWorld* World;
 
-    static CEngine* GEngine;
+    void* ProjectLibrary;
 };
-
-inline PScene* CEngine::GetScene()
-{
-    return Scene;
-}
-
-inline IWindow* CEngine::GetWindow()
-{
-    return Window;
-}
-
-FAssetManager *CEngine::GetAssetManager()
-{
-    return mAssetManager;
-}
-
-inline CEngine* GetEngine()
-{
-    return CEngine::GEngine;
-}
-
-inline Context* CEngine::GetContext()
-{
-    return M_Context;
-}

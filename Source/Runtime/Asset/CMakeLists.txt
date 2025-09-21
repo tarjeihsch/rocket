@@ -23,16 +23,20 @@ file(GLOB_RECURSE ASSET_PRIVATE_SOURCES
 target_sources(Asset PRIVATE ${ASSET_PRIVATE_SOURCES})
 
 target_include_directories(Asset
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/Asset>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
 target_link_libraries(Asset
     PUBLIC Rocket::Core
-    PUBLIC glm::glm
-    PRIVATE vulkan::vulkan
-    PRIVATE fastgltf::fastgltf
-    PRIVATE tinygltf
+    PUBLIC Rocket::RenderCore
+    PRIVATE $<BUILD_INTERFACE:RapidJSON>
+    PRIVATE $<BUILD_INTERFACE:glm::glm>
+    PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>
+    PRIVATE $<BUILD_INTERFACE:tinygltf>
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

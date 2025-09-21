@@ -74,20 +74,20 @@ public:
     };
 
     template <typename T>
-    inline void EnqueueResource(EType Type, T Handle, DescriptorHandle BindingIndex)
+    inline void EnqueueResource(EType Type, T Handle, RDescriptorHandle BindingIndex)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, nullptr);
     }
 
     template <typename T>
-    inline void EnqueueResourceWithAllocation(EType Type, T Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation)
+    inline void EnqueueResourceWithAllocation(EType Type, T Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, Allocation);
     }
 
-    void EnqueueGenericResource(EType Type, uint64_t Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation);
+    void EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation);
 
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
@@ -97,7 +97,7 @@ private:
         EType StructureType;
         uint64_t FrameNumber;
         uint64_t Handle;
-        DescriptorHandle m_DescriptorHandle;
+        RDescriptorHandle m_DescriptorHandle;
         VmaAllocation Allocation;
     };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/RHIPipeline.h"
+#include "Common/RHISampler.h"
 #include "Common/RHITexture.h"
 
 #include <vulkan/vulkan_core.h>
@@ -122,7 +123,10 @@
     X(vkCmdPipelineBarrier2) \
     X(vkCmdBeginRendering) \
     X(vkCmdEndRendering) \
-    X(vkCmdPushConstants)
+    X(vkCmdPushConstants) \
+    X(vkCmdCopyBufferToImage) \
+    X(vkCreateSampler) \
+    X(vkDestroySampler)
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \
@@ -157,9 +161,9 @@ namespace VulkanRHI
     // Opaque handle to dynamic library
     extern void* Library;
 
-    #define DECLARE_PFN(name) extern PFN_##name name;
+#define DECLARE_PFN(name) extern PFN_##name name;
     VULKAN_ALL_FUNCTIONS(DECLARE_PFN)
-    #undef DECLARE_PFN
+#undef DECLARE_PFN
 
     VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
     VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
@@ -178,6 +182,14 @@ namespace VulkanRHI
     VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
 
     VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
+
+    VkFilter ToVkFilter(ERHIFilterMode mode);
+    VkSamplerAddressMode ToVkAddressMode(ERHIAddressMode mode);
+    VkBorderColor ToVkBorderColor(ERHIBorderColor color);
+    VkCompareOp ToVkCompareOp(ERHICompareOp op);
+
+    VkBlendFactor GetVkBlendFactor(ERHIBlendFactor Factor);
+    VkBlendOp GetVkBlendOp(ERHIBlendOp Op);
 }
 
 void LoadVulkanLibrary();

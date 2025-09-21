@@ -1,16 +1,77 @@
+#include "Main.h"
+
+#include "Common/RHI.h"
+#include "ConfigFile.h"
 #include "Engine.h"
+#include "GLFWWindow.h"
+#include "Logger.h"
+#include "Module.h"
+#include "WindowBase.h"
 
-int main()
+RModule * GameModule = nullptr;
+
+STimestep Timestep;
+
+int main(int P_Argc, char* P_Argv[])
 {
-    const auto Engine = new CEngine();
+    REngineInitParams EngineInitParams;
+    RWindowInitParams WindowInitParams;
 
-    Engine->Start();
+    if (P_Argc == 2)
+    {
+        std::string ProjectDirectory = P_Argv[1];
 
-    Engine->Run();
+        FConfigFile ProjectConfiguration(ProjectDirectory + "/Project.ini");
+        EngineInitParams.ProjectRoot = ProjectDirectory;
+        EngineInitParams.ProjectName = ProjectConfiguration.GetData<std::string>("Project", "Name");
+        EngineInitParams.ProjectBuild = ProjectConfiguration.GetData<std::string>("Project", "Path");
+        EngineInitParams.ProjectVersion = ProjectConfiguration.GetData<double>("Project", "Version");
+    }
 
-    Engine->Stop();
+    //EngineInitParams.RHIInterfaceType = ERHIInterfaceType::Vulkan;
 
-    delete Engine;
-    
+    WindowInitParams.Title = "Rocket Engine";
+    WindowInitParams.Width = 1280;
+    WindowInitParams.Height = 720;
+
+    FLogger::Init();
+
+    GameModule = new RModule(P_Argv[1]);
+
+    GWindow = new RGLFWWindow();
+    GWindow->CreateNativeWindow(WindowInitParams);
+
+    SetRHIModule(ERHIInterfaceType::Vulkan);
+    GRHI->Init();
+
+    GEngine = new REngine();
+    GEngine->Start(EngineInitParams);
+    GEngine->LoadWorld("Content/Start.pkg");
+
+    while (!GWindow->ShouldClose())
+    {
+        Timestep.Reset();
+
+        GWindow->Poll();
+
+        GEngine->Tick(Timestep.GetDeltaTime());
+
+        GRHI->Tick(Timestep.GetDeltaTime());
+    }
+
+    GEngine->UnloadWorld();
+    GEngine->Stop();
+    GRHI->Shutdown();
+    GWindow->DestroyNativeWindow();
+
+    delete GEngine;
+    GEngine = nullptr;
+
+    delete GRHI;
+    GRHI = nullptr;
+
+    delete GWindow;
+    GWindow = nullptr;
+
     return 0;
 }

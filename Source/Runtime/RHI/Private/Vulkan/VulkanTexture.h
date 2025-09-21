@@ -17,7 +17,7 @@ struct FVulkanTexture : FRHITexture
     void Alias();
 
     virtual const FRHITextureDesc& RHIGetTextureDesc() const override;
-    virtual void* GetHandle() const;
+    virtual void* GetHandle() const override;
 
     VkImage Image;
     VmaAllocation Allocation;
@@ -38,15 +38,16 @@ private:
 
 struct FVulkanTextureView : FRHITextureView
 {
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, VkImage InImage);
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, VkImage InImage, VkImageView InImageView);
+    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, FRHITexture* Texture);
+    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, FRHITexture* Texture, VkImageView InImageView);
     ~FVulkanTextureView();
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const override;
     virtual void* GetHandle() const override;
+    virtual uint32_t GetBindingIndex() const override;
 
-    VkImage Image;
-    VkImageView View;
+    FRHITexture* Texture;
+    VkImageView ImageView;
 
 private:
     void Alloc();
@@ -56,5 +57,5 @@ private:
     FRHITextureViewDesc Desc;
     FVulkanDevice& Device;
 
-    DescriptorHandle m_DescriptorHandle;
+    RDescriptorHandle DescriptorHandle;
 };

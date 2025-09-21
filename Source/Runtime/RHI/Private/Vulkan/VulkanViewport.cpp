@@ -6,8 +6,8 @@
 #include "Assert.h"
 #include "VulkanTexture.h"
 
+#include "WindowBase.h"
 #include <GLFW/glfw3.h>
-#include "Window.h"
 
 FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     : Device(InDevice),
@@ -18,7 +18,7 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     NumAcquireCalls(0),
     NumPresentCalls(0)
 {
-    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(IWindow::Get()->GetNativeWindow()), nullptr, &Surface);
+    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GWindow->GetNativeWindow()), nullptr, &Surface);
     RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
@@ -74,10 +74,10 @@ void FVulkanViewport::CreateSwapchain()
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
     VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
-    int32_t Width, Height;
-    glfwGetFramebufferSize((GLFWwindow*)IWindow::Get()->GetNativeWindow(), &Width, &Height);
+    const uint32_t Width = static_cast<uint32_t>(GWindow->GetFramebufferWidth());
+    const uint32_t Height = static_cast<uint32_t>(GWindow->GetFramebufferHeight());
 
-    Extent = { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) };
+    Extent = { Width, Height };
     Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
     Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
 
@@ -141,7 +141,7 @@ void FVulkanViewport::CreateSwapchain()
         FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
         BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
-        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Images[Index]));
+        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, BackBuffer.back()));
     }
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};

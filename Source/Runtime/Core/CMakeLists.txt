@@ -22,14 +22,17 @@ file(GLOB_RECURSE CORE_PRIVATE_SOURCES
 
 target_sources(Core PRIVATE ${CORE_PRIVATE_SOURCES})
 
-target_include_directories(Core 
-    PRIVATE ${CMAKE_CURRENT_LIST_DIR}/Private
-    PUBLIC ${CMAKE_CURRENT_LIST_DIR}/Public
+target_include_directories(Core
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
+        $<INSTALL_INTERFACE:include/Core>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Private
 )
 
 target_link_libraries(Core
     PUBLIC Rocket::Asset
-    PRIVATE spdlog::spdlog
+    PRIVATE $<BUILD_INTERFACE:spdlog::spdlog>
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

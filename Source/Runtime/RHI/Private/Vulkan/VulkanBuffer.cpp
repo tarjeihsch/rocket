@@ -38,14 +38,14 @@ uint32_t FVulkanBuffer::GetBindingIndex() const
     return m_DescriptorHandle.Index;
 }
 
-void FVulkanBuffer::Lock(const void *Data, uint64_t Size)
+void FVulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
 {
     RK_ASSERT(Size <= Desc.Size, "Trying to map beyond buffer size.");
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         void* BasePtr = Device.GetTransientResourceAllocator()->GetMappedBasePtr();
-        void* DestPtr = static_cast<uint8_t*>(BasePtr) + Offset;
+        void* DestPtr = static_cast<uint8_t*>(BasePtr) + Offset + DstOffset;
 
         memcpy(DestPtr, Data, Size);
     }

@@ -19,9 +19,9 @@ public:
     virtual const FRHIBufferDesc& GetBufferDesc() const override;
     virtual void* GetHandle() const override;
 
-    virtual uint32_t GetBindingIndex() const;
+    virtual uint32_t GetBindingIndex() const override;
 
-    virtual void Lock(const void* Data, uint64_t Size) override;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) override;
 
 private:
     void Alloc();
@@ -32,7 +32,7 @@ private:
     VmaAllocation Allocation;
     VkDeviceSize Offset;
 
-    DescriptorHandle m_DescriptorHandle;
+    RDescriptorHandle m_DescriptorHandle;
 
     FRHIBufferDesc Desc;
 

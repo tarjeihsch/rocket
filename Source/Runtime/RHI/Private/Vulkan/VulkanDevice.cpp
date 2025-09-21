@@ -117,7 +117,7 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, DescriptorHandle BindingIndex, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;
@@ -143,18 +143,24 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
         switch (It->StructureType)
         {
         case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
-        case EType::ImageView: VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr); break;
-        case EType::Buffer: VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr); break;
+        case EType::ImageView:
+            VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampledImage(It->m_DescriptorHandle); }
+            break;
+        case EType::Buffer:
+            VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveStorageBuffer(It->m_DescriptorHandle); }
+            break;
+        case EType::Sampler:
+            VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampler(It->m_DescriptorHandle); }
+            break;
+        default: break;
         }
 
         if (It->Allocation != nullptr)
         {
             vmaFreeMemory(Device.GetVmaAllocator(), It->Allocation);
-        }
-
-        if (It->m_DescriptorHandle.IsValid())
-        {
-            Device.GetDescriptorManager()->RemoveStorageBuffer(It->m_DescriptorHandle);
         }
 
         It = Entries.erase(It);
@@ -282,7 +288,7 @@ void FVulkanDevice::Initialize()
 
     CommandListContext = new FVulkanCommandListContext(*this);
 
-    TransientResourceAllocator = new FTransientResourceAllocator(*this, 64ull * 1024 * 1024);
+    TransientResourceAllocator = new FTransientResourceAllocator(*this, 256ull * 1024 * 1024);
 }
 
 void FVulkanDevice::Shutdown()

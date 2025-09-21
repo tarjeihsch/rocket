@@ -5,4 +5,7 @@ project(vulkan LANGUAGES C)
 add_library(vulkan INTERFACE)
 add_library(vulkan::vulkan ALIAS vulkan)
 
-target_include_directories(vulkan INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(vulkan INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+    $<INSTALL_INTERFACE:include/vulkan>
+)
