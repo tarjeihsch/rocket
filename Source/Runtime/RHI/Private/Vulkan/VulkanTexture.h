@@ -14,8 +14,6 @@ struct FVulkanTexture : FRHITexture
     FVulkanTexture(FVulkanDevice& InDevice, FRHITextureDesc& InDesc, VkImage InImage);
     ~FVulkanTexture();
 
-    void Alias();
-
     virtual const FRHITextureDesc& RHIGetTextureDesc() const override;
     virtual void* GetHandle() const override;
 

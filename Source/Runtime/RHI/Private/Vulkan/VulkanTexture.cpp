@@ -45,7 +45,7 @@ void* FVulkanTexture::GetHandle() const
 
 void FVulkanTexture::Alloc()
 {
-    VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Tex2D.Extent[0], Desc.Tex2D.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
+    VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Extent[0], Desc.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {

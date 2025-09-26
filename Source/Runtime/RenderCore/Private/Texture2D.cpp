@@ -11,8 +11,8 @@ FTexture2D::FTexture2D(uint32_t Width, uint32_t Height)
     TextureDesc.MipLevel = 1;
     TextureDesc.SampleCount = 1;
     TextureDesc.Lifetime = ERHIResourceLifetime::Transient;
-    TextureDesc.Tex2D.Extent[0] = Width;
-    TextureDesc.Tex2D.Extent[1] = Height;
+    TextureDesc.Extent[0] = Width;
+    TextureDesc.Extent[1] = Height;
     TextureDesc.Usage = ERHITextureUsage::SRV;
     TextureDesc.InitialLayout = ERHITextureLayout::ShaderReadOnly;
 

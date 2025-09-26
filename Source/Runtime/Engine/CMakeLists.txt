@@ -33,12 +33,11 @@ target_include_directories(Engine
 target_link_libraries(Engine
     PUBLIC Rocket::Core
     PUBLIC Rocket::Window
-    PUBLIC Rocket::Scene
     PUBLIC Rocket::Object
     PRIVATE Rocket::RHI
     PRIVATE Rocket::RenderCore
+    PRIVATE Rocket::Renderer
     PRIVATE $<BUILD_INTERFACE:glm::glm>
-    PRIVATE $<BUILD_INTERFACE:EnTT::EnTT>
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

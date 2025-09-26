@@ -1,15 +1,15 @@
-#include "VulkanViewport.h"
+#include "VulkanSwapchain.h"
 
-#include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanLoader.h"
-#include "VulkanDevice.h"
 #include "Assert.h"
+#include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanDevice.h"
+#include "VulkanLoader.h"
 #include "VulkanTexture.h"
 
 #include "WindowBase.h"
 #include <GLFW/glfw3.h>
 
-FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
+RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
     Surface(nullptr),
@@ -62,14 +62,14 @@ FVulkanViewport::FVulkanViewport(FVulkanDevice& InDevice)
     AcquireNextImageIndex();
 }
 
-FVulkanViewport::~FVulkanViewport()
+RVulkanSwapchain::~RVulkanSwapchain()
 {
     DestroySwapchain();
 
     VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
-void FVulkanViewport::CreateSwapchain()
+void RVulkanSwapchain::CreateSwapchain()
 {
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
     VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
@@ -140,8 +140,8 @@ void FVulkanViewport::CreateSwapchain()
     {
         FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
-        BackBuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
-        BackBufferView.push_back(new FVulkanTextureView(Device, ViewDesc, BackBuffer.back()));
+        Backbuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
+        BackbufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Backbuffer.back()));
     }
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
@@ -161,7 +161,7 @@ void FVulkanViewport::CreateSwapchain()
     }
 }
 
-bool FVulkanViewport::AcquireNextImageIndex()
+bool RVulkanSwapchain::AcquireNextImageIndex()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
@@ -177,7 +177,7 @@ bool FVulkanViewport::AcquireNextImageIndex()
     return true;
 }
 
-void FVulkanViewport::Present()
+void RVulkanSwapchain::Present()
 {
     VkPresentInfoKHR PresentInfo = {};
     PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -193,7 +193,7 @@ void FVulkanViewport::Present()
     ++NumPresentCalls;
 }
 
-void FVulkanViewport::DestroySwapchain()
+void RVulkanSwapchain::DestroySwapchain()
 {
     Device.WaitUntilIdle();
 
@@ -209,17 +209,17 @@ void FVulkanViewport::DestroySwapchain()
         VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
     }
 
-    for (auto& Texture : BackBuffer)
+    for (auto& Texture : Backbuffer)
     {
         delete Texture;
     }
 
-    for (auto& View : BackBufferView)
+    for (auto& View : BackbufferView)
     {
         delete View;
     }
 
-    BackBuffer.clear();
+    Backbuffer.clear();
     ImageAcquiredSemaphores.clear();
     RenderFinishedSemaphores.clear();
 
@@ -227,4 +227,14 @@ void FVulkanViewport::DestroySwapchain()
     SemaphoreIndex = 0;
     NumAcquireCalls = 0;
     NumPresentCalls = 0;
+}
+
+FRHITexture* RVulkanSwapchain::GetBackBufferTexture() const
+{
+    return Backbuffer[CurrentImageIndex];
+}
+
+FRHITextureView* RVulkanSwapchain::GetBackBufferTextureView() const
+{
+    return BackbufferView[CurrentImageIndex];
 }

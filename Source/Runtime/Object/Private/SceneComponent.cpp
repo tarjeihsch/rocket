@@ -1,5 +1,8 @@
 #include "SceneComponent.h"
 
+#include "EngineBase.h"
+#include "Scene.h"
+
 RClass *RSceneComponent::StaticClass()
 {
     static RComponent Archetype;
@@ -10,7 +13,11 @@ RClass *RSceneComponent::StaticClass()
 }
 
 RSceneComponent::RSceneComponent()
-    : bShouldTick(1)
+    : Location(0),
+    Rotation(0),
+    Scale(1),
+    Velocity(0),
+    bTransformDirty(false)
 {
 }
 
@@ -21,5 +28,51 @@ const RClass *RSceneComponent::GetClass() const
 
 void RSceneComponent::Tick(float DeltaTime)
 {
-    Transform.M_Translation += Velocity * DeltaTime;
+    if (bTransformDirty)
+    {
+        OnTransformChanged();
+    }
+}
+
+glm::vec3 RSceneComponent::GetLocation() const
+{
+    return Location;
+}
+
+glm::vec3 RSceneComponent::GetRotation() const
+{
+    return Rotation;
+}
+
+void RSceneComponent::SetLocation(glm::vec3 InLocation)
+{
+    Location = InLocation;
+
+    bTransformDirty = true;
+}
+
+void RSceneComponent::SetRotation(glm::vec3 InRotation)
+{
+    Rotation = InRotation;
+
+    bTransformDirty = true;
+}
+
+void RSceneComponent::AddLocation(glm::vec3 InLocation)
+{
+    Location += InLocation;
+
+    bTransformDirty = true;
+}
+
+void RSceneComponent::AddRotation(glm::vec3 InRotation)
+{
+    Rotation += InRotation;
+}
+
+void RSceneComponent::OnTransformChanged()
+{
+    GEngine->GetScene()->UpdateSceneObjectTransform(SceneObjectID, Location, Rotation, Scale);
+
+    bTransformDirty = false;
 }

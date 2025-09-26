@@ -1,11 +1,11 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "Memory.h"
-
 #include "glm/detail/type_quat.hpp"
 #include "glm/fwd.hpp"
 #include "glm/gtx/quaternion.hpp"
+
+#include <span>
 
 struct FRHIBuffer;
 
@@ -27,11 +27,11 @@ struct FPrimitiveMeshSection
     glm::mat4 M_LocalMatrix;
 };
 
-class CStaticMesh
+class RStaticMesh
 {
 public:
-    CStaticMesh(const char* InFilePath);
-    ~CStaticMesh();
+    RStaticMesh(const char* InFilePath);
+    ~RStaticMesh();
 
     inline std::span<const FPrimitiveMeshSection> GetMeshSections() const;
     inline FRHIBuffer* GetVertexBuffer() const;
@@ -56,27 +56,27 @@ private:
     const char* FilePath;
 };
 
-std::span<const FPrimitiveMeshSection> CStaticMesh::GetMeshSections() const
+std::span<const FPrimitiveMeshSection> RStaticMesh::GetMeshSections() const
 {
     return std::span(M_Sections);
 }
 
-inline FRHIBuffer* CStaticMesh::GetVertexBuffer() const
+inline FRHIBuffer* RStaticMesh::GetVertexBuffer() const
 {
     return M_VertexBuffer;
 }
 
-inline FRHIBuffer* CStaticMesh::GetIndexBuffer() const
+inline FRHIBuffer* RStaticMesh::GetIndexBuffer() const
 {
     return M_IndexBuffer;
 }
 
-inline uint32_t CStaticMesh::GetVertexCount() const
+inline uint32_t RStaticMesh::GetVertexCount() const
 {
     return M_VertexCount;
 }
 
-inline uint32_t CStaticMesh::GetIndexCount() const
+inline uint32_t RStaticMesh::GetIndexCount() const
 {
     return M_IndexCount;
 }

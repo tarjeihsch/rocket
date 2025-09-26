@@ -32,10 +32,10 @@ target_include_directories(RenderCore
 
 target_link_libraries(RenderCore
     PUBLIC Rocket::Core
-    PUBLIC Rocket::Scene
     PUBLIC Rocket::Asset
     PUBLIC Rocket::RHI
     PUBLIC Rocket::Window
+    PUBLIC Rocket::Engine
     PUBLIC Rocket::Math
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )

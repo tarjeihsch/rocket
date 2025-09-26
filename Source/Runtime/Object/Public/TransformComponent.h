@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-class CStaticMesh;
+class RStaticMesh;
 
 class RTransformComponent final : public RComponent
 {

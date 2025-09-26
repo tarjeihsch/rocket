@@ -33,7 +33,6 @@ target_include_directories(Object
 target_link_libraries(Object
     PUBLIC Rocket::Core
     PUBLIC Rocket::Window
-    PUBLIC Rocket::Scene
     PUBLIC $<BUILD_INTERFACE:glm::glm>
     PRIVATE Rocket::RHI
     PRIVATE Rocket::RenderCore

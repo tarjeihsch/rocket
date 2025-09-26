@@ -2,7 +2,7 @@
 
 #include "SceneComponent.h"
 
-class CStaticMesh;
+class RStaticMesh;
 
 class RStaticMeshComponent final : public RSceneComponent
 {
@@ -12,15 +12,20 @@ public:
     static RClass* StaticClass();
 
     RStaticMeshComponent();
-    ~RStaticMeshComponent() override;
 
-    virtual void OnInit() override;
-    virtual void OnDestroy() override;
     virtual const RClass* GetClass() const override;
+    virtual void Tick(float DeltaTime) override;
 
-    void SetStaticMesh(CStaticMesh* NewStaticMesh);
-    CStaticMesh* GetStaticMesh() const;
+    void SetStaticMesh(RStaticMesh* NewStaticMesh);
+    RStaticMesh* GetStaticMesh() const;
+
+protected:
+    void OnMeshChanged();
 
 private:
-    CStaticMesh* StaticMesh;
+    uint64_t SceneObjectID;
+
+    RStaticMesh* StaticMesh;
+
+    uint8_t bDirty : 1;
 };

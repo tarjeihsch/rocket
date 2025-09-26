@@ -5,7 +5,7 @@
 #include "Common/RHI.h"
 #include "MeshAsset.h"
 
-CStaticMesh::CStaticMesh(const char* InFilePath)
+RStaticMesh::RStaticMesh(const char* InFilePath)
     : M_VertexBuffer(nullptr),
     M_IndexBuffer(nullptr),
     M_VertexCount(0),
@@ -15,12 +15,12 @@ CStaticMesh::CStaticMesh(const char* InFilePath)
     Init();
 }
 
-CStaticMesh::~CStaticMesh()
+RStaticMesh::~RStaticMesh()
 {
     Shutdown();
 }
 
-void CStaticMesh::Init()
+void RStaticMesh::Init()
 {
     FAssetLoaderRequest Request = { FilePath };
     FMeshAssetOptions Options;
@@ -66,7 +66,7 @@ void CStaticMesh::Init()
     FAssetManager::Get().Unload(AssetHandle);
 }
 
-void CStaticMesh::Shutdown()
+void RStaticMesh::Shutdown()
 {
     delete M_VertexBuffer;
     delete M_IndexBuffer;

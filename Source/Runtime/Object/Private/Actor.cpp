@@ -31,7 +31,7 @@ void RActor::Deserialize(const FJsonAsset::Object &Obj)
 {
     if (auto it = Obj.find("StaticMesh"); it != Obj.end())
     {
-        CStaticMesh* StaticMesh = new CStaticMesh(std::string(std::get<std::string>(it->second.Value)).c_str());
+        RStaticMesh* StaticMesh = new RStaticMesh(std::string(std::get<std::string>(it->second.Value)).c_str());
         StaticMeshComponent->SetStaticMesh(StaticMesh);
     }
 
@@ -41,7 +41,23 @@ void RActor::Deserialize(const FJsonAsset::Object &Obj)
         float Y = (float)std::get<double>(loc.at("y").Value);
         float Z = (float)std::get<double>(loc.at("z").Value);
 
-        StaticMeshComponent->Transform.M_Translation = (glm::vec3{X, Y, Z});
+        StaticMeshComponent->SetLocation(glm::vec3{X, Y, Z});
+    }
+}
+
+void RActor::AddComponent(RComponent* Component)
+{
+    Components.push_back(Component);
+}
+
+RComponent *RActor::GetComponentOfClass(RClass *Class) const
+{
+    for (RComponent *Component : Components)
+    {
+        if (Component->GetClass()->IsA(Class))
+        {
+            return Component;
+        }
     }
 }
 

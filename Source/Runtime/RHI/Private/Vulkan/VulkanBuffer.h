@@ -18,9 +18,7 @@ public:
 
     virtual const FRHIBufferDesc& GetBufferDesc() const override;
     virtual void* GetHandle() const override;
-
     virtual uint32_t GetBindingIndex() const override;
-
     virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) override;
 
 private:

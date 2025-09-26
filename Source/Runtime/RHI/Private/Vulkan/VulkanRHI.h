@@ -8,7 +8,7 @@
 struct FRHITextureView;
 struct FRHITextureAttachment;
 class FVulkanDevice;
-class FVulkanViewport;
+class RVulkanSwapchain;
 class FFrameGraph;
 
 class CVulkanRHI : public IVulkanRHIMinimal
@@ -24,6 +24,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType GetInterfaceType() const noexcept override;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
+    virtual RRHISwapchain* GetSwapchain() const override;
     virtual void RHIWaitUntilIdle() const override;
     virtual uint64_t GetFrameCounter() const noexcept override;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
@@ -77,14 +78,14 @@ public:
 
     // CVulkanRHI interface
     inline FVulkanDevice* GetDevice() const;
-    inline FVulkanViewport* GetViewport() const;
+    inline RVulkanSwapchain* GetViewport() const;
     // ~CVulkanRHI interface
 
 private:
     VkInstance Instance;
 
     FVulkanDevice* Device;
-    FVulkanViewport* Viewport;
+    RVulkanSwapchain* Swapchain;
 
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;

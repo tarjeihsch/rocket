@@ -108,10 +108,8 @@ inline uint32_t GetTextureFormatPixelByteSize(ERHITextureFormat Format)
 
 struct FRHITextureDesc
 {
-    union
-    {
-        uint32_t Extent[2];
-    } Tex2D;
+    uint32_t Extent[2];
+    uint32_t Offset[2];
 
     ERHIResourceLifetime Lifetime;
     ERHITextureFormat Format;
@@ -124,8 +122,8 @@ struct FRHITextureDesc
     static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceLifetime InLifetime, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout InitialLayout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
     {
         FRHITextureDesc Desc = {};
-        Desc.Tex2D.Extent[0] = SizeX;
-        Desc.Tex2D.Extent[1] = SizeY;
+        Desc.Extent[0] = SizeX;
+        Desc.Extent[1] = SizeY;
         Desc.Format = Format;
         Desc.Lifetime = InLifetime;
         Desc.MipLevel = MipLevel;

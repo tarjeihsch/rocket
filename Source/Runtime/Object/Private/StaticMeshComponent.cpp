@@ -1,6 +1,8 @@
 #include "StaticMeshComponent.h"
 
-#include "SceneRenderer.h"
+#include "EngineBase.h"
+#include "Scene.h"
+#include "../../Renderer/Public/SceneRenderer.h"
 #include "StaticMesh.h"
 
 RClass *RStaticMeshComponent::StaticClass()
@@ -13,22 +15,8 @@ RClass *RStaticMeshComponent::StaticClass()
 }
 
 RStaticMeshComponent::RStaticMeshComponent()
+    : bDirty(false)
 {
-
-}
-
-RStaticMeshComponent::~RStaticMeshComponent()
-{
-    delete StaticMesh;
-}
-
-void RStaticMeshComponent::OnInit()
-{
-    RComponent::OnInit();
-}
-void RStaticMeshComponent::OnDestroy()
-{
-    RComponent::OnDestroy();
 }
 
 const RClass *RStaticMeshComponent::GetClass() const
@@ -36,15 +24,30 @@ const RClass *RStaticMeshComponent::GetClass() const
     return StaticClass();
 }
 
-void RStaticMeshComponent::SetStaticMesh(CStaticMesh *NewStaticMesh)
+void RStaticMeshComponent::Tick(float DeltaTime)
 {
-    // TODO: Needs to wire the correct scenerenderer from engine.
-    //RSceneRenderer::Get().RegisterProxy(NewStaticMesh, &Transform);
+    Super::Tick(DeltaTime);
 
-    StaticMesh = NewStaticMesh;
+    if (bDirty)
+    {
+        OnMeshChanged();
+    }
 }
 
-CStaticMesh *RStaticMeshComponent::GetStaticMesh() const
+void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)
+{
+    StaticMesh = NewStaticMesh;
+
+    bDirty = true;
+}
+
+RStaticMesh *RStaticMeshComponent::GetStaticMesh() const
 {
     return StaticMesh;
+}
+
+void RStaticMeshComponent::OnMeshChanged()
+{
+    GEngine->GetScene()->UpdateSceneObjectGeometry(SceneObjectID, StaticMesh);
+    bDirty = false;
 }

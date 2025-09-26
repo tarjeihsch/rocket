@@ -130,8 +130,8 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
     VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
-    viewport.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
+    viewport.width = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width);
+    viewport.height = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -156,7 +156,7 @@ void FVulkanCommandListContext::RHICopyBuffer(FRHIBuffer *Src, FRHIBuffer *Dst, 
     BufferCopy.dstOffset = 0;
     BufferCopy.size = Src->GetBufferDesc().Size;
 
-    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkBuffer>(Src->GetHandle()), reinterpret_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
+    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), static_cast<VkBuffer>(Src->GetHandle()), static_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
 }
 
 void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *Dst)
@@ -167,14 +167,14 @@ void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *D
     BlitRegion.srcSubresource.baseArrayLayer = 0;
     BlitRegion.srcSubresource.layerCount = 1;
     BlitRegion.srcOffsets[0] = { 0, 0, 0 };
-    BlitRegion.srcOffsets[1] = { (int32_t)Src->RHIGetTextureDesc().Tex2D.Extent[0], (int32_t)Src->RHIGetTextureDesc().Tex2D.Extent[1], 1 };
+    BlitRegion.srcOffsets[1] = { (int32_t)Src->RHIGetTextureDesc().Extent[0], (int32_t)Src->RHIGetTextureDesc().Extent[1], 1 };
 
     BlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     BlitRegion.dstSubresource.mipLevel = 0;
     BlitRegion.dstSubresource.baseArrayLayer = 0;
     BlitRegion.dstSubresource.layerCount = 1;
     BlitRegion.dstOffsets[0] = { 0, 0, 0 };
-    BlitRegion.dstOffsets[1] = { (int32_t)Dst->RHIGetTextureDesc().Tex2D.Extent[0], (int32_t)Dst->RHIGetTextureDesc().Tex2D.Extent[1], 1 };
+    BlitRegion.dstOffsets[1] = { (int32_t)Dst->RHIGetTextureDesc().Extent[0], (int32_t)Dst->RHIGetTextureDesc().Extent[1], 1 };
 
     VulkanRHI::vkCmdBlitImage(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkImage>(Src->GetHandle()), VulkanRHI::GetVulkanLayout(Src->CurrentLayout), reinterpret_cast<VkImage>(Dst->GetHandle()), VulkanRHI::GetVulkanLayout(Dst->CurrentLayout), 1, &BlitRegion, VK_FILTER_NEAREST);
 }
