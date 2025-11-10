@@ -15,8 +15,6 @@ public:
 
     virtual const RClass* GetClass() const override;
 
-    virtual void Tick(float DeltaTime) override;
-
     glm::vec3 GetLocation() const;
     glm::vec3 GetRotation() const;
 
@@ -27,11 +25,9 @@ public:
     void AddRotation(glm::vec3 Rotation);
 
 protected:
-    void OnTransformChanged();
+    virtual void OnMarkedDirty() {}
 
 private:
-    uint64_t SceneObjectID;
-
     glm::vec3 Location;
 
     glm::vec3 Rotation;
@@ -39,6 +35,4 @@ private:
     glm::vec3 Scale;
 
     glm::vec3 Velocity;
-
-    uint8_t bTransformDirty : 1;
 };

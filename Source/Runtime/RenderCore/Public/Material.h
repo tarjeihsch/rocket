@@ -38,6 +38,7 @@ class FRHIPipeline;
 enum class LMaterialResourceType : uint8_t
 {
     Texture,
+
     Buffer
 };
 

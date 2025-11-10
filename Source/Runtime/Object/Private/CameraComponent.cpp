@@ -1,8 +1,11 @@
 #include "CameraComponent.h"
 
+#include "EngineBase.h"
+#include "../../Renderer/Public/PrimitiveManager.h"
 #include "Viewport.h"
 
 RCameraComponent::RCameraComponent()
+    : bMarkedDirty(1)
 {
     FovY = 60.0f;
     AspectRatio = 1280 / 720.0f;
@@ -10,7 +13,7 @@ RCameraComponent::RCameraComponent()
     ZFar = 1000.0f;
 }
 
-RClass * RCameraComponent::StaticClass()
+RClass* RCameraComponent::StaticClass()
 {
     static RCameraComponent Archetype;
 
@@ -19,19 +22,29 @@ RClass * RCameraComponent::StaticClass()
     return &Class;
 }
 
-RClass *RCameraComponent::GetClass() const
+RClass* RCameraComponent::GetClass() const
 {
     return StaticClass();
 }
 
-LRenderView RCameraComponent::BuildRenderView() const
+void RCameraComponent::PostConstruct()
 {
-    LRenderView RenderView;
-    RenderView.FovY = FovY;
-    RenderView.AspectRatio = AspectRatio;
-    RenderView.ZNear = ZNear;
-    RenderView.ZFar = ZFar;
-    RenderView.Location = GetLocation();
-    RenderView.Rotation = GetRotation();
-    return RenderView;
+    RSceneComponent::PostConstruct();
+}
+
+void RCameraComponent::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (bMarkedDirty)
+    {
+        OnPropertyChanged();
+    }
+}
+
+void RCameraComponent::OnPropertyChanged()
+{
+    LSceneView NewSceneView(SceneViewID, SceneViewID);
+
+    bMarkedDirty = false;
 }

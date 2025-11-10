@@ -8,19 +8,17 @@
 // TODO: Use an ActorProxy for cache-friendly iteration
 // Store a pointer to the real Actor object for cleanup++
 
+class RRenderProxyManager;
 class ITickable;
 
 class RWorld final
 {
 public:
-    RActor* SpawnActor(RClass* Class);
     void DestroyActor(RActor* Actor);
 
     template<typename TClass>
     TClass* SpawnActor() const;
-
-    template<typename TClass>
-    std::vector<TClass*> GetActorsOfClass();
+    RActor* SpawnActor(RClass* Class);
 
     void Tick(float DeltaTime);
 
@@ -28,11 +26,14 @@ public:
     void Deinitialize();
 
     inline RTickTaskManager* GetTickTaskManager() const;
+    inline RRenderProxyManager* GetPrimitiveProxyManager() const;
 
 private:
     std::vector<RActor*> Actors;
 
     RTickTaskManager* TickTaskManager;
+
+    RRenderProxyManager* PrimitiveProxyManager;
 };
 
 template <typename TActor>
@@ -43,13 +44,12 @@ TActor* RWorld::SpawnActor() const
     return static_cast<TActor*>(SpawnActor(TActor::StaticClass()));
 }
 
-template <typename TClass>
-std::vector<TClass*> RWorld::GetActorsOfClass()
-{
-    std::vector<TClass*> Actors;
-}
-
 inline RTickTaskManager *RWorld::GetTickTaskManager() const
 {
     return TickTaskManager;
+}
+
+inline RRenderProxyManager* RWorld::GetPrimitiveProxyManager() const
+{
+    return PrimitiveProxyManager;
 }

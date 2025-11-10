@@ -1,11 +1,11 @@
 #include "SceneComponent.h"
 
 #include "EngineBase.h"
-#include "Scene.h"
+#include "../../Renderer/Public/PrimitiveManager.h"
 
 RClass *RSceneComponent::StaticClass()
 {
-    static RComponent Archetype;
+    static RSceneComponent Archetype;
 
     static RClass Class { Super::StaticClass(), &Archetype, sizeof(RSceneComponent), alignof(RSceneComponent), C_ClassDefault | C_Memory_Allocator_Heap };
 
@@ -16,22 +16,13 @@ RSceneComponent::RSceneComponent()
     : Location(0),
     Rotation(0),
     Scale(1),
-    Velocity(0),
-    bTransformDirty(false)
+    Velocity(0)
 {
 }
 
 const RClass *RSceneComponent::GetClass() const
 {
     return StaticClass();
-}
-
-void RSceneComponent::Tick(float DeltaTime)
-{
-    if (bTransformDirty)
-    {
-        OnTransformChanged();
-    }
 }
 
 glm::vec3 RSceneComponent::GetLocation() const
@@ -48,31 +39,26 @@ void RSceneComponent::SetLocation(glm::vec3 InLocation)
 {
     Location = InLocation;
 
-    bTransformDirty = true;
+    OnMarkedDirty();
 }
 
 void RSceneComponent::SetRotation(glm::vec3 InRotation)
 {
     Rotation = InRotation;
 
-    bTransformDirty = true;
+    OnMarkedDirty();
 }
 
 void RSceneComponent::AddLocation(glm::vec3 InLocation)
 {
     Location += InLocation;
 
-    bTransformDirty = true;
+    OnMarkedDirty();
 }
 
 void RSceneComponent::AddRotation(glm::vec3 InRotation)
 {
     Rotation += InRotation;
-}
 
-void RSceneComponent::OnTransformChanged()
-{
-    GEngine->GetScene()->UpdateSceneObjectTransform(SceneObjectID, Location, Rotation, Scale);
-
-    bTransformDirty = false;
+    OnMarkedDirty();
 }

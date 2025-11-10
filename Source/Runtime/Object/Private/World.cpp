@@ -4,6 +4,7 @@
 #include "AssetManager.h"
 #include "JsonAsset.h"
 #include "Module.h"
+#include "../../Renderer/Public/PrimitiveManager.h"
 
 #include <dlfcn.h>
 
@@ -44,43 +45,45 @@ void RWorld::Initialize()
 {
     TickTaskManager = new RTickTaskManager();
 
-    FAssetLoaderRequest Request = { "/home/user/Workspace/Spaceship/Content/World.json" };
-    FJsonAssetOptions Options;
-    FAssetHandle<FJsonAsset> AssetHandle = FAssetManager::Get().Load<FJsonAsset>(Request, Options);
-    FJsonAsset* JsonAsset = FAssetManager::Get().GetAsset(AssetHandle);
+    PrimitiveProxyManager = new RRenderProxyManager();
 
-    // Top-level is an array
-    auto& rootArray = std::get<FJsonAsset::Array>(JsonAsset->Value);
-
-    for (auto& entry : rootArray)
-    {
-        auto& obj = std::get<FJsonAsset::Object>(entry.Value);
-        auto& actors = std::get<FJsonAsset::Array>(obj["Actors"].Value);
-
-        for (auto& actorVal : actors)
-        {
-            auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
-
-            std::string className = std::get<std::string>(actorObj["Class"].Value);
-            std::string symbolName = "Z_Class_" + className + "_StaticClass";
-
-            using GetStaticClassFun = RClass* (*)();
-            GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(GScriptModule->GetSymbol((GScriptModule, symbolName.c_str())));
-
-            if (GetStaticClass)
-            {
-                RClass* Class = GetStaticClass();
-                RActor* Actor = SpawnActor(Class);
-                Actor->Deserialize(actorObj);
-            }
-            else
-            {
-                RClass* Class = RActor::StaticClass();
-                RActor* Actor = SpawnActor(Class);
-                Actor->Deserialize(actorObj);
-            }
-        }
-    }
+    //FAssetLoaderRequest Request = { "/home/user/Workspace/Spaceship/Content/World.json" };
+    //FJsonAssetOptions Options;
+    //FAssetHandle<FJsonAsset> AssetHandle = FAssetManager::Get().Load<FJsonAsset>(Request, Options);
+    //FJsonAsset* JsonAsset = FAssetManager::Get().GetAsset(AssetHandle);
+//
+    //// Top-level is an array
+    //auto& rootArray = std::get<FJsonAsset::Array>(JsonAsset->Value);
+//
+    //for (auto& entry : rootArray)
+    //{
+    //    auto& obj = std::get<FJsonAsset::Object>(entry.Value);
+    //    auto& actors = std::get<FJsonAsset::Array>(obj["Actors"].Value);
+//
+    //    for (auto& actorVal : actors)
+    //    {
+    //        auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
+//
+    //        std::string className = std::get<std::string>(actorObj["Class"].Value);
+    //        std::string symbolName = "Z_Class_" + className + "_StaticClass";
+//
+    //        using GetStaticClassFun = RClass* (*)();
+    //        GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(GScriptModule->GetSymbol((GScriptModule, symbolName.c_str())));
+//
+    //        if (GetStaticClass)
+    //        {
+    //            RClass* Class = GetStaticClass();
+    //            RActor* Actor = SpawnActor(Class);
+    //            //Actor->Deserialize(actorObj);
+    //        }
+    //        else
+    //        {
+    //            RClass* Class = RActor::StaticClass();
+    //            RActor* Actor = SpawnActor(Class);
+    //            //Actor->Deserialize(actorObj);
+    //        }
+    //    }
+    //}
 
     //RClass* Class = GetStaticClass();
     //RActor* Actor = GetWorld()->SpawnActor(Class);
@@ -91,4 +94,8 @@ void RWorld::Deinitialize()
     {
         delete Actor;
     }
+
+    delete TickTaskManager;
+
+    delete PrimitiveProxyManager;
 }

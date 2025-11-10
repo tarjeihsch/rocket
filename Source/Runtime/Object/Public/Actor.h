@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Component.h"
+#include "Delegate.h"
 #include "JsonAsset.h"
 #include "Object.h"
 #include "Tickable.h"
 
 class RComponent;
+class RSceneComponent;
 class RStaticMeshComponent;
 
 class RActor : public RObject
@@ -20,25 +22,10 @@ public:
 
     virtual void BeginPlay() {}
     virtual void EndPlay() {}
-    virtual void Tick(float DeltaTime) {}
-
-    virtual void Deserialize(const FJsonAsset::Object& Obj);
-
-    void AddComponent(RComponent *Component);
-    RComponent* GetComponentOfClass(RClass* Class) const;
 
     template<typename TComponent>
     TComponent* AddComponent();
-
-    template<typename TComponent>
-    TComponent* GetComponentOfClass() const;
-
-    inline RStaticMeshComponent* GetStaticMeshComponent() const;
-
-    RActor& operator<<(const FJsonAsset& json);
-
-protected:
-    TObjectPtr<RStaticMeshComponent> StaticMeshComponent;
+    RComponent* AddComponent(RClass* Class);
 
 private:
     std::vector<RComponent*> Components;
@@ -47,18 +34,8 @@ private:
 template <typename TComponent>
 TComponent* RActor::AddComponent()
 {
-    TComponent* Component = ConstructObject<TComponent>();
-    AddComponent(Component);
-    return Component;
-}
-
-template <typename TComponent>
-TComponent* RActor::GetComponentOfClass() const
-{
-    return GetComponentOfClass(TComponent::StaticClass());
-}
-
-inline RStaticMeshComponent *RActor::GetStaticMeshComponent() const
-{
-    return StaticMeshComponent;
+    static_assert(std::is_base_of<RComponent, TComponent>::value, "TComponent must derive from RComponent.");
+    RComponent* BaseComponent = AddComponent(TComponent::StaticClass());
+    TComponent* NewComponent = static_cast<TComponent*>(BaseComponent);
+    return NewComponent;
 }

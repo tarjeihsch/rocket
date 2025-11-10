@@ -1,11 +1,6 @@
 #include "StaticMeshComponent.h"
 
-#include "EngineBase.h"
-#include "Scene.h"
-#include "../../Renderer/Public/SceneRenderer.h"
-#include "StaticMesh.h"
-
-RClass *RStaticMeshComponent::StaticClass()
+RClass* RStaticMeshComponent::StaticClass()
 {
     static RStaticMeshComponent Archetype;
 
@@ -14,40 +9,17 @@ RClass *RStaticMeshComponent::StaticClass()
     return &Class;
 }
 
-RStaticMeshComponent::RStaticMeshComponent()
-    : bDirty(false)
-{
-}
-
 const RClass *RStaticMeshComponent::GetClass() const
 {
     return StaticClass();
 }
 
-void RStaticMeshComponent::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-
-    if (bDirty)
-    {
-        OnMeshChanged();
-    }
-}
-
 void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)
 {
     StaticMesh = NewStaticMesh;
-
-    bDirty = true;
 }
 
 RStaticMesh *RStaticMeshComponent::GetStaticMesh() const
 {
     return StaticMesh;
-}
-
-void RStaticMeshComponent::OnMeshChanged()
-{
-    GEngine->GetScene()->UpdateSceneObjectGeometry(SceneObjectID, StaticMesh);
-    bDirty = false;
 }

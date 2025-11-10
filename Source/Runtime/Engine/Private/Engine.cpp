@@ -5,11 +5,12 @@
 #include "Viewport.h"
 #include "World.h"
 #include "CameraComponent.h"
-#include "Scene.h"
+#include "../../Renderer/Public/PrimitiveManager.h"
+#include "StaticMesh.h"
+#include "StaticMeshComponent.h"
 
 REngine::REngine()
-    : Scene(nullptr),
-    World(nullptr)
+    : World(nullptr)
 {
 }
 
@@ -17,14 +18,14 @@ void REngine::Start(REngineInitParams& InitParams)
 {
     Game = new RGame();
 
-    Scene = new RScene();
+    Renderer = new RRenderer();
 }
 
 void REngine::Tick(float DeltaTime)
 {
     World->Tick(DeltaTime);
 
-    Scene->RenderScene(DeltaTime);
+    Renderer->Render();
 }
 
 void REngine::Stop()
@@ -34,11 +35,6 @@ void REngine::Stop()
 RWorld* REngine::GetWorld() const
 {
     return World;
-}
-
-RScene* REngine::GetScene() const
-{
-    return Scene;
 }
 
 RGame *REngine::GetGame() const
@@ -54,12 +50,11 @@ void REngine::LoadWorld(const char *Path)
 
     // TEST BEGIN //
 
-    RActor* Actor = new RActor();
+    RStaticMesh* StaticMesh = new RStaticMesh("/home/acad/Workspace/Atlas/Content/Monkey.glb");
+    RActor* Actor = GetWorld()->SpawnActor(RActor::StaticClass());
     RCameraComponent* CamComp = Actor->AddComponent<RCameraComponent>();
-
-    RLocalPlayer* LocalPlayer = new RLocalPlayer();
-    Game->LocalPlayers.push_back(LocalPlayer);
-    LocalPlayer->GetCameraManager()->CameraComponent = CamComp;
+    RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
+    StaticMeshComponent->SetStaticMesh(StaticMesh);
 
     // TEST END //
 }

@@ -11,4 +11,7 @@ class RGame
 public:
     // Every LocalPlayer is tied to the duration of this game
     std::vector<RLocalPlayer*> LocalPlayers;
+
+    // One viewport represents one view into game world
+    RViewport* Viewport;
 };

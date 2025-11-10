@@ -1,4 +1,4 @@
-#include "../Public/GLFWWindow.h"
+#include "GLFWWindow.h"
 
 #include "Assert.h"
 #include "KeyCode.h"

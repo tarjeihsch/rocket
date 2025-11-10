@@ -9,15 +9,20 @@ class RCameraComponent : public RSceneComponent
     using Super = RSceneComponent;
 
 public:
-    RCameraComponent();
-
     static RClass* StaticClass();
 
-    virtual RClass* GetClass() const;
+    RCameraComponent();
 
-    LRenderView BuildRenderView() const;
+    virtual RClass* GetClass() const override;
+    virtual void PostConstruct() override;
+    virtual void Tick(float DeltaTime) override;
 
-private:
+protected:
+    void OnPropertyChanged();
+
+public:
+    uint64_t SceneViewID;
+
     float FovY;
 
     float AspectRatio;
@@ -25,4 +30,7 @@ private:
     float ZNear;
 
     float ZFar;
+
+private:
+    uint8_t bMarkedDirty : 1;
 };

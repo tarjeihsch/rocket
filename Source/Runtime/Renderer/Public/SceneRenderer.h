@@ -2,10 +2,10 @@
 
 #include "Renderer.h"
 
-class RSceneRenderer : public IRendererInterface
+class RSceneRenderer
 {
 public:
-    virtual void Init() override;
-    virtual void Shutdown() override;
-    virtual void Render(std::span<LSceneObject> View) override;
+    virtual void Init();
+    virtual void Shutdown();
+    virtual void Render(RViewport* Viewport);
 };

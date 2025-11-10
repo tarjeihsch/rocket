@@ -15,7 +15,7 @@ REditor::REditor()
 void REditor::Init()
 {
     // Create docking UI, tools, asset database
-    Renderer = new REditorRenderer();
+    //Renderer = new REditorRenderer();
 
     GameModule = new RModule("");
 }
@@ -24,7 +24,7 @@ void REditor::Tick(float DeltaTime)
 {
     // Draw Editor UI
 
-    Renderer->Tick(DeltaTime);
+    //Renderer->Render(DeltaTime);
 
     switch (Mode)
     {

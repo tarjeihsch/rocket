@@ -1,11 +1,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "glm/detail/type_quat.hpp"
 #include "glm/fwd.hpp"
 #include "glm/gtx/quaternion.hpp"
 
-#include <span>
+#include "Primitive.h"
 
 struct FRHIBuffer;
 
@@ -24,16 +23,17 @@ struct FPrimitiveMeshSection
     uint32_t M_VertexOffset = 0;
     uint32_t M_IndexOffset = 0;
 
-    glm::mat4 M_LocalMatrix;
+    glm::mat4 LocalMatrix;
 };
 
-class RStaticMesh
+class RStaticMesh : public RPrimitive
 {
 public:
     RStaticMesh(const char* InFilePath);
     ~RStaticMesh();
 
-    inline std::span<const FPrimitiveMeshSection> GetMeshSections() const;
+    virtual void Draw(FRHICommandList& CmdList) const override;
+
     inline FRHIBuffer* GetVertexBuffer() const;
     inline FRHIBuffer* GetIndexBuffer() const;
     inline uint32_t GetVertexCount() const;
@@ -44,7 +44,7 @@ private:
     void Shutdown();
 
 private:
-    std::vector<FPrimitiveMeshSection> M_Sections;
+    std::vector<FPrimitiveMeshSection> Sections;
 
     FRHIBuffer* M_VertexBuffer;
     FRHIBuffer* M_IndexBuffer;
@@ -55,11 +55,6 @@ private:
     // TODO: Handle hot-reloading of meshes
     const char* FilePath;
 };
-
-std::span<const FPrimitiveMeshSection> RStaticMesh::GetMeshSections() const
-{
-    return std::span(M_Sections);
-}
 
 inline FRHIBuffer* RStaticMesh::GetVertexBuffer() const
 {

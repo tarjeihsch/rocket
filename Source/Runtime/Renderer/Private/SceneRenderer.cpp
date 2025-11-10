@@ -14,7 +14,7 @@
 #include "KeyCode.h"
 #include "Pipeline.h"
 #include "RenderTarget.h"
-#include "Scene.h"
+#include "PrimitiveManager.h"
 #include "StaticMesh.h"
 #include "Transform.h"
 #include "Viewport.h"
@@ -22,31 +22,31 @@
 
 std::unique_ptr<FRHITexture> Texture;
 
-void RSceneRenderer::Init()
-{
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)1280, (float)720);
+//void RSceneRenderer::Init()
+//{
+//    ImGui::CreateContext();
+//    ImGuiIO& io = ImGui::GetIO();
+//    io.DisplaySize = ImVec2((float)1280, (float)720);
+//
+//    unsigned char* pixels;
+//    int width, height;
+//    ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+//
+//    Texture.reset(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0)));
+//
+//    GetRHI()->RHIUploadTextureBlocking(Texture.get(), pixels, width, height);
+//}
 
-    unsigned char* pixels;
-    int width, height;
-    ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
-    Texture.reset(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0)));
-
-    GetRHI()->RHIUploadTextureBlocking(Texture.get(), pixels, width, height);
-}
-
-static inline float  ImFloor(float f)                                           { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
-
-void RSceneRenderer::Render(std::span<LSceneObject> View)
+void RSceneRenderer::Render(RViewport* Viewport)
 {
     FFrameGraphBuilder Builder;
 
     FRenderTarget RenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
 
     FRHIPipelineDesc PipelineSpec = {};
-    PipelineSpec.PixelShaderPath = ROCKET_SRC "/Shader/FragmentShader.hlsl";
+    PipelineSpec.PixelShaderPath = ROCKET_SRC "/Shader/PixelShader.hlsl";
     PipelineSpec.VertexShaderPath = ROCKET_SRC "/Shader/VertexShader.hlsl";
     PipelineSpec.bDepthTestEnable = true;
     PipelineSpec.bDepthWriteEnable = true;
@@ -59,47 +59,41 @@ void RSceneRenderer::Render(std::span<LSceneObject> View)
     PipelineSpec.VertexAttributes.emplace_back(2, 0, ERHIFormat::Float2, offsetof(FRHIVertex, m_TexCoord));
     PipelineSpec.BlendAttachments.emplace_back(FRHIBlendAttachment(false, ERHIBlendFactor::SrcAlpha, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, ERHIBlendFactor::One, ERHIBlendFactor::Zero, ERHIBlendOp::Add, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)));
 
-    FPipeline Pipeline(PipelineSpec);
+    FRHIPipeline* Pipeline = GetRHI()->RHICreatePipelineStateObject(PipelineSpec);
     FAttachment DepthAttachment = FAttachment(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1], ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
 
     FFrameGraphPass& DrawPass = Builder.AddPass("Draw Static Mesh", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
     {
-        GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline.GetHandle());
-        for (RLocalPlayer* LocalPlayer : GEngine->GetGame()->LocalPlayers)
+        GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
+
+        FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+        CameraData.Write(Scene->GetViews()[0].ViewMatrix);
+        CameraData.Write(Scene->GetViews()[0].ProjectionMatrix);
+        std::shared_ptr<FRHIBuffer> CameraInterface_GPUBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
+
+        for (const LSceneProxy& Proxy : Scene->GetProxies())
         {
-            FRenderTarget RenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
-
-            // FIXME: Must either A) feed values or manually set them here for the duration of this test.
-            LRenderView RenderView = LocalPlayer->GetCameraManager()->BuildRenderView();
-
-            FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-            CameraData.Write(RenderView.GetViewMatrix());
-            CameraData.Write(RenderView.GetProjection());
-            std::shared_ptr<FRHIBuffer> CameraInterface_GPUBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
-
-            for (auto Proxy : View)
+            RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
+            for (const auto& Section : StaticMesh->GetMeshSections())
             {
-                RStaticMesh* StaticMesh = Proxy.Mesh;
-                FTransform* Transform = Proxy.;
-                for (const auto& Section : StaticMesh->GetMeshSections())
-                {
-                    const glm::mat4 ModelMatrix = Transform->ToMatrix() * Section.M_LocalMatrix;
-                    FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-                    ObjectData.Write(ModelMatrix);
-                    ObjectData.Write(glm::inverseTranspose(ModelMatrix));
-                    std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
-                    FRHIDrawCommand DrawCommand = {};
-                    DrawCommand.VertexBuffer = StaticMesh->GetVertexBuffer();
-                    DrawCommand.IndexBuffer = StaticMesh->GetIndexBuffer();
-                    DrawCommand.IndexCount = Section.M_IndexCount;
-                    DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
-                    DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
-                    DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
-                    FRHIDrawParams DrawParams = {};
-                    DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
-                    DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
-                    GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
-                }
+                FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+                ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
+                ObjectData.Write(Proxy.Transform.InverseModelMatrix);
+                std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
+
+                FRHIDrawCommand DrawCommand = {};
+                DrawCommand.VertexBuffer = StaticMesh->GetVertexBuffer();
+                DrawCommand.IndexBuffer = StaticMesh->GetIndexBuffer();
+                DrawCommand.IndexCount = Section.M_IndexCount;
+                DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
+                DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
+                DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
+
+                FRHIDrawParams DrawParams = {};
+                DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
+                DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
+
+                GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
             }
         }
     });

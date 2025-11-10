@@ -14,8 +14,8 @@
 #include "VulkanQueue.h"
 #include "VulkanResourceManager.h"
 #include "VulkanSampler.h"
+#include "VulkanSwapchain.h"
 #include "VulkanTexture.h"
-#include "VulkanViewport.h"
 
 #include <GLFW/glfw3.h>
 
@@ -146,7 +146,7 @@ void CVulkanRHI::Init()
         }
     }
 
-    Viewport = new FVulkanViewport(*Device);
+    Swapchain = new RVulkanSwapchain(*Device);
 
     FrameCounter = 0;
 }
@@ -155,10 +155,10 @@ void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
 
-    delete Viewport;
+    delete Swapchain;
     delete Device;
 
-    Viewport = nullptr;
+    Swapchain = nullptr;
     Device = nullptr;
 
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
@@ -170,13 +170,13 @@ void CVulkanRHI::Tick(float DeltaTime)
 
     Device->GetPresentQueue()->Submit();
 
-    Viewport->Present();
+    Swapchain->Present();
 
     Device->GetPresentQueue()->Wait();
 
     FrameCounter++;
 
-    Viewport->AcquireNextImageIndex();
+    Swapchain->AcquireNextImageIndex();
 
     Device->GC();
 }
@@ -199,6 +199,11 @@ ERHIInterfaceType CVulkanRHI::GetInterfaceType() const noexcept
 IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
 {
     return const_cast<CVulkanRHI*>(this);
+}
+
+RRHISwapchain* CVulkanRHI::GetSwapchain() const
+{
+    return Swapchain;
 }
 
 void CVulkanRHI::RHIWaitUntilIdle() const
@@ -298,12 +303,12 @@ void CVulkanRHI::RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCo
 
 FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
 {
-    return Viewport->GetBackBufferTexture();
+    return Swapchain->GetBackBufferTexture();
 }
 
 std::array<uint32_t, 2> CVulkanRHI::RHIGetViewportExtent() const
 {
-    return std::array<uint32_t, 2>{Viewport->GetFramebufferExtent().width, Viewport->GetFramebufferExtent().height};
+    return std::array<uint32_t, 2>{Swapchain->GetFramebufferExtent().width, Swapchain->GetFramebufferExtent().height};
 }
 
 void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
@@ -387,37 +392,37 @@ uint32_t CVulkanRHI::RHIGetPresentQueueFamilyIndex() const
 
 VkSurfaceKHR CVulkanRHI::RHIGetVkSurface() const
 {
-    return Viewport->GetVkSurface();
+    return Swapchain->GetVkSurface();
 }
 
 VkSwapchainKHR CVulkanRHI::RHIGetVkSwapchain() const
 {
-    return Viewport->GetVkSwapchain();
+    return Swapchain->GetVkSwapchain();
 }
 
 VkExtent2D CVulkanRHI::RHIGetSwapchainExtent() const
 {
-    return Viewport->GetFramebufferExtent();
+    return Swapchain->GetFramebufferExtent();
 }
 
 VkPresentModeKHR CVulkanRHI::RHIGetSwapchainPresentMode() const
 {
-    return Viewport->GetPresentMode();
+    return Swapchain->GetPresentMode();
 }
 
 VkSurfaceFormatKHR CVulkanRHI::RHIGetSwapchainSurfaceFormat() const
 {
-    return Viewport->GetSurfaceFormat();
+    return Swapchain->GetSurfaceFormat();
 }
 
 VkSemaphore CVulkanRHI::GetImageAcquiredSemaphore() const
 {
-    return Viewport->GetImageAcquiredSemaphore();
+    return Swapchain->GetImageAcquiredSemaphore();
 }
 
 VkSemaphore CVulkanRHI::GetRenderFinishedSemaphore() const
 {
-    return Viewport->GetRenderFinishedSemaphore();
+    return Swapchain->GetRenderFinishedSemaphore();
 }
 
 std::span<const char *> CVulkanRHI::GetValidationExtensions()
@@ -457,9 +462,9 @@ FVulkanDevice * CVulkanRHI::GetDevice() const
     return Device;
 }
 
-FVulkanViewport* CVulkanRHI::GetViewport() const
+RVulkanSwapchain* CVulkanRHI::GetViewport() const
 {
-    assert(Viewport != nullptr);
+    assert(Swapchain != nullptr);
 
-    return Viewport;
+    return Swapchain;
 }

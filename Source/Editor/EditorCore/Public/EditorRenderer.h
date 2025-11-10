@@ -2,10 +2,10 @@
 
 #include "Renderer.h"
 
-class REditorRenderer : public IRenderer
-{
-public:
-    virtual void Init() override;
-    virtual void Shutdown() override;
-    virtual void Tick(float DeltaTime) override;
-};
+//class REditorRenderer : public IRendererSystem
+//{
+//public:
+//    virtual void Init() override;
+//    virtual void Shutdown() override;
+//    virtual void Render(RViewport* Viewport) override;
+//};

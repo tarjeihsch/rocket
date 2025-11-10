@@ -1,16 +1,50 @@
 #pragma once
 
-#include <span>
+#include "glm/vec3.hpp"
+#include "glm/matrix.hpp"
 
-struct LSceneObject;
-class RViewport;
+#include <vector>
 
-class IRendererInterface
+struct FFrameGraphBuilder;
+class RMaterial;
+class RPrimitive;
+
+struct RTransform
+{
+    glm::vec3 Location;
+    glm::vec3 Rotation;
+    glm::vec3 Scale;
+};
+
+struct LDrawItem
+{
+    RPrimitive* Primitive;
+    RTransform* Transform;
+};
+
+struct LDrawView
+{
+    glm::mat4 ViewMatrix;
+    glm::mat4 ProjectionMatrix;
+};
+
+class RRenderer final
 {
 public:
-    virtual ~IRendererInterface() = default;
+    void AddItem(RPrimitive* Primitive, RMaterial* Material, RTransform* Transform);
+    void AddView();
 
-    virtual void Init() = 0;
-    virtual void Shutdown() = 0;
-    virtual void Render(std::span<LSceneObject> View) = 0;
+    void Render();
+
+protected:
+    void Render_Opaque_Internal(FFrameGraphBuilder& Builder);
+
+private:
+    std::vector<LDrawItem> ItemData;
+    std::vector<LDrawView> ViewData;
 };
+
+extern RRenderer* GRenderer;
+
+#define RENDERER_ENQUEUE_COMMAND(x) ...
+#define RENDERER_ENQUEUE_COMMAND_BATCH(x) ...

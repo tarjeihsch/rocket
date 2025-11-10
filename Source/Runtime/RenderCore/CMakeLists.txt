@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(RenderCore LANGUAGES CXX)
 
-add_library(RenderCore STATIC)
+add_library(RenderCore STATIC
+        Private/Primitive.cpp
+        Public/Primitive.h)
 add_library(Rocket::RenderCore ALIAS RenderCore)
 
 file(GLOB_RECURSE RENDERCORE_PUBLIC_HEADERS

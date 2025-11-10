@@ -1,35 +1,16 @@
 #pragma once
-#include "Player.h"
 
-class RViewport;
-class RActor;
-class RCameraComponent;
+#include <cstdint>
 
-struct LRenderView;
-
-// Responsible for creating a per-frame scene view from the current active camera
-struct RPlayerCameraManager
-{
-    //RActor* CameraActor;
-    RCameraComponent* CameraComponent;
-    void Target(RActor* NewCameraActor);
-
-    LRenderView BuildRenderView();
-};
+class RPlayer;
 
 class RLocalPlayer final
 {
 public:
     RLocalPlayer();
 
-    RPlayerCameraManager* GetCameraManager() const;
-    RPlayer* GetPlayer() const;
-    RViewport* GetViewport() const;
+    RPlayer* GetControlledPlayer() const;
 
 private:
-    RPlayerCameraManager* CameraManager;
-
-    RPlayer* Player;
-
-    RViewport* Viewport;
+    RPlayer* ControlledPlayer;
 };

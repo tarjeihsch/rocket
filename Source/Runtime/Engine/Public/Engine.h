@@ -6,10 +6,16 @@
 #include <span>
 #include <vector>
 
-class RScene;
+class RRenderer;
+class IRendererSystem;
+class RRenderProxyManager;
 class RViewport;
 class RSceneRenderer;
 class RWorld;
+
+// TODO: Later down the road, we will use the scene as the context when rendering.
+// Renderer->RenderScene(*Scene, EditorCameraView);
+// Renderer->RenderScene(*Scene, GameCameraView);
 
 class REngine : public IEngineBase
 {
@@ -22,11 +28,12 @@ public:
     virtual void LoadWorld(const char* Path) override;
     virtual void UnloadWorld() override;
     virtual RWorld* GetWorld() const override;
-    virtual RScene* GetScene() const override;
     virtual RGame* GetGame() const override;
 
 private:
-    RWorld* World;
     RGame* Game;
-    RScene* Scene;
+
+    RWorld* World;
+
+    RRenderer* Renderer;
 };

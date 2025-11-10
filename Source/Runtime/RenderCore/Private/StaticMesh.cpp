@@ -3,7 +3,9 @@
 #include "AssetManager.h"
 #include "Common/RHIBuffer.h"
 #include "Common/RHI.h"
+#include "Common/RHIDrawCommand.h"
 #include "MeshAsset.h"
+#include "Primitive.h"
 
 RStaticMesh::RStaticMesh(const char* InFilePath)
     : M_VertexBuffer(nullptr),
@@ -20,6 +22,33 @@ RStaticMesh::~RStaticMesh()
     Shutdown();
 }
 
+void RStaticMesh::Draw(FRHICommandList& RHICmdList, std::vector<FRHIBufferMemoryPacker>& Packers) const
+{
+    RPrimitive::Draw(RHICmdList);
+
+    for (const auto& Section : Sections)
+    {
+        FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+        ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
+        ObjectData.Write(Proxy.Transform.InverseModelMatrix);
+        std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
+
+        FRHIDrawCommand DrawCommand = {};
+        DrawCommand.VertexBuffer = M_VertexBuffer;
+        DrawCommand.IndexBuffer = M_IndexBuffer;
+        DrawCommand.IndexCount = Section.M_IndexCount;
+        DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
+        DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
+        DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
+
+        FRHIDrawParams DrawParams = {};
+        DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
+        DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
+
+        GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
+    }
+}
+
 void RStaticMesh::Init()
 {
     FAssetLoaderRequest Request = { FilePath };
@@ -33,12 +62,12 @@ void RStaticMesh::Init()
 
     for (const auto& Primitive : MeshAsset->Node.Primitives)
     {
-        FPrimitiveMeshSection& Section = M_Sections.emplace_back();
+        FPrimitiveMeshSection& Section = Sections.emplace_back();
         Section.M_IndexCount = Primitive.Indices.size();
         Section.M_VertexCount = Primitive.Vertices.size();
         Section.M_VertexOffset = M_VertexCount;
         Section.M_IndexOffset = M_IndexCount;
-        Section.M_LocalMatrix =
+        Section.LocalMatrix =
             glm::translate(glm::mat4(1.0f), Primitive.Translation) *
             glm::toMat4(glm::quat(glm::radians(Primitive.Rotation))) *
             glm::scale(glm::mat4(1.0f), Primitive.Scale);
