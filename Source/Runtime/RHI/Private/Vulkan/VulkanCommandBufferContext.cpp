@@ -1,6 +1,7 @@
 #include "VulkanCommandBufferContext.h"
 
 #include "VulkanCommandBuffer.h"
+#include <Assertion.h>
 
 FVulkanCommandBufferContext::FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool)
     : Pool(InPool),
@@ -54,7 +55,20 @@ void FVulkanCommandBufferContext::EndPayload()
     }
 }
 
-void FVulkanCommandBufferContext::Finalize(std::vector<FVulkanCommandBufferPayload*>& OutPayloads)
+bool FVulkanCommandBufferContext::ShouldFlush() const
+{
+    FVulkanCommandBufferPayload* Payload = Payloads.front();
+
+    if (Payload->CommandBuffers.empty())
+    {
+        // Permit flushing when we have something to write.
+        return false;
+    }
+
+    return true;
+}
+
+void FVulkanCommandBufferContext::Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads)
 {
     EndPayload();
 

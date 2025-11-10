@@ -15,7 +15,7 @@ REditor::REditor()
 void REditor::Init()
 {
     // Create docking UI, tools, asset database
-    //Renderer = new REditorRenderer();
+    Renderer = new REditorRenderer();
 
     GameModule = new RModule("");
 }
@@ -24,7 +24,7 @@ void REditor::Tick(float DeltaTime)
 {
     // Draw Editor UI
 
-    //Renderer->Render(DeltaTime);
+    Renderer->Render(nullptr);
 
     switch (Mode)
     {
@@ -39,6 +39,8 @@ void REditor::Tick(float DeltaTime)
         break;
     case EMode::Step:
         GEngine->Tick(1.0f / 60.0f);
+        break;
+    default:
         break;
     }
 }

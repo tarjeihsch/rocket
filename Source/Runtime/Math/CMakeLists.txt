@@ -20,7 +20,11 @@ file(GLOB_RECURSE MATH_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Private/*.cpp
 )
 
-target_sources(Math PRIVATE ${MATH_PRIVATE_SOURCES})
+target_sources(Math PRIVATE 
+    ${MATH_PUBLIC_HEADERS}
+    ${MATH_PRIVATE_HEADERS}
+    ${MATH_PRIVATE_SOURCES}
+)
 
 target_include_directories(Math
     PUBLIC

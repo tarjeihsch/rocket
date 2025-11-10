@@ -20,7 +20,11 @@ file(GLOB_RECURSE WINDOW_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Private/*.cpp
 )
 
-target_sources(Window PRIVATE ${WINDOW_PRIVATE_SOURCES})
+target_sources(Window PRIVATE 
+    ${WINDOW_PRIVATE_SOURCES}
+    ${WINDOW_PRIVATE_HEADERS}
+    ${WINDOW_PUBLIC_HEADERS}
+)
 
 target_include_directories(Window
     PUBLIC

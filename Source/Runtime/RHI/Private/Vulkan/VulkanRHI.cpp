@@ -166,6 +166,11 @@ void CVulkanRHI::Shutdown()
 
 void CVulkanRHI::Tick(float DeltaTime)
 {
+    if (!Device->GetCommandListContext()->ShouldFlush())
+    {
+        return;
+    }
+
     Device->GetDescriptorManager()->Flush();
 
     Device->GetPresentQueue()->Submit();

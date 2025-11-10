@@ -22,7 +22,11 @@ file(GLOB_RECURSE RENDERCORE_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/*.cpp
 )
 
-target_sources(RenderCore PRIVATE ${RENDERCORE_PRIVATE_SOURCES})
+target_sources(RenderCore PRIVATE 
+    ${RENDERCORE_PUBLIC_HEADERS}
+    ${RENDERCORE_PRIVATE_HEADERS}
+    ${RENDERCORE_PRIVATE_SOURCES}
+)
 
 target_include_directories(RenderCore
     PUBLIC

@@ -53,7 +53,9 @@ public:
 
     void NewPayload();
     void EndPayload();
-    void Finalize(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
+    
+    bool ShouldFlush() const;
+    void Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
 
     void AddWaitSemaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
     void AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);

@@ -31,7 +31,7 @@ void FVulkanQueue::Submit()
     std::vector<FVulkanCommandBufferPayload*> Payloads;
     
     FVulkanCommandListContext* CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
-    CmdListContext->Finalize(Payloads);
+    CmdListContext->Flush(Payloads);
 
     for (FVulkanCommandBufferPayload *Payload : Payloads)
     {
@@ -115,7 +115,7 @@ void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)>
     FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
 
     std::vector<FVulkanCommandBufferPayload*> Payloads;
-    CmdListContext.Finalize(Payloads);
+    CmdListContext.Flush(Payloads);
 
     for (FVulkanCommandBufferPayload* Payload : Payloads)
     {

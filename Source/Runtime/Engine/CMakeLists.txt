@@ -20,7 +20,11 @@ file(GLOB_RECURSE ENGINE_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Private/*.cpp
 )
 
-target_sources(Engine PRIVATE ${ENGINE_PRIVATE_SOURCES})
+target_sources(Engine PRIVATE 
+    ${ENGINE_PUBLIC_HEADERS}
+    ${ENGINE_PRIVATE_HEADERS}
+    ${ENGINE_PRIVATE_SOURCES}
+)
 
 target_include_directories(Engine
     PUBLIC
@@ -40,4 +44,4 @@ target_link_libraries(Engine
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 
-set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(Engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
