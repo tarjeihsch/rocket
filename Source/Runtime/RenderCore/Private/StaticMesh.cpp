@@ -22,15 +22,15 @@ RStaticMesh::~RStaticMesh()
     Shutdown();
 }
 
-void RStaticMesh::Draw(FRHICommandList& RHICmdList, std::vector<FRHIBufferMemoryPacker>& Packers) const
+void RStaticMesh::Draw(FRHICommandList& RHICmdList) const
 {
     RPrimitive::Draw(RHICmdList);
 
     for (const auto& Section : Sections)
     {
         FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-        ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
-        ObjectData.Write(Proxy.Transform.InverseModelMatrix);
+        //ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
+        //ObjectData.Write(Proxy.Transform.InverseModelMatrix);
         std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
 
         FRHIDrawCommand DrawCommand = {};
@@ -42,8 +42,8 @@ void RStaticMesh::Draw(FRHICommandList& RHICmdList, std::vector<FRHIBufferMemory
         DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
 
         FRHIDrawParams DrawParams = {};
-        DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
-        DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
+        //DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
+        //DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
 
         GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
     }

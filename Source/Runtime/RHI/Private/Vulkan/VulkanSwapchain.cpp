@@ -1,6 +1,6 @@
 #include "VulkanSwapchain.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"

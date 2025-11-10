@@ -52,7 +52,7 @@ void RRenderer::Render_Opaque_Internal(FFrameGraphBuilder& Builder)
 
             for (const LDrawItem& Item : ItemData)
             {
-                Item.Primitive->Draw(RHICmdList, ViewBuffer, Item.Transform);
+                Item.Primitive->Draw(RHICmdList);
             }
         }
     });

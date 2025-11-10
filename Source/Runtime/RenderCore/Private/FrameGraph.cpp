@@ -6,8 +6,6 @@
 
 #include <cassert>
 
-extern RFrameGraph* GFrameGraph = nullptr;
-
 FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture *InHandle)
     : FFGResourceRef(InAccess), Handle(InHandle)
 {

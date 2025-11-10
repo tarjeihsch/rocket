@@ -1,6 +1,6 @@
 #include "ShaderAsset.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 
 #ifdef RK_PLATFORM_LINUX
     #include <dlfcn.h>

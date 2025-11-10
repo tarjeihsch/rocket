@@ -4,7 +4,7 @@
 #include "VulkanQueue.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
-#include "Assert.h"
+#include "Assertion.h"
 
 FVulkanCommandBuffer::FVulkanCommandBuffer(FVulkanCommandBufferPool& InPool)
     : Pool(InPool),

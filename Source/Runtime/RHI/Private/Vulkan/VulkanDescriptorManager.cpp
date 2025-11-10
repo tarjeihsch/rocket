@@ -2,7 +2,7 @@
 
 #include "VulkanLoader.h"
 #include "VulkanDevice.h"
-#include "Assert.h"
+#include "Assertion.h"
 
 static VkDescriptorSetLayoutBinding MakeBinding(uint32_t pBinding, VkDescriptorType pType, VkShaderStageFlags pStages, uint32_t pCount)
 {

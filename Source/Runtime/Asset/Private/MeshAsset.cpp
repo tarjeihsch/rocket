@@ -11,7 +11,7 @@
 
 #include <tiny_gltf.h>
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "glm/fwd.hpp"
 
 FMeshAsset TAssetLoader<FMeshAsset, FMeshAssetOptions>::Load(const FAssetLoaderRequest &p_Request, const FMeshAssetOptions &p_Options)
