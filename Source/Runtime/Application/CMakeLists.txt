@@ -36,10 +36,6 @@ target_link_libraries(Application
     PRIVATE -Wl,--export-dynamic
 )
 
-add_custom_command(TARGET Application
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${CMAKE_BINARY_DIR}/compile_commands.json
-    ${CMAKE_BINARY_DIR}/../compile_commands.json
-    COMMENT "Copying compile_commands.json to project root"
-)
+if (EXISTS ${CMAKE_BINARY_DIR}/compile_commands.json)
+    file(COPY ${CMAKE_BINARY_DIR}/compile_commands.json DESTINATION ${CMAKE_SOURCE_DIR})
+endif()

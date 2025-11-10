@@ -10,7 +10,7 @@
 class IRHICommandListContext;
 class FRHICommandList;
 class FVulkanDevice;
-class FVulkanCommandBufferPayload;
+struct FVulkanCommandBufferPayload;
 class FVulkanCommandBufferPool;
 class FVulkanCommandBufferContext;
 class FVulkanCommandBuffer;

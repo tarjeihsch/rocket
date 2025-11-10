@@ -28,8 +28,9 @@ FVulkanQueue::~FVulkanQueue()
 
 void FVulkanQueue::Submit()
 {
-    std::vector<FVulkanCommandBufferPayload *> Payloads;
-    auto CmdListContext = static_cast<FVulkanCommandListContext *>(GetRHI()->GetCommandListContext());
+    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    
+    FVulkanCommandListContext* CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
     CmdListContext->Finalize(Payloads);
 
     for (FVulkanCommandBufferPayload *Payload : Payloads)

@@ -6,7 +6,9 @@
 #include "Module.h"
 #include "../../Renderer/Public/PrimitiveManager.h"
 
+#ifdef RK_PLATFORM_LINUX
 #include <dlfcn.h>
+#endif
 
 RActor *RWorld::SpawnActor(RClass *Class)
 {

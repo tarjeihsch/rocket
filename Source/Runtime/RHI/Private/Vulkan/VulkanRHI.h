@@ -3,6 +3,7 @@
 #include "Vulkan/VulkanRHIMinimal.h"
 
 #include "vector"
+#include <array>
 #include "Common/RHIDrawCommand.h"
 
 struct FRHITextureView;

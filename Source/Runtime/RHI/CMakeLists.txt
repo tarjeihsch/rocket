@@ -40,4 +40,4 @@ target_link_libraries(RHI
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 
-set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(RHI PROPERTIES POSITION_INDEPENDENT_CODE ON)
