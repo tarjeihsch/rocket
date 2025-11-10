@@ -33,6 +33,7 @@ target_include_directories(EditorCore
 target_link_libraries(EditorCore
 	PUBLIC Rocket::Core
     PUBLIC Rocket::Engine
+	PUBLIC Rocket::Renderer
 )
 
 set_target_properties(EditorCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
