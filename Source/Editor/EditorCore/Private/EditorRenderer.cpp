@@ -16,6 +16,8 @@
 
 static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
+void DrawEditorUI();
+
 REditorRenderer::REditorRenderer()
 {
 	Init();
@@ -31,7 +33,9 @@ void REditorRenderer::Init()
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize = ImVec2((float)1280, (float)720);
-	
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
 	unsigned char* pixels;
 	int width, height;
 	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -71,7 +75,7 @@ void REditorRenderer::Render(float DeltaTime)
 	io.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
 
 	ImGui::NewFrame();
-	ImGui::ShowDemoWindow(&a);
+	DrawEditorUI();
 	ImGui::Render();
 	ImDrawData* DrawData = ImGui::GetDrawData();
 
@@ -90,7 +94,8 @@ void REditorRenderer::Render(float DeltaTime)
 
 	FPipeline ImGuiPipeline = FPipeline(ImGuiPipelineDesc);
 
-	FFrameGraphPass& ImGuiPass = Builder.AddPass("ImGui", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+	//FFrameGraphPass& ImGuiPass = Builder.AddPass("ImGui", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
+	FFrameGraphPass & ImGuiPass = Builder.AddPass("ImGui", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
 	{
 		GetRHI()->RHICmdBindPipeline(RHICmdList, ImGuiPipeline.GetHandle());
 
@@ -211,4 +216,58 @@ void REditorRenderer::Render(float DeltaTime)
 	// This should be a unified call done by FrameGraph itself, not the builder.
 	// Should take all the builder's and combine them. (eg. Editor, Game)
 	Builder.Execute();
+}
+
+void DrawEditorUI()
+{
+	static bool dockspaceOpen = true;
+	static bool opt_fullscreen = true;
+	static bool opt_padding = false;
+	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	if (opt_fullscreen)
+	{
+		const ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(viewport->WorkPos);
+		ImGui::SetNextWindowSize(viewport->WorkSize);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	}
+
+	if (!opt_padding) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("MainDockspace", &dockspaceOpen, window_flags);
+	if (!opt_padding) ImGui::PopStyleVar();
+
+	if (opt_fullscreen) ImGui::PopStyleVar(2);
+
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+	{
+		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+	}
+
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit")) {}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+
+	ImGui::Begin("Left Panel");
+	ImGui::End();
+
+	ImGui::Begin("Right Panel");
+	ImGui::End();
+
+	ImGui::Begin("Game Viewport");
+	ImGui::End();
+
+	ImGui::End();
 }
