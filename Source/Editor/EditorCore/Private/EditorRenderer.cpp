@@ -196,7 +196,7 @@ void REditorRenderer::Render(float DeltaTime)
 	});
 	ImGuiPass.AddColorAttachment(RenderTarget.GetHandle());
 
-
+	assert(GetRHI()->RHIGetBackBufferRenderTarget());
 
 	// These lines should be covered by the Execute function itself. Should not have to specify the composition and present passes manually.
 	FFrameGraphPass& CompositionPass = Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)

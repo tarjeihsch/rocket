@@ -171,6 +171,7 @@ bool RVulkanSwapchain::AcquireNextImageIndex()
     {
         DestroySwapchain();
         CreateSwapchain();
+		AcquireNextImageIndex();
     }
 
     ++NumAcquireCalls;
@@ -220,6 +221,7 @@ void RVulkanSwapchain::DestroySwapchain()
     }
 
     Backbuffer.clear();
+    BackbufferView.clear();
     ImageAcquiredSemaphores.clear();
     RenderFinishedSemaphores.clear();
 
