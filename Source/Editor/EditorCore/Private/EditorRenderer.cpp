@@ -48,9 +48,11 @@ void REditorViewportClient::Init()
 	
 	//ImGui_FontAtlas = GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0));
 	ImGui_FontAtlas = std::make_unique<RTexture2D>(Width, Height);
-	ImGui_FontAtlas->UploadData(Data);
+	ImGui_FontAtlas->UploadImage(Data);
 
 	IO.Fonts->SetTexID((ImTextureID)ImGui_FontAtlas->GetHandle());
+
+	RenderTarget_SceneViewport.reset(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(Width, Height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0)));
 }
 
 void REditorViewportClient::Shutdown()
@@ -62,7 +64,15 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	FRenderTarget EditorViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
 	FRenderTarget SceneViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
 
-	// Transient GPU resources
+	FFrameGraphPass& SceneColorPass = Ctx.Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, 
+		[&](FRHICommandList& RHICmdList)
+		{
+
+		});
+	SceneColorPass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
+	
+	/* ---- Begin ImGUI ---- */
+
 	std::unique_ptr<FRHIBuffer> VertexBuffer;
 	std::unique_ptr<FRHIBuffer> IndexBuffer;
 	std::unique_ptr<FRHITextureView> TextureView;
@@ -129,8 +139,8 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	ImGui::Begin("Right Panel");
 	ImGui::End();
 
-	ImGui::Begin("Game Viewport");
-	//ImGui::Image((ImTextureID)GameViewportTexture, ImGui::GetContentRegionAvail());
+	ImGui::Begin("Scene Viewport");
+	ImGui::Image((ImTextureID)SceneViewportRenderTarget.GetHandle(), ImGui::GetContentRegionAvail());
 	ImGui::End();
 
 	ImGui::End();
@@ -256,28 +266,17 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	});
 	UIPass.AddColorAttachment(EditorViewportRenderTarget.GetHandle());
 
-// 	FFrameGraphPass& OpaquePass = Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
-// 	{
-// 		
-// 	});
-// 	OpaquePass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
-// 
-// 
-// 	FFrameGraphPass& SceneCompositionPass = Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
-// 	{
-// 		GetRHI()->RHICmdBlitImage(RHICmdList, SceneViewportRenderTarget.GetHandle(), GameViewportTexture);
-// 	});
-// 
-// 	SceneCompositionPass.AddTransferSrc(SceneViewportRenderTarget.GetHandle());
-// 	SceneCompositionPass.AddTransferDst(GameViewportTexture);
-
 	// These lines should be covered by the Execute function itself. Should not have to specify the composition and present passes manually.
-	FFrameGraphPass& CompositionPass = Ctx.Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
-	{
-		GetRHI()->RHICmdBlitImage(RHICmdList, EditorViewportRenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
-	});
+	FFrameGraphPass& CompositionPass = Ctx.Builder.AddPass("Composition", EFGPassFlags::Compute, 
+		[&](FRHICommandList& RHICmdList)
+		{
+			GetRHI()->RHICmdBlitImage(RHICmdList, EditorViewportRenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
+			GetRHI()->RHICmdBlitImage(RHICmdList, SceneViewportRenderTarget.GetHandle(), RenderTarget_SceneViewport.get());
+		});
 
 	CompositionPass.AddTransferSrc(EditorViewportRenderTarget.GetHandle());
+	CompositionPass.AddTransferSrc(SceneViewportRenderTarget.GetHandle());
+	CompositionPass.AddTransferDst(RenderTarget_SceneViewport.get());
 	CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
 
 	FFrameGraphPass& PresentPass = Ctx.Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);

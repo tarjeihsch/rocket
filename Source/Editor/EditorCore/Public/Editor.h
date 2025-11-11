@@ -5,6 +5,7 @@
 class RModule;
 class RViewport;
 class REditorViewportClient;
+class RLevelEditorViewportClient;
 
 class REditor final : public IEditorBase
 {
@@ -27,5 +28,7 @@ private:
 
     RViewport* Viewport;
 
-    REditorViewportClient* ViewportClient;
+    REditorViewportClient* EditorViewportClient;
+
+    RLevelEditorViewportClient* LevelEditorViewportClient;
 };

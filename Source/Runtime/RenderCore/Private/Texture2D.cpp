@@ -25,7 +25,7 @@ RTexture2D::~RTexture2D()
     delete Handle;
 }
 
-void RTexture2D::UploadData(const uint8_t* Data)
+void RTexture2D::UploadImage(const uint8_t* Data)
 {
     GetRHI()->RHIUploadTextureBlocking(Handle, Data, Width, Height);
 }

@@ -15,7 +15,7 @@ struct RTexture2D
 
     inline FRHITexture* GetHandle() const;
 
-    void UploadData(const uint8_t* Data);
+    void UploadImage(const uint8_t* Data);
 
 private:
     FRHITexture* Handle;

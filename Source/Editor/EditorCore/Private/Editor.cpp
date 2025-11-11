@@ -18,7 +18,7 @@ void REditor::Init()
     // Create docking UI, tools, asset database
     Viewport = new RViewport();
 
-    ViewportClient = new REditorViewportClient();
+    EditorViewportClient = new REditorViewportClient();
 
     ScriptClientModule = new RModule("");
 }
@@ -27,7 +27,7 @@ void REditor::Tick(float DeltaTime)
 {
     // Draw Editor UI
 
-    Viewport->Update(ViewportClient, DeltaTime);
+    Viewport->Update(EditorViewportClient, DeltaTime);
 
     switch (Mode)
     {

@@ -21,5 +21,5 @@ FRenderTarget::FRenderTarget(uint32_t Width, uint32_t Height)
 
 FRenderTarget::~FRenderTarget()
 {
-    delete Handle;
+    //delete Handle;
 }

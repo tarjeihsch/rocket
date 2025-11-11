@@ -59,8 +59,8 @@ void RViewport::Shutdown()
 void RViewport::Update(RViewportClient* ViewportClient, float DeltaTime)
 {
     RFrameContext FrameCtx = {};
-    FrameCtx.ViewportWidth = 1280;
-    FrameCtx.ViewportHeight = 720;
+    FrameCtx.ViewportWidth = GetRHI()->RHIGetViewportExtent()[0];
+    FrameCtx.ViewportHeight = GetRHI()->RHIGetViewportExtent()[1];
     FrameCtx.Timestep = DeltaTime;
 
     ViewportClient->Draw(FrameCtx);

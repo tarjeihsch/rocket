@@ -118,6 +118,8 @@ struct FFrameGraphBuilder
 
     void Execute();
 
+    void Present(FRHITexture* Present);
+
 private:
     void AddFirstTextureTransition(FFGTextureRef TextureRef);
     void AddLastTextureTransition(FFGTextureRef TextureRef);

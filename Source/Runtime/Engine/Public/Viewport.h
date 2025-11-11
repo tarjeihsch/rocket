@@ -79,7 +79,6 @@ struct RFrameContext
 {
     float ViewportWidth;
     float ViewportHeight;
-    
     float Timestep;
 
 	FFrameGraphBuilder Builder;

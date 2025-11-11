@@ -35,6 +35,7 @@ public:
     void AddView();
 
     void Render();
+    //void Render(RWorld* World, RCamera* Camera);
 
 protected:
     void Render_Opaque_Internal(FFrameGraphBuilder& Builder);
