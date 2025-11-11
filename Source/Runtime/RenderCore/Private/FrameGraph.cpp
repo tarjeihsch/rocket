@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+RFrameGraph* GFrameGraph = nullptr;
+
 FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture *InHandle)
     : FFGResourceRef(InAccess), Handle(InHandle)
 {
@@ -62,14 +64,6 @@ void FFrameGraphPass::AddTransferDst(FRHITexture* Resource)
 void FFrameGraphPass::AddPresentSrc(FRHITexture* Resource)
 {
     TextureWrites.push_back({ERHIResourceAccess::Presentation, Resource});
-}
-
-FFrameGraphBuilder::FFrameGraphBuilder()
-{
-}
-
-FFrameGraphBuilder::~FFrameGraphBuilder()
-{
 }
 
 FFrameGraphPass& FFrameGraphBuilder::AddPass(const char *DebugName, EFGPassFlags Flags, std::function<void(FRHICommandList &CmdList)> &&Callback)

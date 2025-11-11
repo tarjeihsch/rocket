@@ -6,7 +6,7 @@
 #include <span>
 #include <vector>
 
-class RRenderer;
+class RSceneRenderer;
 class IRendererSystem;
 class RRenderProxyManager;
 class RViewport;
@@ -35,5 +35,5 @@ private:
 
     RWorld* World;
 
-    RRenderer* Renderer;
+    RSceneRenderer* Renderer;
 };

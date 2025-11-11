@@ -28,7 +28,7 @@ struct LDrawView
     glm::mat4 ProjectionMatrix;
 };
 
-class RRenderer final
+class RSceneRenderer final
 {
 public:
     void AddItem(RPrimitive* Primitive, RMaterial* Material, RTransform* Transform);
@@ -44,7 +44,7 @@ private:
     std::vector<LDrawView> ViewData;
 };
 
-extern RRenderer* GRenderer;
+extern RSceneRenderer* GRenderer;
 
 #define RENDERER_ENQUEUE_COMMAND(x) ...
 #define RENDERER_ENQUEUE_COMMAND_BATCH(x) ...

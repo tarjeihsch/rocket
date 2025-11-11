@@ -24,7 +24,7 @@ void REditor::Tick(float DeltaTime)
 {
     // Draw Editor UI
 
-    Renderer->Render(nullptr);
+    Renderer->Render(DeltaTime);
 
     switch (Mode)
     {

@@ -7,9 +7,9 @@
 #include "Common/RHI.h"
 #include "Common/RHIBuffer.h"
 
-RRenderer* GRenderer = nullptr;
+RSceneRenderer* GRenderer = nullptr;
 
-void RRenderer::AddItem(RPrimitive *Primitive, RMaterial *Material, RTransform *Transform)
+void RSceneRenderer::AddItem(RPrimitive *Primitive, RMaterial *Material, RTransform *Transform)
 {
     LDrawItem DrawCommand = {};
     DrawCommand.Primitive = Primitive;
@@ -17,7 +17,7 @@ void RRenderer::AddItem(RPrimitive *Primitive, RMaterial *Material, RTransform *
     ItemData.push_back(DrawCommand);
 }
 
-void RRenderer::Render()
+void RSceneRenderer::Render()
 {
     FFrameGraphBuilder Builder;
 
@@ -39,7 +39,7 @@ void RRenderer::Render()
     Builder.Execute();
 }
 
-void RRenderer::Render_Opaque_Internal(FFrameGraphBuilder& Builder)
+void RSceneRenderer::Render_Opaque_Internal(FFrameGraphBuilder& Builder)
 {
     Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
     {

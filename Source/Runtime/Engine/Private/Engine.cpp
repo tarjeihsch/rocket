@@ -18,7 +18,7 @@ void REngine::Start(REngineInitParams& InitParams)
 {
     Game = new RGame();
 
-    Renderer = new RRenderer();
+    Renderer = new RSceneRenderer();
 }
 
 void REngine::Tick(float DeltaTime)

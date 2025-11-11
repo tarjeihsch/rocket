@@ -114,9 +114,6 @@ struct FFrameGraphPass
 
 struct FFrameGraphBuilder
 {
-    FFrameGraphBuilder();
-    ~FFrameGraphBuilder();
-
     FFrameGraphPass& AddPass(const char* DebugName, EFGPassFlags Flags, std::function<void(FRHICommandList& CmdList)>&& Callback);
 
     void Execute();
@@ -128,3 +125,10 @@ private:
 private:
     std::vector<FFrameGraphPass> Passes;
 };
+
+class RFrameGraph
+{
+
+};
+
+extern class RFrameGraph* GFrameGraph;
