@@ -6,18 +6,24 @@
 
 struct FRHITexture;
 
-struct FTexture2D
+// Read-only texture memory
+
+struct RTexture2D
 {
-    FTexture2D(uint32_t Width, uint32_t Height);
-    ~FTexture2D();
+    RTexture2D(uint32_t Width, uint32_t Height);
+    ~RTexture2D();
 
     inline FRHITexture* GetHandle() const;
 
+    void UploadData(const uint8_t* Data);
+
 private:
     FRHITexture* Handle;
+    uint32_t Width;
+    uint32_t Height;
 };
 
-inline FRHITexture* FTexture2D::GetHandle() const
+inline FRHITexture* RTexture2D::GetHandle() const
 {
     return Handle;
 }

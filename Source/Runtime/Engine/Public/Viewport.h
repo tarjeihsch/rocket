@@ -6,8 +6,10 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/fwd.hpp"
 #include "glm/vec3.hpp"
+#include "FrameGraph.h"
 
 struct FRenderTarget;
+class IRenderer;
 
 enum class ERenderViewProjectionMode
 {
@@ -53,7 +55,8 @@ struct LRenderView
     glm::mat4 GetProjection() const;
 };
 
-class RRHISwapchain;
+class FRHITexture;
+class RViewportClient;
 
 // Rendering, audio, input systems
 class RViewport
@@ -62,12 +65,28 @@ public:
     RViewport();
     ~RViewport();
 
-    FRenderTarget* GetRenderTarget() const;
+    void Update(RViewportClient* ViewportClient, float DeltaTime);
 
 private:
     void Init();
     void Shutdown();
-
+    
 private:
-    FRenderTarget* RenderTarget;
+    FRHITexture* RenderTarget;
+};
+
+struct RFrameContext
+{
+    float ViewportWidth;
+    float ViewportHeight;
+    
+    float Timestep;
+
+	FFrameGraphBuilder Builder;
+};
+
+class RViewportClient
+{
+public:
+	virtual void Draw(RFrameContext& Context) = 0;
 };

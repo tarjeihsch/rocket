@@ -2,12 +2,14 @@
 
 #include "Common/RHISwapchain.h"
 #include "VulkanResourceManager.h"
-#include "VulkanTexture.h"
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include <memory>
 
 class FVulkanDevice;
+struct FVulkanTexture;
+struct FVulkanTextureView;
 
 class RVulkanSwapchain : public RRHISwapchain
 {
@@ -30,8 +32,9 @@ public:
     inline VkSurfaceFormatKHR GetSurfaceFormat() const;
     inline VkSemaphore GetImageAcquiredSemaphore() const;
     inline VkSemaphore GetRenderFinishedSemaphore() const;
-    inline VkImage GetImage() const;
-    inline VkImageView GetImageView() const;
+    
+    VkImage GetImage() const;
+    VkImageView GetImageView() const;
 
 private:
     void CreateSwapchain();
@@ -44,8 +47,8 @@ private:
     VkPresentModeKHR PresentMode;
     VkSurfaceFormatKHR SurfaceFormat;
 
-    std::vector<FVulkanTexture*> Backbuffer;
-    std::vector<FVulkanTextureView*> BackbufferView;
+    std::vector<std::unique_ptr<FVulkanTexture>> Backbuffer;
+    std::vector<std::unique_ptr<FVulkanTextureView>> BackbufferView;
 
     std::vector<VkSemaphore> ImageAcquiredSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
@@ -89,14 +92,4 @@ inline VkSemaphore RVulkanSwapchain::GetImageAcquiredSemaphore() const
 inline VkSemaphore RVulkanSwapchain::GetRenderFinishedSemaphore() const
 {
     return RenderFinishedSemaphores[CurrentImageIndex];
-}
-
-inline VkImage RVulkanSwapchain::GetImage() const
-{
-    return Backbuffer[CurrentImageIndex]->Image;
-}
-
-inline VkImageView RVulkanSwapchain::GetImageView() const
-{
-    return BackbufferView[CurrentImageIndex]->ImageView;
 }

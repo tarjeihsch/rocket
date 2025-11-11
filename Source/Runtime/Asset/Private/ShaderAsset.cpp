@@ -20,11 +20,11 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
 
 #ifdef RK_PLATFORM_LINUX
     void* DxcLibHandle = dlopen(ROCKET_BINARIES "/ThirdParty/Vulkan/lib/libdxcompiler.so", RTLD_LAZY);
-    RK_ASSERT(DxcLibHandle, "Failed to dynamically load DXC library (Ensure DXC is installed and environment is set).");
+    ensure(DxcLibHandle, "Failed to dynamically load DXC library (Ensure DXC is installed and environment is set).");
 
     using DxcCreateInstanceProc = HRESULT(__stdcall*)(const IID&, const IID&, void**);
     auto DxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>(dlsym(DxcLibHandle, "DxcCreateInstance"));
-    RK_ASSERT(DxcCreateInstance, "Failed to locate DxcCreateInstance function address.");
+    ensure(DxcCreateInstance, "Failed to locate DxcCreateInstance function address.");
 
     CComPtr<IDxcBlob> ShaderBlob;
     CComPtr<IDxcCompiler> Compiler;
@@ -35,15 +35,15 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
 
     // Create the DXC library instance
     HRESULT Result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&Compiler));
-    RK_ASSERT(!FAILED(Result), "Failed to create DXC Library instance.");
+    ensure(!FAILED(Result), "Failed to create DXC Library instance.");
 
     // Create the DXC compiler instance
     Result = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&Library));
-    RK_ASSERT(!FAILED(Result), "Failed to create DXC Compiler instance.");
+    ensure(!FAILED(Result), "Failed to create DXC Compiler instance.");
 
     // Load and encode the shader source file
     Result = Library->CreateBlobFromFile(std::wstring(pRequest.Path.begin(), pRequest.Path.end()).c_str(), nullptr, &SourceBlob);
-    RK_ASSERT(!FAILED(Result), "Failed to load shader source file.");
+    ensure(!FAILED(Result), "Failed to load shader source file.");
 
     std::wstring TargetProfileW(pOptions.TargetProfile.begin(), pOptions.TargetProfile.end());
     std::vector<LPCWSTR> Arguments;
@@ -59,11 +59,11 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
     Result = Compiler->Compile(
             SourceBlob, std::wstring(pRequest.Path.begin(), pRequest.Path.end()).c_str(), std::wstring(pOptions.EntryPoint.begin(), pOptions.EntryPoint.end()).c_str(),
             TargetProfileW.c_str(),Arguments.data(), Arguments.size(), nullptr, 0, nullptr, &OperationResult);
-    RK_ASSERT(!FAILED(Result), "Shader compilation failed.");
+    ensure(!FAILED(Result), "Shader compilation failed.");
 
     HRESULT CompileStatus;
     Result = OperationResult->GetStatus(&CompileStatus);
-    RK_ASSERT(!FAILED(Result), "Undefined compile status.");
+    ensure(!FAILED(Result), "Undefined compile status.");
 
     if (FAILED(CompileStatus))
     {
@@ -77,7 +77,7 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
     }
 
     Result = OperationResult->GetResult(&ShaderBlob);
-    RK_ASSERT(!FAILED(Result), "Unable to retrieve compiled shader.");
+    ensure(!FAILED(Result), "Unable to retrieve compiled shader.");
 
     const size_t ByteSize = ShaderBlob->GetBufferSize();
     const size_t WordCount = ByteSize / sizeof(uint32_t);
@@ -98,13 +98,13 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
 
 #ifdef RK_PLATFORM_WINDOWS
     HMODULE DxcLibHandle = LoadLibraryW(ROCKET_BINARIES L"/ThirdParty/Vulkan/lib/dxcompiler.dll");
-    RK_ASSERT(DxcLibHandle, "Failed to load dxcompiler.dll (make sure DXC is installed or bundled).");
+    ensure(DxcLibHandle, "Failed to load dxcompiler.dll (make sure DXC is installed or bundled).");
 
     using DxcCreateInstanceProc = HRESULT(__stdcall*)(REFCLSID, REFIID, LPVOID*);
     auto DxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>(
         GetProcAddress(DxcLibHandle, "DxcCreateInstance")
     );
-    RK_ASSERT(DxcCreateInstance, "Failed to locate DxcCreateInstance in dxcompiler.dll.");
+    ensure(DxcCreateInstance, "Failed to locate DxcCreateInstance in dxcompiler.dll.");
 
     ComPtr<IDxcCompiler> Compiler;
     ComPtr<IDxcLibrary> Library;
@@ -113,10 +113,10 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
     ComPtr<IDxcBlob> ShaderBlob;
 
     HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&Compiler));
-    RK_ASSERT(SUCCEEDED(hr), "Failed to create DXC Compiler instance.");
+    ensure(SUCCEEDED(hr), "Failed to create DXC Compiler instance.");
 
     hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&Library));
-    RK_ASSERT(SUCCEEDED(hr), "Failed to create DXC Library instance.");
+    ensure(SUCCEEDED(hr), "Failed to create DXC Library instance.");
 
     // Load HLSL source file
     hr = Library->CreateBlobFromFile(
@@ -124,7 +124,7 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
         nullptr,
         &SourceBlob
     );
-    RK_ASSERT(SUCCEEDED(hr), "Failed to load shader source file.");
+    ensure(SUCCEEDED(hr), "Failed to load shader source file.");
 
     std::wstring TargetProfileW(pOptions.TargetProfile.begin(), pOptions.TargetProfile.end());
     std::vector<LPCWSTR> Arguments {
@@ -147,11 +147,11 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
         nullptr,
         &OperationResult
     );
-    RK_ASSERT(SUCCEEDED(hr), "Shader compilation failed.");
+    ensure(SUCCEEDED(hr), "Shader compilation failed.");
 
     HRESULT status;
     hr = OperationResult->GetStatus(&status);
-    RK_ASSERT(SUCCEEDED(hr), "Failed to retrieve compile status.");
+    ensure(SUCCEEDED(hr), "Failed to retrieve compile status.");
 
     if (FAILED(status)) {
         ComPtr<IDxcBlobEncoding> ErrorBlob;
@@ -165,7 +165,7 @@ ShaderAsset TAssetLoader<ShaderAsset>::Load(const FAssetLoaderRequest &pRequest,
     }
 
     hr = OperationResult->GetResult(&ShaderBlob);
-    RK_ASSERT(SUCCEEDED(hr), "Failed to get shader bytecode.");
+    ensure(SUCCEEDED(hr), "Failed to get shader bytecode.");
 
     const size_t ByteSize = ShaderBlob->GetBufferSize();
     const size_t WordCount = ByteSize / sizeof(uint32_t);

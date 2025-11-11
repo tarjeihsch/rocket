@@ -90,7 +90,7 @@ void CVulkanRHI::Init()
     InstanceCreateInfo.pNext = &DebugUtilsMessengerCreateInfo;
 
     VkResult Result = VulkanRHI::vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
+    ensure(Result == VK_SUCCESS, "Failed to initialize Vulkan instance.");
 
     LoadVulkanInstanceFunc(RHIGetVkInstance());
 

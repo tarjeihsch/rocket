@@ -3,23 +3,29 @@
 #include "Common/RHI.h"
 #include "Common/RHITexture.h"
 
-FTexture2D::FTexture2D(uint32_t Width, uint32_t Height)
+RTexture2D::RTexture2D(uint32_t InWidth, uint32_t InHeight)
+    : Width(InWidth), Height(InHeight)
 {
     FRHITextureDesc TextureDesc;
-    TextureDesc.Format = ERHITextureFormat::B8G8R8A8_SRGB;
+    TextureDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
     TextureDesc.LayerCount = 1;
     TextureDesc.MipLevel = 1;
     TextureDesc.SampleCount = 1;
-    TextureDesc.Lifetime = ERHIResourceLifetime::Transient;
+    TextureDesc.Lifetime = ERHIResourceLifetime::Persistent;
     TextureDesc.Extent[0] = Width;
     TextureDesc.Extent[1] = Height;
-    TextureDesc.Usage = ERHITextureUsage::SRV;
+    TextureDesc.Usage = ERHITextureUsage::SRV | ERHITextureUsage::CopyDst;
     TextureDesc.InitialLayout = ERHITextureLayout::ShaderReadOnly;
 
     Handle = GetRHI()->RHICreateTexture(TextureDesc);
 }
 
-FTexture2D::~FTexture2D()
+RTexture2D::~RTexture2D()
 {
     delete Handle;
+}
+
+void RTexture2D::UploadData(const uint8_t* Data)
+{
+    GetRHI()->RHIUploadTextureBlocking(Handle, Data, Width, Height);
 }

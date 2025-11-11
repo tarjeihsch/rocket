@@ -163,7 +163,7 @@ const FConfigSection &FConfigFile::GetSection_Internal(const std::string &Sectio
 {
     FConfigSection SectionTemp = {Section};
     auto SectionIt = M_SectionSet.find(SectionTemp);
-    RK_ASSERT(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
+    ensure(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
     return *SectionIt;
 }
 
@@ -171,11 +171,11 @@ const FConfigField &FConfigFile::GetField_Internal(const std::string& Section, c
 {
     FConfigSection SectionTemp = {Section};
     auto SectionIt = M_SectionSet.find(SectionTemp);
-    RK_ASSERT(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
+    ensure(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
 
     FConfigField FieldTemp = {Field};
     auto FieldIt = SectionIt->M_FieldSet.find(FieldTemp);
-    RK_ASSERT(FieldIt != SectionIt->M_FieldSet.end(), "Failed to find field with given parameter.");
+    ensure(FieldIt != SectionIt->M_FieldSet.end(), "Failed to find field with given parameter.");
     return *FieldIt;
 }
 
@@ -183,11 +183,11 @@ const FConfigValueType& FConfigFile::GetValue_Internal(const std::string &Sectio
 {
     FConfigSection SectionTemp = {Section};
     auto SectionIt = M_SectionSet.find(SectionTemp);
-    RK_ASSERT(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
+    ensure(SectionIt != M_SectionSet.end(), "Failed to find section with given parameter.");
 
     FConfigField FieldTemp = {Key};
     auto FieldIt = SectionIt->M_FieldSet.find(FieldTemp);
-    RK_ASSERT(FieldIt != SectionIt->M_FieldSet.end(), "Failed to find field with given parameter.");
+    ensure(FieldIt != SectionIt->M_FieldSet.end(), "Failed to find field with given parameter.");
 
     const FConfigValueType& Value = FieldIt->M_Value;
     return Value;

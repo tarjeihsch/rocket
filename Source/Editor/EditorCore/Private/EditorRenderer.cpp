@@ -1,5 +1,6 @@
 #include "EditorRenderer.h"
 
+#include "Renderer.h"
 #include "Viewport.h"
 #include "FrameGraph.h"
 #include "RenderTarget.h"
@@ -13,70 +14,128 @@
 #include "Common/RHIBuffer.h"
 #include "Common/RHISampler.h"
 #include "Common/RHITexture.h"
+#include <Logger.h>
+#include "Texture2D.h"
 
 static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
-void DrawEditorUI();
+static bool S_DockspaceOpen = true;
+static bool S_Fullscreen = true;
+static bool S_Padding = false;
+static ImGuiDockNodeFlags S_DockspaceFlags = ImGuiDockNodeFlags_None;
 
-REditorRenderer::REditorRenderer()
+REditorViewportClient::REditorViewportClient()
 {
 	Init();
 }
 
-REditorRenderer::~REditorRenderer()
+REditorViewportClient::~REditorViewportClient()
 {
 	Shutdown();
 }
 
-void REditorRenderer::Init()
+void REditorViewportClient::Init()
 {
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)1280, (float)720);
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	ImGuiIO& IO = ImGui::GetIO();
+	IO.DisplaySize = ImVec2((float)1280, (float)720);
+	IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-	unsigned char* pixels;
-	int width, height;
-	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+	unsigned char* Data;
+	int Width, Height;
+	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&Data, &Width, &Height);
 	
-	ImGuiTextureAtlas = GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0));
-	
-	GetRHI()->RHIUploadTextureBlocking(ImGuiTextureAtlas, pixels, width, height);
+	//ImGui_FontAtlas = GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0));
+	ImGui_FontAtlas = std::make_unique<RTexture2D>(Width, Height);
+	ImGui_FontAtlas->UploadData(Data);
+
+	IO.Fonts->SetTexID((ImTextureID)ImGui_FontAtlas->GetHandle());
 }
 
-void REditorRenderer::Shutdown()
+void REditorViewportClient::Shutdown()
 {
-	delete ImGuiTextureAtlas;
 }
 
-void REditorRenderer::Render(float DeltaTime)
+void REditorViewportClient::Draw(RFrameContext& Ctx)
 {
-    // Draw ImGui elements
+	FRenderTarget EditorViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
+	FRenderTarget SceneViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
 
-	FFrameGraphBuilder Builder;
-
-	FRenderTarget RenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
-
-	static bool a = true;
-
+	// Transient GPU resources
 	std::unique_ptr<FRHIBuffer> VertexBuffer;
 	std::unique_ptr<FRHIBuffer> IndexBuffer;
 	std::unique_ptr<FRHITextureView> TextureView;
 	std::unique_ptr<RRHISampler> Sampler;
 
-	ImGuiIO& io = ImGui::GetIO();
-	const auto extent = GetRHI()->RHIGetViewportExtent();
-	io.DisplaySize = ImVec2((float)extent[0], (float)extent[1]);
-	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-	io.DeltaTime = DeltaTime;
-	io.MousePos = ImVec2((float)PInput::GetMouseX(), (float)PInput::GetMouseY());
-	io.MouseDown[0] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_LEFT);
-	io.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
+	ImGuiIO& IO = ImGui::GetIO();
+	IO.DisplaySize = ImVec2(Ctx.ViewportWidth, Ctx.ViewportHeight);
+	IO.DeltaTime = Ctx.Timestep;
+	IO.MousePos = ImVec2((float)PInput::GetMouseX(), (float)PInput::GetMouseY());
+	IO.MouseDown[0] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_LEFT);
+	IO.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
 
 	ImGui::NewFrame();
-	DrawEditorUI();
+
+	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	if (S_Fullscreen)
+	{
+		const ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(MainViewport->WorkPos);
+		ImGui::SetNextWindowSize(MainViewport->WorkSize);
+		ImGui::SetNextWindowViewport(MainViewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		WindowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	}
+
+	if (!S_Padding)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	}
+
+	ImGui::Begin("MainDockspace", &S_DockspaceOpen, WindowFlags);
+	
+	if (!S_Padding)
+	{
+		ImGui::PopStyleVar();
+	}
+
+	if (S_Fullscreen)
+	{
+		ImGui::PopStyleVar(2);
+	}
+
+	if (IO.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+	{
+		ImGuiID DockspaceID = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(DockspaceID, ImVec2(0.0f, 0.0f), S_DockspaceFlags);
+	}
+
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit")) {}
+
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+
+	ImGui::Begin("Left Panel");
+	ImGui::End();
+
+	ImGui::Begin("Right Panel");
+	ImGui::End();
+
+	ImGui::Begin("Game Viewport");
+	//ImGui::Image((ImTextureID)GameViewportTexture, ImGui::GetContentRegionAvail());
+	ImGui::End();
+
+	ImGui::End();
 	ImGui::Render();
+
 	ImDrawData* DrawData = ImGui::GetDrawData();
 
 	FRHIPipelineDesc ImGuiPipelineDesc = {};
@@ -91,11 +150,9 @@ void REditorRenderer::Render(float DeltaTime)
 	ImGuiPipelineDesc.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float2, 8);  // uv (Float2!)
 	ImGuiPipelineDesc.VertexAttributes.emplace_back(2, 0, ERHIFormat::UNorm8x4, 16); // color
 	ImGuiPipelineDesc.BlendAttachments.push_back(FRHIBlendAttachment(1, ERHIBlendFactor::SrcAlpha, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, ERHIBlendFactor::One, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)));
-
 	FPipeline ImGuiPipeline = FPipeline(ImGuiPipelineDesc);
 
-	//FFrameGraphPass& ImGuiPass = Builder.AddPass("ImGui", EFGPassFlags::Graphics | EFGPassFlags::Dynamic, [&](FRHICommandList& RHICmdList)
-	FFrameGraphPass & ImGuiPass = Builder.AddPass("ImGui", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+	FFrameGraphPass& UIPass = Ctx.Builder.AddPass("UI Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
 	{
 		GetRHI()->RHICmdBindPipeline(RHICmdList, ImGuiPipeline.GetHandle());
 
@@ -158,13 +215,16 @@ void REditorRenderer::Render(float DeltaTime)
 			{
 				if (cmd.UserCallback) { cmd.UserCallback(cl, &cmd); continue; }
 
+				FRHITexture* srcTexture = reinterpret_cast<FRHITexture*>(cmd.GetTexID());
+
 				FRHITextureViewDesc TextureViewDesc;
-				TextureViewDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
+				TextureViewDesc.Format = srcTexture->RHIGetTextureDesc().Format;
 				TextureViewDesc.Aspect = ERHITextureAspect::Color;
 				TextureViewDesc.Lifetime = ERHIResourceLifetime::Transient;
-				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, ImGuiTextureAtlas));
-				Sampler.reset(GetRHI()->RHICreateSampler(desc));
 
+				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, srcTexture));
+				Sampler.reset(GetRHI()->RHICreateSampler(desc));
+				
 				ImVec2 clipMin = (ImVec2(ImFloor((cmd.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
 				ImVec2 clipMax = (ImVec2(ImFloor((cmd.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
 				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) { idxOffset += cmd.ElemCount; continue; }
@@ -194,80 +254,36 @@ void REditorRenderer::Render(float DeltaTime)
 			}
 		}
 	});
-	ImGuiPass.AddColorAttachment(RenderTarget.GetHandle());
+	UIPass.AddColorAttachment(EditorViewportRenderTarget.GetHandle());
 
-	assert(GetRHI()->RHIGetBackBufferRenderTarget());
+// 	FFrameGraphPass& OpaquePass = Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+// 	{
+// 		
+// 	});
+// 	OpaquePass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
+// 
+// 
+// 	FFrameGraphPass& SceneCompositionPass = Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
+// 	{
+// 		GetRHI()->RHICmdBlitImage(RHICmdList, SceneViewportRenderTarget.GetHandle(), GameViewportTexture);
+// 	});
+// 
+// 	SceneCompositionPass.AddTransferSrc(SceneViewportRenderTarget.GetHandle());
+// 	SceneCompositionPass.AddTransferDst(GameViewportTexture);
 
 	// These lines should be covered by the Execute function itself. Should not have to specify the composition and present passes manually.
-	FFrameGraphPass& CompositionPass = Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
+	FFrameGraphPass& CompositionPass = Ctx.Builder.AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
 	{
-		GetRHI()->RHICmdBlitImage(RHICmdList, RenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
+		GetRHI()->RHICmdBlitImage(RHICmdList, EditorViewportRenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
 	});
 
-	CompositionPass.AddTransferSrc(RenderTarget.GetHandle());
+	CompositionPass.AddTransferSrc(EditorViewportRenderTarget.GetHandle());
 	CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
 
-	FFrameGraphPass& PresentPass = Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);
+	FFrameGraphPass& PresentPass = Ctx.Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);
 	PresentPass.AddPresentSrc(GetRHI()->RHIGetBackBufferRenderTarget());
-
-
-
 
 	// This should be a unified call done by FrameGraph itself, not the builder.
 	// Should take all the builder's and combine them. (eg. Editor, Game)
-	Builder.Execute();
-}
-
-void DrawEditorUI()
-{
-	static bool dockspaceOpen = true;
-	static bool opt_fullscreen = true;
-	static bool opt_padding = false;
-	static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-	if (opt_fullscreen)
-	{
-		const ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(viewport->WorkPos);
-		ImGui::SetNextWindowSize(viewport->WorkSize);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-	}
-
-	if (!opt_padding) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("MainDockspace", &dockspaceOpen, window_flags);
-	if (!opt_padding) ImGui::PopStyleVar();
-
-	if (opt_fullscreen) ImGui::PopStyleVar(2);
-
-	ImGuiIO& io = ImGui::GetIO();
-	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-	{
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-	}
-
-	if (ImGui::BeginMenuBar())
-	{
-		if (ImGui::BeginMenu("File"))
-		{
-			if (ImGui::MenuItem("Exit")) {}
-			ImGui::EndMenu();
-		}
-		ImGui::EndMenuBar();
-	}
-
-	ImGui::Begin("Left Panel");
-	ImGui::End();
-
-	ImGui::Begin("Right Panel");
-	ImGui::End();
-
-	ImGui::Begin("Game Viewport");
-	ImGui::End();
-
-	ImGui::End();
+	Ctx.Builder.Execute();
 }

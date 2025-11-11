@@ -50,7 +50,7 @@ void FVulkanTexture::Alloc()
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
 
         Device.GetTransientResourceAllocator()->AllocImage(Image, Offset);
     }
@@ -61,7 +61,7 @@ void FVulkanTexture::Alloc()
         AllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
         VkResult Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
     }
 
     CurrentLayout = Desc.InitialLayout;

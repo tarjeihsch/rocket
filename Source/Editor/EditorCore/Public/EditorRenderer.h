@@ -1,20 +1,22 @@
 #pragma once
 
-#include "Renderer.h"
+#include "Viewport.h"
+#include <memory>
 
-class RViewport;
-class FRHITexture;
+class RTexture2D;
 
-class REditorRenderer
+class REditorViewportClient : public RViewportClient
 {
 public:
-    REditorRenderer();
-    ~REditorRenderer();
+    REditorViewportClient();
+    ~REditorViewportClient();
 
-    virtual void Init();
-    virtual void Shutdown();
-    virtual void Render(float DeltaTime);
+	virtual void Draw(RFrameContext& FrameCtx) override;
 
 private:
-	FRHITexture* ImGuiTextureAtlas;
+    void Init();
+    void Shutdown();
+
+private:
+	std::unique_ptr<RTexture2D> ImGui_FontAtlas;
 };

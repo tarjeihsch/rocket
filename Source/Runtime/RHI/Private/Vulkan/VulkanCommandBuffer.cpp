@@ -30,7 +30,7 @@ void FVulkanCommandBuffer::Alloc()
     CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
     VkResult Result = VulkanRHI::vkAllocateCommandBuffers(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CommandBufferAllocateInfo, &Handle);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate command buffers.");
+    ensure(Result == VK_SUCCESS, "Failed to allocate command buffers.");
 
     State = EVulkanCommandBufferState::ReadyForBegin;
 }
@@ -60,7 +60,7 @@ void FVulkanCommandBuffer::Begin()
     CommandBufferBeginInfo.pInheritanceInfo = nullptr;
 
     VkResult Result = VulkanRHI::vkBeginCommandBuffer(Handle, &CommandBufferBeginInfo);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to begin recording command buffer.");
+    ensure(Result == VK_SUCCESS, "Failed to begin recording command buffer.");
 
     State = EVulkanCommandBufferState::IsInsideBegin;
 }
@@ -158,7 +158,7 @@ void FVulkanCommandBufferPool::Initialize()
     CommandPoolCreateInfo.queueFamilyIndex = Queue.GetQueueFamilyIndex();
 
     VkResult Result = VulkanRHI::vkCreateCommandPool(Device.GetVkDevice(), &CommandPoolCreateInfo, nullptr, &Handle);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create command pool.");
+    ensure(Result == VK_SUCCESS, "Failed to create command pool.");
 }
 
 void FVulkanCommandBufferPool::Shutdown()

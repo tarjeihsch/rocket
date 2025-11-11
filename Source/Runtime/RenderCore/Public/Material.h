@@ -7,7 +7,7 @@
 struct FRHIBuffer;
 struct FRHITextureView;
 struct RBuffer;
-struct FTexture2D;
+struct RTexture2D;
 
 enum class EMaterialBlendMode
 {
@@ -49,7 +49,7 @@ public:
     ~RMaterial();
 
     void SetBufferParameter(const std::string& Name, RBuffer* Buffer);
-    void SetTextureParameter(const std::string& Name, FTexture2D* Texture);
+    void SetTextureParameter(const std::string& Name, RTexture2D* Texture);
 
     // Called to write all material parameters to descriptors
     void Bind();
@@ -58,5 +58,5 @@ private:
     FRHIPipeline* Pipeline;
 
     std::unordered_map<std::string, RBuffer*> Textures;
-    std::unordered_map<std::string, FTexture2D*> Buffers;
+    std::unordered_map<std::string, RTexture2D*> Buffers;
 };

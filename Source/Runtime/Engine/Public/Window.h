@@ -6,5 +6,5 @@
 class RWindow
 {
 public:
-    
+       
 };

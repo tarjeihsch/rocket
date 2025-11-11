@@ -5,7 +5,6 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanTexture.h"
-
 #include "WindowBase.h"
 #include <GLFW/glfw3.h>
 
@@ -19,7 +18,7 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     NumPresentCalls(0)
 {
     VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GWindow->GetNativeWindow()), nullptr, &Surface);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
+    ensure(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
     VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
@@ -58,7 +57,6 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     }
 
     CreateSwapchain();
-
     AcquireNextImageIndex();
 }
 
@@ -124,9 +122,9 @@ void RVulkanSwapchain::CreateSwapchain()
     }
 
     VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create swapchain.");
+    ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
 
-    RK_LOG_DEBUG("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
+    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
 
     std::vector<VkImage> Images;
     std::vector<VkImageView> Views;
@@ -140,8 +138,8 @@ void RVulkanSwapchain::CreateSwapchain()
     {
         FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
-        Backbuffer.push_back(new FVulkanTexture(Device, Desc, Images[Index]));
-        BackbufferView.push_back(new FVulkanTextureView(Device, ViewDesc, Backbuffer.back()));
+        Backbuffer.push_back(std::make_unique<FVulkanTexture>(Device, Desc, Images[Index]));
+        BackbufferView.push_back(std::make_unique<FVulkanTextureView>(Device, ViewDesc, Backbuffer.back().get()));
     }
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
@@ -169,6 +167,8 @@ bool RVulkanSwapchain::AcquireNextImageIndex()
 
     if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
     {
+        RK_LOG_INFO("Swapchain is out of date.");
+
         DestroySwapchain();
         CreateSwapchain();
 		AcquireNextImageIndex();
@@ -210,16 +210,6 @@ void RVulkanSwapchain::DestroySwapchain()
         VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
     }
 
-    for (auto& Texture : Backbuffer)
-    {
-        delete Texture;
-    }
-
-    for (auto& View : BackbufferView)
-    {
-        delete View;
-    }
-
     Backbuffer.clear();
     BackbufferView.clear();
     ImageAcquiredSemaphores.clear();
@@ -233,10 +223,24 @@ void RVulkanSwapchain::DestroySwapchain()
 
 FRHITexture* RVulkanSwapchain::GetBackBufferTexture() const
 {
-    return Backbuffer[CurrentImageIndex];
+    ensure(Backbuffer.size() != 0)
+
+    return Backbuffer[CurrentImageIndex].get();
 }
 
 FRHITextureView* RVulkanSwapchain::GetBackBufferTextureView() const
 {
-    return BackbufferView[CurrentImageIndex];
+    ensure(BackbufferView.size() != 0)
+
+    return BackbufferView[CurrentImageIndex].get();
+}
+
+VkImage RVulkanSwapchain::GetImage() const
+{
+	return static_cast<VkImage>(GetBackBufferTexture()->GetHandle());
+}
+
+VkImageView RVulkanSwapchain::GetImageView() const
+{
+	return static_cast<VkImageView>(GetBackBufferTextureView()->GetHandle());
 }

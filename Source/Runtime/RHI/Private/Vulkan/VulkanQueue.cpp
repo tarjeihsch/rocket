@@ -100,7 +100,7 @@ void FVulkanQueue::Submit()
         SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
 
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
-        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
+        ensure(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
         SubmissionQueue.push(Payload);
     }
@@ -141,7 +141,7 @@ void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)>
         SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
 
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, Fence);
-        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit to queue.");
+        ensure(Result == VK_SUCCESS, "Failed to submit to queue.");
 
         VulkanRHI::vkWaitForFences(Device.GetVkDevice(), 1, &Fence, VK_TRUE, UINT64_MAX);
         VulkanRHI::vkDestroyFence(Device.GetVkDevice(), Fence, nullptr);

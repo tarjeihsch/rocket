@@ -22,7 +22,7 @@ void RMaterial::SetBufferParameter(const std::string &Name, RBuffer* Buffer)
 {
 }
 
-void RMaterial::SetTextureParameter(const std::string &Name, FTexture2D* Texture)
+void RMaterial::SetTextureParameter(const std::string &Name, RTexture2D* Texture)
 {
 }
 

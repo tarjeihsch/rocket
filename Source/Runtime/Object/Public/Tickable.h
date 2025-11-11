@@ -23,7 +23,7 @@ struct RTickDelegate
 
     inline void Execute(float DeltaTime) const
     {
-        RK_ASSERT(Function, "RTickDelegate::Function is null");
+        ensure(Function, "RTickDelegate::Function is null");
 
         Function(Instance, DeltaTime);
     }

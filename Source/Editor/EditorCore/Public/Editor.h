@@ -3,7 +3,8 @@
 #include "EditorBase.h"
 
 class RModule;
-class REditorRenderer;
+class RViewport;
+class REditorViewportClient;
 
 class REditor final : public IEditorBase
 {
@@ -22,7 +23,9 @@ public:
 private:
     EMode Mode;
 
-    REditorRenderer* Renderer;
+    RModule* ScriptClientModule;
 
-    RModule* GameModule;
+    RViewport* Viewport;
+
+    REditorViewportClient* ViewportClient;
 };

@@ -4,6 +4,8 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "LocalPlayer.h"
 #include "RenderTarget.h"
+#include <Assertion.h>
+#include "Renderer.h"
 
 glm::mat4 LRenderView::GetViewMatrix() const
 {
@@ -39,7 +41,6 @@ glm::mat4 LRenderView::GetProjection() const
 
 RViewport::RViewport()
 {
-    Init();
 }
 
 RViewport::~RViewport()
@@ -55,7 +56,12 @@ void RViewport::Shutdown()
 {
 }
 
-FRenderTarget *RViewport::GetRenderTarget() const
+void RViewport::Update(RViewportClient* ViewportClient, float DeltaTime)
 {
-    return RenderTarget;
+    RFrameContext FrameCtx = {};
+    FrameCtx.ViewportWidth = 1280;
+    FrameCtx.ViewportHeight = 720;
+    FrameCtx.Timestep = DeltaTime;
+
+    ViewportClient->Draw(FrameCtx);
 }

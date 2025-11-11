@@ -71,6 +71,7 @@ public:
         Sampler,
         Semaphore,
         ShaderModule,
+        Texture
     };
 
     template <typename T>

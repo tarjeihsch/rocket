@@ -40,7 +40,7 @@ uint32_t FVulkanBuffer::GetBindingIndex() const
 
 void FVulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
 {
-    RK_ASSERT(Size <= Desc.Size, "Trying to map beyond buffer size.");
+    ensure(Size <= Desc.Size, "Trying to map beyond buffer size.");
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
@@ -54,7 +54,7 @@ void FVulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
         void* DataPtr = nullptr;
 
         VkResult Result = vmaMapMemory(Device.GetVmaAllocator(), Allocation, &DataPtr);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
 
         memcpy(DataPtr, Data, Size);
 
@@ -69,7 +69,7 @@ void FVulkanBuffer::Alloc()
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         VkResult Result = VulkanRHI::vkCreateBuffer(Device.GetVkDevice(), &CreateInfo, nullptr, &Buffer);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
 
         Device.GetTransientResourceAllocator()->AllocBuffer(Buffer, Offset);
     }
@@ -80,7 +80,7 @@ void FVulkanBuffer::Alloc()
         AllocationCreateInfo.usage = VulkanRHI::ToVmaMemoryUsage(Desc.Memory);
 
         VkResult Result = vmaCreateBuffer(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Buffer, &Allocation, nullptr);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
     }
 
     if ((Desc.Usage & ERHIBufferUsage::Uniform) == ERHIBufferUsage::Uniform ||
