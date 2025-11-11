@@ -271,12 +271,9 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		[&](FRHICommandList& RHICmdList)
 		{
 			GetRHI()->RHICmdBlitImage(RHICmdList, EditorViewportRenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
-			GetRHI()->RHICmdBlitImage(RHICmdList, SceneViewportRenderTarget.GetHandle(), RenderTarget_SceneViewport.get());
 		});
 
 	CompositionPass.AddTransferSrc(EditorViewportRenderTarget.GetHandle());
-	CompositionPass.AddTransferSrc(SceneViewportRenderTarget.GetHandle());
-	CompositionPass.AddTransferDst(RenderTarget_SceneViewport.get());
 	CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
 
 	FFrameGraphPass& PresentPass = Ctx.Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);

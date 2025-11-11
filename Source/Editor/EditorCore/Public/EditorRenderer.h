@@ -22,8 +22,3 @@ private:
 
     std::unique_ptr<FRHITexture> RenderTarget_SceneViewport;
 };
-
-class RLevelEditorViewportClient : public RViewportClient
-{
-
-};
