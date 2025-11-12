@@ -58,8 +58,8 @@ void REditorViewportClient::Shutdown()
 
 void REditorViewportClient::Draw(RFrameContext& Ctx)
 {
-	FRenderTarget EditorViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
-	FRenderTarget SceneViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
+	FRenderTarget EditorViewportRenderTarget = FRenderTarget(Ctx.ViewportWidth, Ctx.ViewportHeight);
+	FRenderTarget SceneViewportRenderTarget = FRenderTarget(Ctx.ViewportWidth, Ctx.ViewportHeight);
 
 	FFrameGraphPass& SceneColorPass = Ctx.Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, 
 		[&](FRHICommandList& RHICmdList)
