@@ -82,7 +82,7 @@ T* ConstructObject()
     {
         // Perform a manual raw byte copy from archetype to pass the correct vtable pointer from archetype
         void* Block = ::operator new(T::StaticClass()->GetSize(), std::align_val_t(T::StaticClass()->GetAlignment()));
-        std::memcpy(Block, T::StaticClass()->GetArchetype(), T::StaticClass()->GetSize());
+        std::memcpy(Block, static_cast<const void*>(T::StaticClass()->GetArchetype()), T::StaticClass()->GetSize());
         T* NewObj = static_cast<T*>(Block);
         NewObj->PostConstruct();
         return NewObj;

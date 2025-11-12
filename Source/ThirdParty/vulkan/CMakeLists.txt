@@ -9,3 +9,9 @@ target_include_directories(vulkan INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:include/vulkan>
 )
+
+target_compile_options(vulkan INTERFACE
+    -Wno-nullability-completeness
+    -Wno-nullability-extension
+    -Wno-everything
+)
