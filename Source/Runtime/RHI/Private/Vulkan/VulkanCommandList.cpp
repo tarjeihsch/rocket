@@ -15,10 +15,10 @@ FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
 
 void FVulkanCommandListContext::RHIBindPipeline(FRHIPipeline *Pipeline)
 {
-    VkDescriptorSet DS = GetVulkanRHIMinimal()->GetBindlessDescriptorSet();
+    VkDescriptorSet DescriptorSet = GetVulkanRHIMinimal()->GetBindlessDescriptorSet();
 
     VulkanRHI::vkCmdBindPipeline(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(Pipeline->GetHandle()));
-    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DS, 0, nullptr);
+    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
 }
 
 void FVulkanCommandListContext::RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height)

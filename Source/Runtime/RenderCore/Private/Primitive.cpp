@@ -8,7 +8,7 @@ RPrimitive::RPrimitive()
 
 void RPrimitive::Draw(FRHICommandList &CmdList) const
 {
-    Material->Bind();
+    //Material->Bind();
 }
 
 RMaterial * RPrimitive::GetMaterial() const

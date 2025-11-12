@@ -4,10 +4,10 @@
 #include <string>
 #include <unordered_map>
 
-struct FRHIBuffer;
-struct FRHITextureView;
+struct FRHIPipeline;
 struct RBuffer;
 struct RTexture2D;
+class FRHICommandList;
 
 enum class EMaterialBlendMode
 {
@@ -30,33 +30,32 @@ enum class EMaterialPass
 
     DepthOnly,
 
-    Shadow
-};
+    Shadow,
 
-class FRHIPipeline;
-
-enum class LMaterialResourceType : uint8_t
-{
-    Texture,
-
-    Buffer
+    UI
 };
 
 class RMaterial
 {
 public:
-    RMaterial(const char* VertexShader, const char* PixelShaderPath);
+    explicit RMaterial(EMaterialPass InPass, EMaterialBlendMode InBlendMode, const char* InVertexShaderPath, const char* InPixelShaderPath);
     ~RMaterial();
 
     void SetBufferParameter(const std::string& Name, RBuffer* Buffer);
     void SetTextureParameter(const std::string& Name, RTexture2D* Texture);
 
-    // Called to write all material parameters to descriptors
-    void Bind();
+    // Called to bind pipeline and write all material parameters to descriptors
+    void Bind(FRHICommandList& CmdList);
 
 private:
+	std::unordered_map<std::string, RBuffer*> Textures;
+	std::unordered_map<std::string, RTexture2D*> Buffers;
+
     FRHIPipeline* Pipeline;
 
-    std::unordered_map<std::string, RBuffer*> Textures;
-    std::unordered_map<std::string, RTexture2D*> Buffers;
+    const char* VertexShaderPath;
+    const char* PixelShaderPath;
+
+    EMaterialPass Pass;
+    EMaterialBlendMode BlendMode;
 };

@@ -16,6 +16,7 @@
 #include "Common/RHITexture.h"
 #include <Logger.h>
 #include "Texture2D.h"
+#include <Material.h>
 
 static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
 
@@ -145,23 +146,11 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 
 	ImDrawData* DrawData = ImGui::GetDrawData();
 
-	FRHIPipelineDesc ImGuiPipelineDesc = {};
-	ImGuiPipelineDesc.VertexShaderPath = ROCKET_SRC "/Shader/ImGuiVS.hlsl";
-	ImGuiPipelineDesc.PixelShaderPath = ROCKET_SRC "/Shader/ImGuiPS.hlsl";
-	ImGuiPipelineDesc.bDepthTestEnable = false;
-	ImGuiPipelineDesc.bDepthWriteEnable = false;
-	ImGuiPipelineDesc.CullMode = ERHICullMode::None;
-	ImGuiPipelineDesc.ColorAttachmentFormats.push_back(ERHIFormat::BGRA8_SRGB);
-	ImGuiPipelineDesc.VertexBindings.push_back(FRHIVertexBinding(0, 20, 0));
-	ImGuiPipelineDesc.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float2, 0);  // pos
-	ImGuiPipelineDesc.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float2, 8);  // uv (Float2!)
-	ImGuiPipelineDesc.VertexAttributes.emplace_back(2, 0, ERHIFormat::UNorm8x4, 16); // color
-	ImGuiPipelineDesc.BlendAttachments.push_back(FRHIBlendAttachment(1, ERHIBlendFactor::SrcAlpha, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, ERHIBlendFactor::One, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)));
-	FPipeline ImGuiPipeline = FPipeline(ImGuiPipelineDesc);
-
 	FFrameGraphPass& UIPass = Ctx.Builder.AddPass("UI Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
 	{
-		GetRHI()->RHICmdBindPipeline(RHICmdList, ImGuiPipeline.GetHandle());
+		std::unique_ptr<RMaterial> UIMaterial = std::make_unique<RMaterial>(EMaterialPass::UI, EMaterialBlendMode::Transparent, ROCKET_SRC "/Shader/ImGuiVS.hlsl", ROCKET_SRC "/Shader/ImGuiPS.hlsl");
+
+		UIMaterial->Bind(RHICmdList);
 
 		size_t totalVtx = 0, totalIdx = 0;
 		for (int n = 0; n < DrawData->CmdListsCount; ++n)
