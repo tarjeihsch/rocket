@@ -18,7 +18,12 @@
 #include "Texture2D.h"
 #include <Material.h>
 #include <MathTypes.h>
+#include <Editor.h>
+#include <Actor.h>
+#include "World.h"
 
+static RActor* SelectedActor = nullptr;
+static RComponent* SelectedComponent = nullptr;
 static bool S_DockspaceOpen = true;
 static bool S_Fullscreen = true;
 static bool S_Padding = false;
@@ -130,10 +135,43 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		ImGui::EndMenuBar();
 	}
 
-	ImGui::Begin("Left Panel");
+	ImGui::Begin("Scene Hierarchy");
+	std::span<RActor*> Actors = GEditor->GetWorld()->GetActors();
+	for (size_t Index = 0; Index < Actors.size(); ++Index)
+	{
+		RActor* Actor = Actors[Index];
+		std::string ActorLabel = "Actor##" + std::to_string(Index);
+
+		if (ImGui::Selectable(ActorLabel.c_str(), (SelectedActor == Actor)))
+		{
+			SelectedActor = Actor;
+			SelectedComponent = nullptr;
+		}
+	}
+
 	ImGui::End();
 
-	ImGui::Begin("Right Panel");
+	ImGui::Begin("Components");
+	if (SelectedActor)
+	{
+		ImGui::Text("Actor: %s", &SelectedActor);
+		ImGui::Separator();
+
+		std::span<RComponent*> Components = SelectedActor->GetComponents();
+		for (size_t Index = 0; Index < Components.size(); ++Index)
+		{
+			RComponent* Component = Components[Index];
+			std::string ComponentLabel = "Component##" + std::to_string(Index);
+
+			if (ImGui::Selectable(ComponentLabel.c_str(), (SelectedComponent == Component)))
+			{
+				SelectedComponent = Component;
+			}
+		}
+	}
+	ImGui::End();
+
+	ImGui::Begin("Properties");
 	ImGui::End();
 
 	ImGui::Begin("Scene Viewport");
@@ -225,8 +263,8 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, UserTexture));
 				Sampler.reset(GetRHI()->RHICreateSampler(SamplerDesc));
 				
-				ImVec2 ClipMin = ImVec2(Floor((CommandBuffer.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
-				ImVec2 ClipMax = ImVec2(Floor((CommandBuffer.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
+				glm::vec2 ClipMin = glm::vec2(Floor((CommandBuffer.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
+				glm::vec2 ClipMax = glm::vec2(Floor((CommandBuffer.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
 				if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y) 
 				{ 
 					IndexBase += CommandBuffer.ElemCount; continue; 

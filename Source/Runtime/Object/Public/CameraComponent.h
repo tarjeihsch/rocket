@@ -14,7 +14,7 @@ public:
     RCameraComponent();
 
     virtual RClass* GetClass() const override;
-    virtual void PostConstruct() override;
+    virtual void PostConstruct(RWorld* World, RObject* Owner) override;
     virtual void Tick(float DeltaTime) override;
 
 protected:

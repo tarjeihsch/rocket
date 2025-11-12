@@ -6,6 +6,7 @@ class RModule;
 class RViewport;
 class REditorViewportClient;
 class RLevelEditorViewportClient;
+class RWorld;
 
 class REditor final : public IEditorBase
 {
@@ -20,9 +21,12 @@ public:
     virtual void PauseFrame() override;
     virtual void StepFrame() override;
     virtual EMode GetMode() const override;
+    virtual RWorld* GetWorld() const override;
 
 private:
     EMode Mode;
+
+    RWorld* EditorWorld;
 
     RModule* ScriptClientModule;
 

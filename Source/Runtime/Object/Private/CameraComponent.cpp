@@ -27,9 +27,9 @@ RClass* RCameraComponent::GetClass() const
     return StaticClass();
 }
 
-void RCameraComponent::PostConstruct()
+void RCameraComponent::PostConstruct(RWorld* World, RObject* Owner)
 {
-    RSceneComponent::PostConstruct();
+    Super::PostConstruct(World, Owner);
 }
 
 void RCameraComponent::Tick(float DeltaTime)

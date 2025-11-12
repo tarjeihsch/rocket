@@ -5,7 +5,6 @@
 
 #include <cstring>
 #include <vector>
-
 /*
  * Each RObject carries its own integrated RClass metadata layer. This results in boilerplate code that is necessary to perform
  * statical reflection-based lookup and comparisons.
@@ -20,7 +19,7 @@
 class RObject
 {
 public:
-    RObject() = default;
+    RObject();
     RObject(const RObject&) = delete;
     RObject& operator=(const RObject&) = delete;
     RObject(RObject&&) = delete;
@@ -40,15 +39,30 @@ public:
     virtual const RClass* GetClass() const;
 
     // Runs a deep copy on pointer/heap-owning fields
-    virtual void PostConstruct() {}
+    virtual void PostConstruct(class RWorld* InWorld, class RObject* InOwner);
     virtual void Load(const std::vector<uint8_t>& Data) {}
     virtual void Save(std::vector<uint8_t>& Data) {}
 
+    inline RWorld* GetWorld() const
+    {
+        return World;
+    }
+
+    inline RObject* GetOwner() const
+    {
+        return Owner;
+    }
+
 protected:
     static_assert(DoesImplementStaticClass<RObject>, "");
+
+protected:
+    RWorld* World;
+
+    RObject* Owner;
 };
 
-inline RObject* ConstructObject(RClass* Class)
+inline RObject* ConstructObject(RWorld* World, RObject* Owner, RClass* Class)
 {
     if ((Class->GetFlags() & C_Memory_Allocator_Heap) == C_Memory_Allocator_Heap)
     {
@@ -56,7 +70,7 @@ inline RObject* ConstructObject(RClass* Class)
         void* Block = ::operator new(Class->GetSize(), std::align_val_t(Class->GetAlignment()));
 		std::memcpy(Block, static_cast<const void*>(Class->GetArchetype()), Class->GetSize());
         RObject* NewObj = static_cast<RObject*>(Block);
-        NewObj->PostConstruct();
+        NewObj->PostConstruct(World, Owner);
         return NewObj;
     }
     ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
@@ -76,7 +90,7 @@ inline void DestructObject(RObject* Object)
 
 // Helper function for ConstructObject() when type is known at compile-time
 template<typename T>
-T* ConstructObject()
+T* ConstructObject(RWorld* World, RObject* Owner)
 {
     if ((T::StaticClass()->GetFlags() & C_Memory_Allocator_Heap) == C_Memory_Allocator_Heap)
     {
@@ -84,7 +98,7 @@ T* ConstructObject()
         void* Block = ::operator new(T::StaticClass()->GetSize(), std::align_val_t(T::StaticClass()->GetAlignment()));
         std::memcpy(Block, static_cast<const void*>(T::StaticClass()->GetArchetype()), T::StaticClass()->GetSize());
         T* NewObj = static_cast<T*>(Block);
-        NewObj->PostConstruct();
+        NewObj->PostConstruct(World, Owner);
         return NewObj;
     }
     ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");

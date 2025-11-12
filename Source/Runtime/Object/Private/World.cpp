@@ -12,13 +12,27 @@
 
 RActor *RWorld::SpawnActor(RClass *Class)
 {
-    RActor* Actor = ConstructObject<RActor>();
+    RActor* Actor = ConstructObject<RActor>(this, nullptr);
 
     Actors.push_back(Actor);
 
     Actor->BeginPlay();
 
     return Actor;
+}
+
+RWorld::RWorld()
+{
+	TickTaskManager = new RTickTaskManager();
+
+	PrimitiveProxyManager = new RRenderProxyManager();
+}
+
+RWorld::~RWorld()
+{
+    delete TickTaskManager;
+
+    delete PrimitiveProxyManager;
 }
 
 void RWorld::DestroyActor(RActor *P_Actor)
@@ -45,10 +59,6 @@ void RWorld::Tick(float DeltaTime)
 
 void RWorld::Initialize()
 {
-    TickTaskManager = new RTickTaskManager();
-
-    PrimitiveProxyManager = new RRenderProxyManager();
-
     //FAssetLoaderRequest Request = { "/home/user/Workspace/Spaceship/Content/World.json" };
     //FJsonAssetOptions Options;
     //FAssetHandle<FJsonAsset> AssetHandle = FAssetManager::Get().Load<FJsonAsset>(Request, Options);
@@ -100,4 +110,9 @@ void RWorld::Deinitialize()
     delete TickTaskManager;
 
     delete PrimitiveProxyManager;
+}
+
+std::span<RActor*> RWorld::GetActors()
+{
+    return Actors;
 }

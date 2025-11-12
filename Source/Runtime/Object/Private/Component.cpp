@@ -22,9 +22,11 @@ const RClass *RComponent::GetClass() const
     return StaticClass();
 }
 
-void RComponent::PostConstruct()
+void RComponent::PostConstruct(RWorld* World, RObject* Owner)
 {
-    GEngine->GetWorld()->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
+    Super::PostConstruct(World, Owner);
+
+    World->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
 }
 
 void RComponent::Tick(float DeltaTime)

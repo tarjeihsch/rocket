@@ -4,6 +4,7 @@
 
 #include <Actor.h>
 #include <vector>
+#include <span>
 
 // TODO: Use an ActorProxy for cache-friendly iteration
 // Store a pointer to the real Actor object for cleanup++
@@ -14,6 +15,9 @@ class ITickable;
 class RWorld final
 {
 public:
+    RWorld();
+    ~RWorld();
+
     void DestroyActor(RActor* Actor);
 
     template<typename TClass>
@@ -24,6 +28,8 @@ public:
 
     void Initialize();
     void Deinitialize();
+
+    std::span<RActor*> GetActors();
 
     inline RTickTaskManager* GetTickTaskManager() const;
     inline RRenderProxyManager* GetPrimitiveProxyManager() const;

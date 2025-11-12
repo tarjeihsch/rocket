@@ -50,11 +50,11 @@ void REngine::LoadWorld(const char *Path)
 
     // TEST BEGIN //
 
-    RStaticMesh* StaticMesh = new RStaticMesh("/home/acad/Workspace/Atlas/Content/Monkey.glb");
-    RActor* Actor = GetWorld()->SpawnActor(RActor::StaticClass());
-    RCameraComponent* CamComp = Actor->AddComponent<RCameraComponent>();
-    RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
-    StaticMeshComponent->SetStaticMesh(StaticMesh);
+//     RStaticMesh* StaticMesh = new RStaticMesh("/home/acad/Workspace/Atlas/Content/Monkey.glb");
+//     RActor* Actor = GetWorld()->SpawnActor(RActor::StaticClass());
+//     RCameraComponent* CamComp = Actor->AddComponent<RCameraComponent>();
+//     RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
+//     StaticMeshComponent->SetStaticMesh(StaticMesh);
 
     // TEST END //
 }

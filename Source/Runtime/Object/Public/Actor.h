@@ -5,6 +5,7 @@
 #include "JsonAsset.h"
 #include "Object.h"
 #include "Tickable.h"
+#include <span>
 
 class RComponent;
 class RSceneComponent;
@@ -18,7 +19,7 @@ public:
     static RClass* StaticClass();
 
     virtual const RClass* GetClass() const override;
-    virtual void PostConstruct() override;
+    virtual void PostConstruct(RWorld* World, RObject* Owner) override;
 
     virtual void BeginPlay() {}
     virtual void EndPlay() {}
@@ -26,6 +27,8 @@ public:
     template<typename TComponent>
     TComponent* AddComponent();
     RComponent* AddComponent(RClass* Class);
+
+    std::span<RComponent*> GetComponents();
 
 private:
     std::vector<RComponent*> Components;

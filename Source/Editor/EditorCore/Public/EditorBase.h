@@ -1,5 +1,7 @@
 #pragma once
 
+class RWorld;
+
 class IEditorBase
 {
 public:
@@ -18,6 +20,7 @@ public:
     virtual void PauseFrame() = 0;
     virtual void StepFrame() = 0;
     virtual EMode GetMode() const = 0;
+    virtual RWorld* GetWorld() const = 0;
 
 private:
     EMode Mode;

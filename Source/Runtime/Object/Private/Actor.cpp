@@ -16,14 +16,21 @@ const RClass *RActor::GetClass() const
     return StaticClass();
 }
 
-void RActor::PostConstruct()
+void RActor::PostConstruct(RWorld* InWorld, RObject* InOwner)
 {
+    Super::PostConstruct(InWorld, InOwner);
+
     BeginPlay();
 }
 
 RComponent* RActor::AddComponent(RClass *Class)
 {
-    RComponent* Component = (RComponent*)ConstructObject(Class);
+    RComponent* Component = (RComponent*)ConstructObject(World, this, Class);
     Components.push_back(Component);
     return Component;
+}
+
+std::span<RComponent*> RActor::GetComponents()
+{
+    return Components;
 }
