@@ -19,6 +19,4 @@ private:
 
 private:
 	std::unique_ptr<RTexture2D> ImGui_FontAtlas;
-
-    std::unique_ptr<FRHITexture> RenderTarget_SceneViewport;
 };

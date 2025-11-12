@@ -55,6 +55,8 @@ void REditor::Shutdown()
         ExitPlayMode();
     }
 
+    delete EditorViewportClient;
+
     delete Viewport;
 
     delete ScriptClientModule;

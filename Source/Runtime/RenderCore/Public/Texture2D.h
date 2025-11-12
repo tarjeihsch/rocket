@@ -6,19 +6,29 @@
 
 struct FRHITexture;
 
-// Read-only texture memory
+enum class ETextureType
+{
+    // Standard color texture
+    SRGB = 0,
+
+    // Linear color texture (UI, albedo)
+    Linear = 1
+};
 
 struct RTexture2D
 {
-    RTexture2D(uint32_t Width, uint32_t Height);
+    explicit RTexture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight);
     ~RTexture2D();
 
     inline FRHITexture* GetHandle() const;
 
-    void UploadImage(const uint8_t* Data);
+    void LoadRawTextureData(const uint8_t* Data);
+
+protected:
+    FRHITexture* Handle;
 
 private:
-    FRHITexture* Handle;
+    ETextureType Type;
     uint32_t Width;
     uint32_t Height;
 };

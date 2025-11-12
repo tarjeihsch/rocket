@@ -20,15 +20,15 @@ enum class ERHITextureUsage : uint8_t
 
 enum class ERHITextureLayout : uint8_t
 {
-    Undefined,           // Initial undefined state
-    General,             // Read/Write by shader (UAV)
-    ColorAttachment,     // Render target
-    DepthStencil,        // Depth/stencil usage
-    DepthReadOnly,       // Shader read-only depth
-    ShaderReadOnly,      // Sampled image
-    TransferSrc,         // Copy from
-    TransferDst,         // Copy to
-    Present              // Swapchain presentation
+    Undefined, // Initial undefined state
+    General, // Read/Write by shader (UAV)
+    ColorAttachment, // Render target
+    DepthStencil, // Depth/stencil usage
+    DepthReadOnly, // Shader read-only depth
+    ShaderReadOnly, // Sampled image
+    TransferSrc, // Copy from
+    TransferDst, // Copy to
+    Present // Swapchain presentation
 };
 
 enum class ERHIResourceAccess : uint16_t
@@ -74,6 +74,7 @@ enum class ERHITextureFormat
     Invalid = 0,
     B8G8R8A8_SRGB,
     R8G8B8A8_UNORM,
+    R8G8B8A8_SRGB,
     D32_SFLOAT_S8_UINT,
     D32_SFLOAT,
 };
@@ -94,7 +95,8 @@ inline uint32_t GetTextureFormatPixelByteSize(ERHITextureFormat Format)
 {
     switch (Format)
     {
-    case ERHITextureFormat::B8G8R8A8_SRGB:
+	case ERHITextureFormat::B8G8R8A8_SRGB:
+	case ERHITextureFormat::R8G8B8A8_SRGB:
     case ERHITextureFormat::R8G8B8A8_UNORM:
         return 4;
     case ERHITextureFormat::D32_SFLOAT:

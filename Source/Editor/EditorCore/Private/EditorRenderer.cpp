@@ -46,17 +46,14 @@ void REditorViewportClient::Init()
 	int Width, Height;
 	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&Data, &Width, &Height);
 	
-	//ImGui_FontAtlas = GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(width, height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0));
-	ImGui_FontAtlas = std::make_unique<RTexture2D>(Width, Height);
-	ImGui_FontAtlas->UploadImage(Data);
-
+	ImGui_FontAtlas = std::make_unique<RTexture2D>(ETextureType::Linear, Width, Height);
+	ImGui_FontAtlas->LoadRawTextureData(Data);
 	IO.Fonts->SetTexID((ImTextureID)ImGui_FontAtlas->GetHandle());
-
-	RenderTarget_SceneViewport.reset(GetRHI()->RHICreateTexture(FRHITextureDesc::Create2D(Width, Height, ERHIResourceLifetime::Persistent, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::SRV | ERHITextureUsage::CopyDst, ERHITextureLayout::Undefined, 0, 1, 0)));
 }
 
 void REditorViewportClient::Shutdown()
 {
+	ImGui_FontAtlas = nullptr;
 }
 
 void REditorViewportClient::Draw(RFrameContext& Ctx)
