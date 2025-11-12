@@ -22,10 +22,11 @@ void SetRHIModule(ERHIInterfaceType InInterfaceType)
 
     switch (InInterfaceType)
     {
+        case ERHIInterfaceType::None: ensure(false && "Missing API backend"); break;
         case ERHIInterfaceType::Vulkan: GRHIModule = CreateVulkanRHIModule(); break;
-        case ERHIInterfaceType::D3D12: ensure("Missing API backend"); break;
-        case ERHIInterfaceType::Metal: ensure("Missing API backend"); break;
-        case ERHIInterfaceType::WebGL: ensure("Missing API backend"); break;
+        case ERHIInterfaceType::D3D12: ensure(false && "Missing API backend"); break;
+        case ERHIInterfaceType::Metal: ensure(false && "Missing API backend"); break;
+        case ERHIInterfaceType::WebGL: ensure(false && "Missing API backend"); break;
     }
 
     if (InInterfaceType != ERHIInterfaceType::None)

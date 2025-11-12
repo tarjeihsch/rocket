@@ -10,8 +10,10 @@ target_include_directories(vulkan INTERFACE
     $<INSTALL_INTERFACE:include/vulkan>
 )
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 target_compile_options(vulkan INTERFACE
-    -Wno-nullability-completeness
-    -Wno-nullability-extension
-    -Wno-everything
-)
+        -Wno-nullability-completeness
+        -Wno-nullability-extension
+        -Wno-dynamic-class-memaccess
+    )
+endif()
