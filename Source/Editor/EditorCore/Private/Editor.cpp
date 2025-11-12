@@ -4,27 +4,30 @@
 #include "Engine.h"
 #include "EngineBase.h"
 #include "Module.h"
+#include "Viewport.h"
 
 REditor::REditor()
     : Mode(EMode::Edit),
-    Renderer(nullptr),
-    GameModule(nullptr)
+    Viewport(nullptr),
+    ScriptClientModule(nullptr)
 {
 }
 
 void REditor::Init()
 {
     // Create docking UI, tools, asset database
-    Renderer = new REditorRenderer();
+    Viewport = new RViewport();
 
-    GameModule = new RModule("");
+    EditorViewportClient = new REditorViewportClient();
+
+    ScriptClientModule = new RModule("");
 }
 
 void REditor::Tick(float DeltaTime)
 {
     // Draw Editor UI
 
-    Renderer->Tick(DeltaTime);
+    Viewport->Update(EditorViewportClient, DeltaTime);
 
     switch (Mode)
     {
@@ -40,6 +43,8 @@ void REditor::Tick(float DeltaTime)
     case EMode::Step:
         GEngine->Tick(1.0f / 60.0f);
         break;
+    default:
+        break;
     }
 }
 
@@ -50,9 +55,11 @@ void REditor::Shutdown()
         ExitPlayMode();
     }
 
-    delete Renderer;
+    delete EditorViewportClient;
 
-    delete GameModule;
+    delete Viewport;
+
+    delete ScriptClientModule;
 }
 
 void REditor::EnterPlayMode()

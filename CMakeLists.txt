@@ -49,13 +49,13 @@ add_compile_definitions(ROCKET_SRC=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\")
 add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 
 # Third Party modules
-add_subdirectory(Source/ThirdParty/glfw)
-add_subdirectory(Source/ThirdParty/vulkan)
-add_subdirectory(Source/ThirdParty/imgui)
-add_subdirectory(Source/ThirdParty/glm)
-add_subdirectory(Source/ThirdParty/spdlog)
-add_subdirectory(Source/ThirdParty/tinygltf)
-add_subdirectory(Source/ThirdParty/rapidjson)
+add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/imgui EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/spdlog EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/tinygltf EXCLUDE_FROM_ALL)
+add_subdirectory(Source/ThirdParty/rapidjson EXCLUDE_FROM_ALL)
 
 # Rocket modules
 add_subdirectory(Source/Editor/Application)
@@ -67,8 +67,8 @@ add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Engine)
 add_subdirectory(Source/Runtime/RHI)
 add_subdirectory(Source/Runtime/RenderCore)
+add_subdirectory(Source/Runtime/Renderer)
 add_subdirectory(Source/Runtime/Window)
-add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Asset)
 add_subdirectory(Source/Runtime/Application)
 
@@ -78,8 +78,8 @@ set(ROCKET_EXPORT_LIBS
     Engine
     RHI
     RenderCore
+    Renderer
     Window
-    Scene
     Asset
     Math
 )

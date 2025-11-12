@@ -1,6 +1,6 @@
 #include "Module.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 
 #ifdef RK_PLATFORM_LINUX
 #include <dlfcn.h>
@@ -33,7 +33,7 @@ void* RModule::GetSymbol(const char *Name)
     return dlsym(Library, Name);
 #endif
 
-    RK_ASSERT(false, "Failed to find symbol from given name");
+    ensure(false, "Failed to find symbol from given name");
 }
 
 void RModule::Load()
@@ -47,7 +47,7 @@ void RModule::Load()
     if (!Library)
     {
         RK_LOG_ERROR("Error: {}", dlerror());
-        RK_ASSERT(false, "Failed to load library from given path");
+        ensure(false, "Failed to load library from given path");
     }
 #endif
 

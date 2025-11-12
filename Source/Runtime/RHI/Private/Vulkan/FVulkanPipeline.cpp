@@ -1,6 +1,6 @@
 #include "FVulkanPipeline.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "Logger.h"
 #include "ShaderAsset.h"
 #include "Vulkan/VulkanRHIMinimal.h"
@@ -67,7 +67,7 @@ void FVulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
     CreateInfo.pCode = pData;
     CreateInfo.codeSize = pWordCount * sizeof(uint32_t);
     VkResult Result = VulkanRHI::vkCreateShaderModule(Device, &CreateInfo, nullptr, &Module);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create shader module.");
+    ensure(Result == VK_SUCCESS, "Failed to create shader module.");
 
     Version += 1;
 }
@@ -310,7 +310,7 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
 
     VkPipeline Pipeline = VK_NULL_HANDLE;
     VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.GetVkDevice(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create graphics pipeline");
+    ensure(Result == VK_SUCCESS, "Failed to create graphics pipeline");
 
     return Pipeline;
 }

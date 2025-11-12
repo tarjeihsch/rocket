@@ -3,6 +3,7 @@
 #include "Delegate.h"
 
 #include <span>
+#include <vector>
 
 #include <vulkan/vulkan_core.h>
 
@@ -37,6 +38,8 @@ inline bool operator<(EVulkanCommandBufferContextState a, EVulkanCommandBufferCo
     return static_cast<int>(a) < static_cast<int>(b);   
 }
 
+struct FVulkanCommandBufferPayload;
+
 class FVulkanCommandBufferContext 
 {
 private:
@@ -46,12 +49,13 @@ public:
     explicit FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
 
     FVulkanCommandBuffer* GetCurrentCommandBuffer();
-    FVulkanCommandBufferPool* GetCommandBufferPool();
     FVulkanCommandBufferPayload& GetPayload(EVulkanCommandBufferContextState State); 
 
     void NewPayload();
     void EndPayload();
-    void Finalize(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
+    
+    bool ShouldFlush() const;
+    void Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
 
     void AddWaitSemaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
     void AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);

@@ -1,5 +1,5 @@
 #include "VulkanDevice.h"
-#include "Assert.h"
+#include "Assertion.h"
 #include "FVulkanPipeline.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanCommandList.h"
@@ -7,6 +7,7 @@
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
 #include "VulkanResourceManager.h"
+#include "VulkanTexture.h"
 
 void FTransientResourceAllocator::Init()
 {
@@ -29,7 +30,7 @@ void FTransientResourceAllocator::Init()
         }
     }
 
-    RK_ASSERT(TypeIndex != UINT32_MAX);
+    ensure(TypeIndex != UINT32_MAX);
 
     VkMemoryAllocateInfo AllocInfo = {};
     AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -37,17 +38,17 @@ void FTransientResourceAllocator::Init()
     AllocInfo.memoryTypeIndex = TypeIndex;
 
     Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate memory.");
+    ensure(Result == VK_SUCCESS, "Failed to allocate memory.");
 
     Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to map transient memory.");
+    ensure(Result == VK_SUCCESS, "Failed to map transient memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
     BlockCreateInfo.size = 64ull * 1024 * 1024;
     BlockCreateInfo.flags = 0;
 
     Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create virtual block.");
+    ensure(Result == VK_SUCCESS, "Failed to create virtual block.");
 }
 
 void FTransientResourceAllocator::Shutdown()
@@ -76,7 +77,7 @@ void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
     VmaVirtualAllocation Allocation;
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
+    ensure(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
     VulkanRHI::vkBindImageMemory(Device.GetVkDevice(), Image, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
@@ -96,7 +97,7 @@ void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffs
     VmaVirtualAllocation Allocation;
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
+    ensure(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
     VulkanRHI::vkBindBufferMemory(Device.GetVkDevice(), Buffer, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
@@ -155,6 +156,8 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
             VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
             if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampler(It->m_DescriptorHandle); }
             break;
+        case EType::Texture:
+            delete (FVulkanTexture*)It->Handle;
         default: break;
         }
 
@@ -255,7 +258,7 @@ void FVulkanDevice::Initialize()
     DeviceCreateInfo.ppEnabledLayerNames = GetVulkanRHIMinimal()->GetValidationExtensions().data();
 
     VkResult Result = VulkanRHI::vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize logical device.");
+    ensure(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
     LoadVulkanDeviceFunc(GetVkDevice());
 
@@ -268,7 +271,7 @@ void FVulkanDevice::Initialize()
     AllocatorCreateInfo.pVulkanFunctions = &VmaFuncs;
 
     Result = vmaCreateAllocator(&AllocatorCreateInfo, &Allocator);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to initialize memory allocator.");
+    ensure(Result == VK_SUCCESS, "Failed to initialize memory allocator.");
 
     for (uint32_t Index = 0; Index < QueueFamilyCount; Index++)
     {

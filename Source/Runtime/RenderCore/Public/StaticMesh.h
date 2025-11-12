@@ -1,11 +1,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "Memory.h"
-
-#include "glm/detail/type_quat.hpp"
 #include "glm/fwd.hpp"
 #include "glm/gtx/quaternion.hpp"
+
+#include "Primitive.h"
 
 struct FRHIBuffer;
 
@@ -24,16 +23,17 @@ struct FPrimitiveMeshSection
     uint32_t M_VertexOffset = 0;
     uint32_t M_IndexOffset = 0;
 
-    glm::mat4 M_LocalMatrix;
+    glm::mat4 LocalMatrix;
 };
 
-class CStaticMesh
+class RStaticMesh : public RPrimitive
 {
 public:
-    CStaticMesh(const char* InFilePath);
-    ~CStaticMesh();
+    RStaticMesh(const char* InFilePath);
+    ~RStaticMesh();
 
-    inline std::span<const FPrimitiveMeshSection> GetMeshSections() const;
+    virtual void Draw(FRHICommandList& CmdList) const override;
+
     inline FRHIBuffer* GetVertexBuffer() const;
     inline FRHIBuffer* GetIndexBuffer() const;
     inline uint32_t GetVertexCount() const;
@@ -44,7 +44,7 @@ private:
     void Shutdown();
 
 private:
-    std::vector<FPrimitiveMeshSection> M_Sections;
+    std::vector<FPrimitiveMeshSection> Sections;
 
     FRHIBuffer* M_VertexBuffer;
     FRHIBuffer* M_IndexBuffer;
@@ -56,27 +56,22 @@ private:
     const char* FilePath;
 };
 
-std::span<const FPrimitiveMeshSection> CStaticMesh::GetMeshSections() const
-{
-    return std::span(M_Sections);
-}
-
-inline FRHIBuffer* CStaticMesh::GetVertexBuffer() const
+inline FRHIBuffer* RStaticMesh::GetVertexBuffer() const
 {
     return M_VertexBuffer;
 }
 
-inline FRHIBuffer* CStaticMesh::GetIndexBuffer() const
+inline FRHIBuffer* RStaticMesh::GetIndexBuffer() const
 {
     return M_IndexBuffer;
 }
 
-inline uint32_t CStaticMesh::GetVertexCount() const
+inline uint32_t RStaticMesh::GetVertexCount() const
 {
     return M_VertexCount;
 }
 
-inline uint32_t CStaticMesh::GetIndexCount() const
+inline uint32_t RStaticMesh::GetIndexCount() const
 {
     return M_IndexCount;
 }

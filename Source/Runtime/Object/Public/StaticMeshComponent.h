@@ -1,26 +1,24 @@
 #pragma once
 
-#include "SceneComponent.h"
+#include "PrimitiveComponent.h"
 
-class CStaticMesh;
+class RStaticMesh;
 
-class RStaticMeshComponent final : public RSceneComponent
+class RStaticMeshComponent final : public RPrimitiveComponent
 {
     using Super = RSceneComponent;
 
 public:
     static RClass* StaticClass();
 
-    RStaticMeshComponent();
-    ~RStaticMeshComponent() override;
-
-    virtual void OnInit() override;
-    virtual void OnDestroy() override;
     virtual const RClass* GetClass() const override;
 
-    void SetStaticMesh(CStaticMesh* NewStaticMesh);
-    CStaticMesh* GetStaticMesh() const;
+    void SetStaticMesh(RStaticMesh* NewStaticMesh);
+    RStaticMesh* GetStaticMesh() const;
+
+protected:
+    void OnMeshChanged();
 
 private:
-    CStaticMesh* StaticMesh;
+    RStaticMesh* StaticMesh;
 };

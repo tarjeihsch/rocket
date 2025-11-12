@@ -4,13 +4,16 @@
 #include "Editor.h"
 #include "GLFWWindow.h"
 #include "Logger.h"
+#include <Timer.h>
+
+STimestep Timestep;
 
 int main(int Argc, char** Argv)
 {
     FLogger::Init();
 
-    RWindowInitParams WindowInitParams;
-    WindowInitParams.Width = 1280;
+    RWindowInitParams WindowInitParams = {};
+	WindowInitParams.Width = 1280;
     WindowInitParams.Height = 720;
     WindowInitParams.Title = "Rocket Editor";
 
@@ -25,11 +28,10 @@ int main(int Argc, char** Argv)
 
     while (!GWindow->ShouldClose())
     {
+        Timestep.Reset();
         GWindow->Poll();
-
-        GEditor->Tick(0.0f);
-
-        GRHI->Tick(.0f);
+        GEditor->Tick(Timestep.GetDeltaTime());
+        GRHI->Tick(Timestep.GetDeltaTime());
     }
 
     GEditor->Shutdown();

@@ -1,6 +1,6 @@
-#include "../Public/GLFWWindow.h"
+#include "GLFWWindow.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "KeyCode.h"
 
 #include <GLFW/glfw3.h>
@@ -20,7 +20,7 @@ void RGLFWWindow::CreateNativeWindow(RWindowInitParams& InitParams)
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     NativeWindow = glfwCreateWindow(InitParams.Width, InitParams.Height, InitParams.Title, nullptr, nullptr);
-    RK_ASSERT(NativeWindow, "Failed to create GLFW window");
+    ensure(NativeWindow, "Failed to create GLFW window");
 
     glfwSetWindowUserPointer((GLFWwindow*)NativeWindow, this);
 

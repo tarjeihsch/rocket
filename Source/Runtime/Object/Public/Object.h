@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "Class.h"
 
 #include <cstring>
@@ -59,7 +59,7 @@ inline RObject* ConstructObject(RClass* Class)
         NewObj->PostConstruct();
         return NewObj;
     }
-    RK_ASSERT(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
+    ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
 }
 
 inline void DestructObject(RObject* Object)
@@ -70,7 +70,7 @@ inline void DestructObject(RObject* Object)
         ::operator delete(Object, Object->GetClass()->GetSize(), static_cast<std::align_val_t>(Object->GetClass()->GetAlignment()));
         return;
     }
-    RK_ASSERT(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
+    ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
 }
 
 // Helper function for ConstructObject() when type is known at compile-time
@@ -86,7 +86,7 @@ T* ConstructObject()
         NewObj->PostConstruct();
         return NewObj;
     }
-    RK_ASSERT(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
+    ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
 }
 
 template <typename T>

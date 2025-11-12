@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(RenderCore LANGUAGES CXX)
 
-add_library(RenderCore STATIC)
+add_library(RenderCore STATIC
+        Private/Primitive.cpp
+        Public/Primitive.h)
 add_library(Rocket::RenderCore ALIAS RenderCore)
 
 file(GLOB_RECURSE RENDERCORE_PUBLIC_HEADERS
@@ -20,7 +22,11 @@ file(GLOB_RECURSE RENDERCORE_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/*.cpp
 )
 
-target_sources(RenderCore PRIVATE ${RENDERCORE_PRIVATE_SOURCES})
+target_sources(RenderCore PRIVATE 
+    ${RENDERCORE_PUBLIC_HEADERS}
+    ${RENDERCORE_PRIVATE_HEADERS}
+    ${RENDERCORE_PRIVATE_SOURCES}
+)
 
 target_include_directories(RenderCore
     PUBLIC
@@ -32,10 +38,10 @@ target_include_directories(RenderCore
 
 target_link_libraries(RenderCore
     PUBLIC Rocket::Core
-    PUBLIC Rocket::Scene
     PUBLIC Rocket::Asset
     PUBLIC Rocket::RHI
     PUBLIC Rocket::Window
+    PUBLIC Rocket::Engine
     PUBLIC Rocket::Math
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )

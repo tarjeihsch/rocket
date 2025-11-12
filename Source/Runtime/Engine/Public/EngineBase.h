@@ -1,8 +1,13 @@
 #pragma once
 
+#include "Game.h"
+
 #include <cstdint>
+#include <span>
 #include <string>
 
+class RRenderProxyManager;
+class RViewport;
 class RWorld;
 enum class ERHIInterfaceType : uint8_t;
 
@@ -38,6 +43,7 @@ public:
     virtual void LoadWorld(const char* Path) = 0;
     virtual void UnloadWorld() = 0;
     virtual RWorld* GetWorld() const = 0;
+    virtual RGame* GetGame() const = 0;
 };
 
 extern IEngineBase* GEngine;

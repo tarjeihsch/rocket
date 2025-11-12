@@ -114,12 +114,11 @@ struct FFrameGraphPass
 
 struct FFrameGraphBuilder
 {
-    FFrameGraphBuilder();
-    ~FFrameGraphBuilder();
-
     FFrameGraphPass& AddPass(const char* DebugName, EFGPassFlags Flags, std::function<void(FRHICommandList& CmdList)>&& Callback);
 
     void Execute();
+
+    void Present(FRHITexture* Present);
 
 private:
     void AddFirstTextureTransition(FFGTextureRef TextureRef);
@@ -128,3 +127,10 @@ private:
 private:
     std::vector<FFrameGraphPass> Passes;
 };
+
+class RFrameGraph
+{
+
+};
+
+extern class RFrameGraph* GFrameGraph;

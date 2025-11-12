@@ -20,7 +20,11 @@ file(GLOB_RECURSE EDITOR_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Private/*.cpp
 )
 
-target_sources(Editor PRIVATE ${EDITOR_PRIVATE_SOURCES})
+target_sources(Editor PRIVATE 
+    ${EDITOR_PUBLIC_HEADERS}
+    ${EDITOR_PRIVATE_HEADERS}
+    ${EDITOR_PRIVATE_SOURCES}
+)
 
 target_include_directories(Editor
     PUBLIC

@@ -4,6 +4,12 @@
 #include "Common/RHISampler.h"
 #include "Common/RHITexture.h"
 
+#if defined(_WIN32)
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #include <Windows.h>
+    #undef APIENTRY
+#endif
+
 #include <vulkan/vulkan_core.h>
 #include <vma/vk_mem_alloc.h>
 

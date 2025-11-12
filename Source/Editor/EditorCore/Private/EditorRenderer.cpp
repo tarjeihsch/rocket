@@ -1,15 +1,271 @@
 #include "EditorRenderer.h"
 
-void REditorRenderer::Init()
-{
+#include "Renderer.h"
+#include "Viewport.h"
+#include "FrameGraph.h"
+#include "RenderTarget.h"
+#include "Common/RHIDrawCommand.h"
+#include <memory>
+#include <Common/RHI.h>
+#include "../imgui/imgui.h"
+#include <Input.h>
+#include <KeyCode.h>
+#include <Pipeline.h>
+#include "Common/RHIBuffer.h"
+#include "Common/RHISampler.h"
+#include "Common/RHITexture.h"
+#include <Logger.h>
+#include "Texture2D.h"
+#include <Material.h>
 
+static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
+
+static bool S_DockspaceOpen = true;
+static bool S_Fullscreen = true;
+static bool S_Padding = false;
+static ImGuiDockNodeFlags S_DockspaceFlags = ImGuiDockNodeFlags_None;
+
+REditorViewportClient::REditorViewportClient()
+{
+	Init();
 }
 
-void REditorRenderer::Shutdown()
+REditorViewportClient::~REditorViewportClient()
 {
+	Shutdown();
 }
 
-void REditorRenderer::Tick(float DeltaTime)
+void REditorViewportClient::Init()
 {
-    // Draw ImGui elements
+	ImGui::CreateContext();
+	ImGuiIO& IO = ImGui::GetIO();
+	IO.DisplaySize = ImVec2((float)1280, (float)720);
+	IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	IO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+	unsigned char* Data;
+	int Width, Height;
+	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&Data, &Width, &Height);
+	
+	ImGui_FontAtlas = std::make_unique<RTexture2D>(ETextureType::Linear, Width, Height);
+	ImGui_FontAtlas->LoadRawTextureData(Data);
+	IO.Fonts->SetTexID((ImTextureID)ImGui_FontAtlas->GetHandle());
+}
+
+void REditorViewportClient::Shutdown()
+{
+	ImGui_FontAtlas = nullptr;
+}
+
+void REditorViewportClient::Draw(RFrameContext& Ctx)
+{
+	FRenderTarget EditorViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
+	FRenderTarget SceneViewportRenderTarget = FRenderTarget(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1]);
+
+	FFrameGraphPass& SceneColorPass = Ctx.Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, 
+		[&](FRHICommandList& RHICmdList)
+		{
+
+		});
+	SceneColorPass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
+	
+	/* ---- Begin ImGUI ---- */
+
+	std::unique_ptr<FRHIBuffer> VertexBuffer;
+	std::unique_ptr<FRHIBuffer> IndexBuffer;
+	std::unique_ptr<FRHITextureView> TextureView;
+	std::unique_ptr<RRHISampler> Sampler;
+
+	ImGuiIO& IO = ImGui::GetIO();
+	IO.DisplaySize = ImVec2(Ctx.ViewportWidth, Ctx.ViewportHeight);
+	IO.DeltaTime = Ctx.Timestep;
+	IO.MousePos = ImVec2((float)PInput::GetMouseX(), (float)PInput::GetMouseY());
+	IO.MouseDown[0] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_LEFT);
+	IO.MouseDown[1] = PInput::GetMouseButtonPressed(RK_MOUSE_BUTTON_RIGHT);
+
+	ImGui::NewFrame();
+
+	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	if (S_Fullscreen)
+	{
+		const ImGuiViewport* MainViewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(MainViewport->WorkPos);
+		ImGui::SetNextWindowSize(MainViewport->WorkSize);
+		ImGui::SetNextWindowViewport(MainViewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		WindowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	}
+
+	if (!S_Padding)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	}
+
+	ImGui::Begin("MainDockspace", &S_DockspaceOpen, WindowFlags);
+	
+	if (!S_Padding)
+	{
+		ImGui::PopStyleVar();
+	}
+
+	if (S_Fullscreen)
+	{
+		ImGui::PopStyleVar(2);
+	}
+
+	if (IO.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+	{
+		ImGuiID DockspaceID = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(DockspaceID, ImVec2(0.0f, 0.0f), S_DockspaceFlags);
+	}
+
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit")) {}
+
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+
+	ImGui::Begin("Left Panel");
+	ImGui::End();
+
+	ImGui::Begin("Right Panel");
+	ImGui::End();
+
+	ImGui::Begin("Scene Viewport");
+	ImGui::Image((ImTextureID)SceneViewportRenderTarget.GetHandle(), ImGui::GetContentRegionAvail());
+	ImGui::End();
+
+	ImGui::End();
+	ImGui::Render();
+
+	ImDrawData* DrawData = ImGui::GetDrawData();
+
+	FFrameGraphPass& UIPass = Ctx.Builder.AddPass("UI Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+	{
+		std::unique_ptr<RMaterial> UIMaterial = std::make_unique<RMaterial>(EMaterialPass::UI, EMaterialBlendMode::Transparent, ROCKET_SRC "/Shader/ImGuiVS.hlsl", ROCKET_SRC "/Shader/ImGuiPS.hlsl");
+
+		UIMaterial->Bind(RHICmdList);
+
+		size_t totalVtx = 0, totalIdx = 0;
+		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		{
+			totalVtx += DrawData->CmdLists[n]->VtxBuffer.Size;
+			totalIdx += DrawData->CmdLists[n]->IdxBuffer.Size;
+		}
+
+		const size_t vbBytes = totalVtx * sizeof(ImDrawVert);
+		const size_t ibBytes = totalIdx * sizeof(ImDrawIdx);
+
+		if (!(vbBytes > 0 && ibBytes > 0)) return;
+
+		FRHIBufferDesc VertexBufferDesc = { vbBytes, ERHIResourceLifetime::Transient, ERHIBufferUsage::Vertex, ERHIResourceMemory::HostVisible };
+		VertexBuffer.reset(GetRHI()->RHICreateBuffer(VertexBufferDesc));
+
+		FRHIBufferDesc IndexBufferDesc = { ibBytes, ERHIResourceLifetime::Transient, ERHIBufferUsage::Index, ERHIResourceMemory::HostVisible };
+		IndexBuffer.reset(GetRHI()->RHICreateBuffer(IndexBufferDesc));
+		
+		RRHISamplerDesc desc{};
+		desc.MinFilter = ERHIFilterMode::Linear;
+		desc.MagFilter = ERHIFilterMode::Linear;
+		desc.MipFilter = ERHIFilterMode::Linear;
+		desc.AddressU = ERHIAddressMode::ClampToEdge;
+		desc.AddressV = ERHIAddressMode::ClampToEdge;
+		desc.AddressW = ERHIAddressMode::ClampToEdge;
+		desc.MinLod = 0.0f;
+		desc.MaxLod = 0.0f;
+
+		size_t vbOff = 0, ibOff = 0;
+		std::vector<size_t> listVtxBase(DrawData->CmdListsCount), listIdxBase(DrawData->CmdListsCount);
+
+		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		{
+			const ImDrawList* cl = DrawData->CmdLists[n];
+			const size_t vsz = cl->VtxBuffer.Size * sizeof(ImDrawVert);
+			const size_t isz = cl->IdxBuffer.Size * sizeof(ImDrawIdx);
+			VertexBuffer->Map(cl->VtxBuffer.Data, vsz, vbOff);
+			IndexBuffer->Map(cl->IdxBuffer.Data, isz, ibOff);
+			listVtxBase[n] = vbOff / sizeof(ImDrawVert);
+			listIdxBase[n] = ibOff / sizeof(ImDrawIdx);
+			vbOff += vsz; ibOff += isz;
+		}
+
+		struct Push { glm::vec2 scale; glm::vec2 translate; } pc;
+		pc.scale.x = 2.0f / DrawData->DisplaySize.x;
+		pc.scale.y = 2.0f / DrawData->DisplaySize.y;
+		pc.translate.x = -1.0f - DrawData->DisplayPos.x * pc.scale.x;
+		pc.translate.y = -1.0f - DrawData->DisplayPos.y * pc.scale.y;
+
+		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		{
+			const ImDrawList* cl = DrawData->CmdLists[n];
+			size_t idxOffset = listIdxBase[n];
+			size_t vtxBase = listVtxBase[n];
+
+			for (const ImDrawCmd& cmd : cl->CmdBuffer)
+			{
+				if (cmd.UserCallback) { cmd.UserCallback(cl, &cmd); continue; }
+
+				FRHITexture* srcTexture = reinterpret_cast<FRHITexture*>(cmd.GetTexID());
+
+				FRHITextureViewDesc TextureViewDesc;
+				TextureViewDesc.Format = srcTexture->RHIGetTextureDesc().Format;
+				TextureViewDesc.Aspect = ERHITextureAspect::Color;
+				TextureViewDesc.Lifetime = ERHIResourceLifetime::Transient;
+
+				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, srcTexture));
+				Sampler.reset(GetRHI()->RHICreateSampler(desc));
+				
+				ImVec2 clipMin = (ImVec2(ImFloor((cmd.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
+				ImVec2 clipMax = (ImVec2(ImFloor((cmd.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
+				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) { idxOffset += cmd.ElemCount; continue; }
+
+				GetRHI()->RHICmdSetScissor(RHICmdList, (int32_t)clipMin.x, (int32_t)clipMin.y, (uint32_t)(clipMax.x - clipMin.x), (uint32_t)(clipMax.y - clipMin.y));
+
+				FRHIDrawCommand dc = {};
+				dc.IndexCount = cmd.ElemCount;
+				dc.IndexBuffer = IndexBuffer.get();
+				dc.VertexBuffer = VertexBuffer.get();
+				dc.IndexBufferOffset = cmd.IdxOffset + listIdxBase[n];
+				dc.VertexBufferOffset = cmd.VtxOffset + listVtxBase[n];
+				dc.IndexType = FRHIDrawCommand::EIndexType::U16;
+
+				FRHIDrawParams dp = {};
+				dp.DrawParam_U32_1 = TextureView->GetBindingIndex();
+				dp.DrawParam_U32_2 = Sampler->GetBindingIndex();
+				dp.DrawParam_F32_1 = pc.scale[0];
+				dp.DrawParam_F32_2 = pc.scale[1];
+				dp.DrawParam_F32_3 = pc.translate[0];
+				dp.DrawParam_F32_4 = pc.translate[1];
+				
+
+				GetRHI()->RHICmdDrawIndexed(RHICmdList, dc, dp);
+
+				idxOffset += cmd.ElemCount;
+			}
+		}
+	});
+	UIPass.AddColorAttachment(EditorViewportRenderTarget.GetHandle());
+
+	// These lines should be covered by the Execute function itself. Should not have to specify the composition and present passes manually.
+	FFrameGraphPass& CompositionPass = Ctx.Builder.AddPass("Composition", EFGPassFlags::Compute, 
+		[&](FRHICommandList& RHICmdList)
+		{
+			GetRHI()->RHICmdBlitImage(RHICmdList, EditorViewportRenderTarget.GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
+		});
+
+	CompositionPass.AddTransferSrc(EditorViewportRenderTarget.GetHandle());
+	CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
+
+	FFrameGraphPass& PresentPass = Ctx.Builder.AddPass("Present", EFGPassFlags::Graphics, nullptr);
+	PresentPass.AddPresentSrc(GetRHI()->RHIGetBackBufferRenderTarget());
+
+	// This should be a unified call done by FrameGraph itself, not the builder.
+	// Should take all the builder's and combine them. (eg. Editor, Game)
+	Ctx.Builder.Execute();
 }

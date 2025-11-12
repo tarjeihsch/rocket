@@ -7,6 +7,7 @@
 #include <memory>
 #include <span>
 
+class RRHISwapchain;
 struct RRHISamplerDesc;
 class RRHISampler;
 struct FRHIDrawCommand;
@@ -76,6 +77,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
 
+    virtual RRHISwapchain* GetSwapchain() const = 0;
     virtual uint64_t GetFrameCounter() const noexcept = 0;
     virtual void RHIWaitUntilIdle() const = 0;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;

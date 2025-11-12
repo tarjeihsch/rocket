@@ -1,6 +1,6 @@
 #include "VulkanTexture.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanResourceManager.h"
@@ -45,12 +45,12 @@ void* FVulkanTexture::GetHandle() const
 
 void FVulkanTexture::Alloc()
 {
-    VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Tex2D.Extent[0], Desc.Tex2D.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
+    VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Extent[0], Desc.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
 
     if (Desc.Lifetime == ERHIResourceLifetime::Transient)
     {
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
 
         Device.GetTransientResourceAllocator()->AllocImage(Image, Offset);
     }
@@ -61,7 +61,7 @@ void FVulkanTexture::Alloc()
         AllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
         VkResult Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
-        RK_ASSERT(Result == VK_SUCCESS);
+        ensure(Result == VK_SUCCESS);
     }
 
     CurrentLayout = Desc.InitialLayout;

@@ -5,7 +5,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanCommandBufferContext.h"
 #include "VulkanDevice.h"
-#include "Assert.h"
+#include "Assertion.h"
 #include "VulkanCommandList.h"
 
 #include <cstring>
@@ -28,9 +28,10 @@ FVulkanQueue::~FVulkanQueue()
 
 void FVulkanQueue::Submit()
 {
-    std::vector<FVulkanCommandBufferPayload *> Payloads;
-    auto CmdListContext = static_cast<FVulkanCommandListContext *>(GetRHI()->GetCommandListContext());
-    CmdListContext->Finalize(Payloads);
+    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    
+    FVulkanCommandListContext* CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
+    CmdListContext->Flush(Payloads);
 
     for (FVulkanCommandBufferPayload *Payload : Payloads)
     {
@@ -99,7 +100,7 @@ void FVulkanQueue::Submit()
         SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
 
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
-        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
+        ensure(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
         SubmissionQueue.push(Payload);
     }
@@ -114,7 +115,7 @@ void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)>
     FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
 
     std::vector<FVulkanCommandBufferPayload*> Payloads;
-    CmdListContext.Finalize(Payloads);
+    CmdListContext.Flush(Payloads);
 
     for (FVulkanCommandBufferPayload* Payload : Payloads)
     {
@@ -140,7 +141,7 @@ void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)>
         SubmitInfo.pCommandBufferInfos = CommandBufferSubmitInfos.data();
 
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, Fence);
-        RK_ASSERT(Result == VK_SUCCESS, "Failed to submit to queue.");
+        ensure(Result == VK_SUCCESS, "Failed to submit to queue.");
 
         VulkanRHI::vkWaitForFences(Device.GetVkDevice(), 1, &Fence, VK_TRUE, UINT64_MAX);
         VulkanRHI::vkDestroyFence(Device.GetVkDevice(), Fence, nullptr);

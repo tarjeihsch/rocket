@@ -61,7 +61,7 @@ void RVulkanSampler::Alloc()
     }
 
     VkResult Result = VulkanRHI::vkCreateSampler(Device.GetVkDevice(), &SamplerCreateInfo, nullptr, &Sampler);
-    RK_ASSERT(Result == VK_SUCCESS, "Failed to create sampler");
+    ensure(Result == VK_SUCCESS, "Failed to create sampler");
 
     DescriptorHandle = Device.GetDescriptorManager()->AddSampler(Sampler);
 }

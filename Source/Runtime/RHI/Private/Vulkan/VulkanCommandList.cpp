@@ -1,6 +1,6 @@
 #include "VulkanCommandList.h"
 
-#include "Assert.h"
+#include "Assertion.h"
 #include "Common/RHIBuffer.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanCommandBuffer.h"
@@ -15,10 +15,10 @@ FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
 
 void FVulkanCommandListContext::RHIBindPipeline(FRHIPipeline *Pipeline)
 {
-    VkDescriptorSet DS = GetVulkanRHIMinimal()->GetBindlessDescriptorSet();
+    VkDescriptorSet DescriptorSet = GetVulkanRHIMinimal()->GetBindlessDescriptorSet();
 
     VulkanRHI::vkCmdBindPipeline(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(Pipeline->GetHandle()));
-    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DS, 0, nullptr);
+    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
 }
 
 void FVulkanCommandListContext::RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
@@ -42,7 +42,8 @@ void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawComman
     VkBuffer VertexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.VertexBuffer->GetHandle());
     VkBuffer IndexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.IndexBuffer->GetHandle());
 
-    VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, (VkDeviceSize[]){0});
+    VkDeviceSize Size = 0;
+    VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Size);
     VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), IndexBufferPtr, 0, DrawCommand.IndexType == FRHIDrawCommand::EIndexType::U32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
     VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &InDrawParams);
     VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCommand.IndexCount, 1, DrawCommand.IndexBufferOffset, static_cast<int32_t>(DrawCommand.VertexBufferOffset), 0);
@@ -130,8 +131,8 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
     VkViewport viewport = {};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
-    viewport.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
+    viewport.width = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width);
+    viewport.height = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
@@ -156,7 +157,7 @@ void FVulkanCommandListContext::RHICopyBuffer(FRHIBuffer *Src, FRHIBuffer *Dst, 
     BufferCopy.dstOffset = 0;
     BufferCopy.size = Src->GetBufferDesc().Size;
 
-    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkBuffer>(Src->GetHandle()), reinterpret_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
+    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), static_cast<VkBuffer>(Src->GetHandle()), static_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
 }
 
 void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *Dst)
@@ -167,14 +168,14 @@ void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *D
     BlitRegion.srcSubresource.baseArrayLayer = 0;
     BlitRegion.srcSubresource.layerCount = 1;
     BlitRegion.srcOffsets[0] = { 0, 0, 0 };
-    BlitRegion.srcOffsets[1] = { (int32_t)Src->RHIGetTextureDesc().Tex2D.Extent[0], (int32_t)Src->RHIGetTextureDesc().Tex2D.Extent[1], 1 };
+    BlitRegion.srcOffsets[1] = { (int32_t)Src->RHIGetTextureDesc().Extent[0], (int32_t)Src->RHIGetTextureDesc().Extent[1], 1 };
 
     BlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     BlitRegion.dstSubresource.mipLevel = 0;
     BlitRegion.dstSubresource.baseArrayLayer = 0;
     BlitRegion.dstSubresource.layerCount = 1;
     BlitRegion.dstOffsets[0] = { 0, 0, 0 };
-    BlitRegion.dstOffsets[1] = { (int32_t)Dst->RHIGetTextureDesc().Tex2D.Extent[0], (int32_t)Dst->RHIGetTextureDesc().Tex2D.Extent[1], 1 };
+    BlitRegion.dstOffsets[1] = { (int32_t)Dst->RHIGetTextureDesc().Extent[0], (int32_t)Dst->RHIGetTextureDesc().Extent[1], 1 };
 
     VulkanRHI::vkCmdBlitImage(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkImage>(Src->GetHandle()), VulkanRHI::GetVulkanLayout(Src->CurrentLayout), reinterpret_cast<VkImage>(Dst->GetHandle()), VulkanRHI::GetVulkanLayout(Dst->CurrentLayout), 1, &BlitRegion, VK_FILTER_NEAREST);
 }

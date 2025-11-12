@@ -35,7 +35,7 @@ int main(int P_Argc, char* P_Argv[])
 
     FLogger::Init();
 
-    GScriptModule = new RModule((EngineInitParams.ProjectRoot + "/" + EngineInitParams.ProjectBuild).c_str());
+    //GScriptModule = new RModule((EngineInitParams.ProjectRoot + "/" + EngineInitParams.ProjectBuild).c_str());
 
     GWindow = new RGLFWWindow();
     GWindow->CreateNativeWindow(WindowInitParams);
@@ -50,11 +50,8 @@ int main(int P_Argc, char* P_Argv[])
     while (!GWindow->ShouldClose())
     {
         Timestep.Reset();
-
         GWindow->Poll();
-
         GEngine->Tick(Timestep.GetDeltaTime());
-
         GRHI->Tick(Timestep.GetDeltaTime());
     }
 

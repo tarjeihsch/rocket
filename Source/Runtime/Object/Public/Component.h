@@ -26,8 +26,6 @@ public:
     virtual const RClass* GetClass() const override;
     virtual void PostConstruct() override;
 
-    virtual void OnInit() {}
-    virtual void OnDestroy() {}
     virtual void Tick(float DeltaTime);
 
     inline RActor* GetOwner() const;

@@ -1,9 +1,13 @@
 #pragma once
 
+#include "Component.h"
+#include "Delegate.h"
 #include "JsonAsset.h"
 #include "Object.h"
 #include "Tickable.h"
 
+class RComponent;
+class RSceneComponent;
 class RStaticMeshComponent;
 
 class RActor : public RObject
@@ -18,19 +22,20 @@ public:
 
     virtual void BeginPlay() {}
     virtual void EndPlay() {}
-    virtual void Tick(float DeltaTime) {}
 
-    virtual void Deserialize(const FJsonAsset::Object& Obj);
+    template<typename TComponent>
+    TComponent* AddComponent();
+    RComponent* AddComponent(RClass* Class);
 
-    inline RStaticMeshComponent* GetStaticMeshComponent() const;
-
-    RActor& operator<<(const FJsonAsset& json);
-
-protected:
-    TObjectPtr<RStaticMeshComponent> StaticMeshComponent;
+private:
+    std::vector<RComponent*> Components;
 };
 
-inline RStaticMeshComponent *RActor::GetStaticMeshComponent() const
+template <typename TComponent>
+TComponent* RActor::AddComponent()
 {
-    return StaticMeshComponent;
+    static_assert(std::is_base_of<RComponent, TComponent>::value, "TComponent must derive from RComponent.");
+    RComponent* BaseComponent = AddComponent(TComponent::StaticClass());
+    TComponent* NewComponent = static_cast<TComponent*>(BaseComponent);
+    return NewComponent;
 }

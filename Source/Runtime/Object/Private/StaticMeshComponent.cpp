@@ -1,9 +1,6 @@
 #include "StaticMeshComponent.h"
 
-#include "SceneRenderer.h"
-#include "StaticMesh.h"
-
-RClass *RStaticMeshComponent::StaticClass()
+RClass* RStaticMeshComponent::StaticClass()
 {
     static RStaticMeshComponent Archetype;
 
@@ -12,39 +9,17 @@ RClass *RStaticMeshComponent::StaticClass()
     return &Class;
 }
 
-RStaticMeshComponent::RStaticMeshComponent()
-{
-
-}
-
-RStaticMeshComponent::~RStaticMeshComponent()
-{
-    delete StaticMesh;
-}
-
-void RStaticMeshComponent::OnInit()
-{
-    RComponent::OnInit();
-}
-void RStaticMeshComponent::OnDestroy()
-{
-    RComponent::OnDestroy();
-}
-
 const RClass *RStaticMeshComponent::GetClass() const
 {
     return StaticClass();
 }
 
-void RStaticMeshComponent::SetStaticMesh(CStaticMesh *NewStaticMesh)
+void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)
 {
-    // TODO: Needs to wire the correct scenerenderer from engine.
-    //RSceneRenderer::Get().RegisterProxy(NewStaticMesh, &Transform);
-
     StaticMesh = NewStaticMesh;
 }
 
-CStaticMesh *RStaticMeshComponent::GetStaticMesh() const
+RStaticMesh *RStaticMeshComponent::GetStaticMesh() const
 {
     return StaticMesh;
 }

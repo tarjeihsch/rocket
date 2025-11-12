@@ -2,7 +2,7 @@
 
 #include "VulkanLoader.h"
 #include "VulkanDevice.h"
-#include "Assert.h"
+#include "Assertion.h"
 
 static VkDescriptorSetLayoutBinding MakeBinding(uint32_t pBinding, VkDescriptorType pType, VkShaderStageFlags pStages, uint32_t pCount)
 {
@@ -63,7 +63,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     LayoutCreateInfo.pNext = &Extension;
 
     VkResult Result = VulkanRHI::vkCreateDescriptorSetLayout(pDevice.GetVkDevice(), &LayoutCreateInfo, nullptr, &DescriptorSetLayout);
-    RK_ASSERT(Result == VK_SUCCESS);
+    ensure(Result == VK_SUCCESS);
 
     VkDescriptorPoolSize PoolSizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  pMaxSampledImages },
@@ -79,7 +79,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     PoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     PoolCreateInfo.pPoolSizes = PoolSizes;
     Result = VulkanRHI::vkCreateDescriptorPool(pDevice.GetVkDevice(), &PoolCreateInfo, nullptr, &DescriptorPool);
-    RK_ASSERT(Result == VK_SUCCESS);
+    ensure(Result == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo DescriptorSetAllocInfo = {};
     DescriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -87,7 +87,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     DescriptorSetAllocInfo.descriptorSetCount = 1;
     DescriptorSetAllocInfo.pSetLayouts        = &DescriptorSetLayout;
     Result = VulkanRHI::vkAllocateDescriptorSets(pDevice.GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
-    RK_ASSERT(Result == VK_SUCCESS);
+    ensure(Result == VK_SUCCESS);
 
     VkPushConstantRange PushConstantRanges[1];
     PushConstantRanges[0].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
@@ -101,7 +101,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
     PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges;
     VulkanRHI::vkCreatePipelineLayout(Device.GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
-    RK_ASSERT(Result == VK_SUCCESS);
+    ensure(Result == VK_SUCCESS);
 }
 
 VulkanDescriptorManager::~VulkanDescriptorManager()
@@ -123,7 +123,7 @@ void VulkanDescriptorManager::Shutdown()
 
 RDescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::SlotBase &Slot)
 {
-    RK_ASSERT(!Slot.FreeList.empty(), "Out of slots.");
+    ensure(!Slot.FreeList.empty(), "Out of slots.");
     uint32_t Index = Slot.FreeList.back();
     Slot.FreeList.pop_back();
     return { Index, Slot.Generation[Index] };

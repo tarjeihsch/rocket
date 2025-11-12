@@ -1,7 +1,6 @@
 {
     "version": 6,
-    "cmakeMinimumRequired":
-    {
+    "cmakeMinimumRequired": {
         "major": 3,
         "minor": 23,
         "patch": 0
@@ -77,33 +76,59 @@
                 "CMAKE_RC_COMPILER": "x86_64-w64-mingw32-windres",
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "msvc-debug",
+            "displayName": "MSVC Debug",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/Build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "/MP /Zi /EHsc"
+            }
+        },
+        {
+            "name": "msvc-release",
+            "displayName": "MSVC Release",
+            "generator": "Visual Studio 19 2022",
+            "binaryDir": "${sourceDir}/Build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
-        { 
+        {
             "name": "gcc-debug",
-            "configurePreset": "gcc-debug" 
+            "configurePreset": "gcc-debug"
         },
-        { 
+        {
             "name": "gcc-release",
             "configurePreset": "gcc-release"
         },
-        { 
+        {
             "name": "clang-debug",
             "configurePreset": "clang-debug"
         },
-        { 
+        {
             "name": "clang-release",
             "configurePreset": "clang-release"
         },
-        { 
+        {
             "name": "mingw-debug",
             "configurePreset": "mingw-debug"
         },
-        { 
+        {
             "name": "mingw-release",
             "configurePreset": "mingw-release"
+        },
+        {
+            "name": "msvc-debug",
+            "configurePreset": "msvc-debug"
+        },
+        {
+            "name": "msvc-release",
+            "configurePreset": "msvc-release"
         }
     ]
 }
-
