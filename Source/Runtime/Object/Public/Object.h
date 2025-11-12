@@ -54,12 +54,13 @@ inline RObject* ConstructObject(RClass* Class)
     {
         // Perform a manual raw byte copy from archetype to pass the correct vtable pointer from archetype
         void* Block = ::operator new(Class->GetSize(), std::align_val_t(Class->GetAlignment()));
-        std::memcpy(Block, Class->GetArchetype(), Class->GetSize());
+		std::memcpy(Block, static_cast<const void*>(Class->GetArchetype()), Class->GetSize());
         RObject* NewObj = static_cast<RObject*>(Block);
         NewObj->PostConstruct();
         return NewObj;
     }
     ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
+    return nullptr;
 }
 
 inline void DestructObject(RObject* Object)
@@ -67,7 +68,7 @@ inline void DestructObject(RObject* Object)
     if ((Object->GetClass()->GetFlags() & C_Memory_Allocator_Heap) == C_Memory_Allocator_Heap)
     {
         Object->~RObject();
-        ::operator delete(Object, Object->GetClass()->GetSize(), static_cast<std::align_val_t>(Object->GetClass()->GetAlignment()));
+		::operator delete(Object, static_cast<std::align_val_t>(Object->GetClass()->GetAlignment()));
         return;
     }
     ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
@@ -87,6 +88,7 @@ T* ConstructObject()
         return NewObj;
     }
     ensure(false, "Incorrect usage of allocator strategy. Explicit control over allocator strategy is required.");
+    return nullptr;
 }
 
 template <typename T>
