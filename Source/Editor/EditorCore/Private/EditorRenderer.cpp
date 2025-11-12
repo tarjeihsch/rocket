@@ -17,8 +17,7 @@
 #include <Logger.h>
 #include "Texture2D.h"
 #include <Material.h>
-
-static inline float ImFloor(float f) { return (float)((f >= 0 || (float)(int)f == f) ? (int)f : (int)f - 1); } // Decent replacement for floorf()
+#include <MathTypes.h>
 
 static bool S_DockspaceOpen = true;
 static bool S_Fullscreen = true;
@@ -152,101 +151,108 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 
 		UIMaterial->Bind(RHICmdList);
 
-		size_t totalVtx = 0, totalIdx = 0;
-		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		size_t TotalVertices = 0;
+		size_t TotalIndices = 0;
+
+		for (int Index = 0; Index < DrawData->CmdListsCount; ++Index)
 		{
-			totalVtx += DrawData->CmdLists[n]->VtxBuffer.Size;
-			totalIdx += DrawData->CmdLists[n]->IdxBuffer.Size;
+			TotalVertices += DrawData->CmdLists[Index]->VtxBuffer.Size;
+			TotalIndices += DrawData->CmdLists[Index]->IdxBuffer.Size;
 		}
 
-		const size_t vbBytes = totalVtx * sizeof(ImDrawVert);
-		const size_t ibBytes = totalIdx * sizeof(ImDrawIdx);
-
-		if (!(vbBytes > 0 && ibBytes > 0)) return;
-
-		FRHIBufferDesc VertexBufferDesc = { vbBytes, ERHIResourceLifetime::Transient, ERHIBufferUsage::Vertex, ERHIResourceMemory::HostVisible };
+		FRHIBufferDesc VertexBufferDesc = {};
+		VertexBufferDesc.Size = TotalVertices * sizeof(ImDrawVert);
+		VertexBufferDesc.Lifetime = ERHIResourceLifetime::Transient;
+		VertexBufferDesc.Usage = ERHIBufferUsage::Vertex;
+		VertexBufferDesc.Memory = ERHIResourceMemory::HostVisible;
 		VertexBuffer.reset(GetRHI()->RHICreateBuffer(VertexBufferDesc));
 
-		FRHIBufferDesc IndexBufferDesc = { ibBytes, ERHIResourceLifetime::Transient, ERHIBufferUsage::Index, ERHIResourceMemory::HostVisible };
+		FRHIBufferDesc IndexBufferDesc = {};
+		IndexBufferDesc.Size = TotalIndices * sizeof(ImDrawIdx);
+		IndexBufferDesc.Lifetime = ERHIResourceLifetime::Transient;
+		IndexBufferDesc.Usage = ERHIBufferUsage::Index;
+		IndexBufferDesc.Memory = ERHIResourceMemory::HostVisible;
 		IndexBuffer.reset(GetRHI()->RHICreateBuffer(IndexBufferDesc));
-		
-		RRHISamplerDesc desc{};
-		desc.MinFilter = ERHIFilterMode::Linear;
-		desc.MagFilter = ERHIFilterMode::Linear;
-		desc.MipFilter = ERHIFilterMode::Linear;
-		desc.AddressU = ERHIAddressMode::ClampToEdge;
-		desc.AddressV = ERHIAddressMode::ClampToEdge;
-		desc.AddressW = ERHIAddressMode::ClampToEdge;
-		desc.MinLod = 0.0f;
-		desc.MaxLod = 0.0f;
 
-		size_t vbOff = 0, ibOff = 0;
-		std::vector<size_t> listVtxBase(DrawData->CmdListsCount), listIdxBase(DrawData->CmdListsCount);
+		RRHISamplerDesc SamplerDesc = {};
+		SamplerDesc.MinFilter = ERHIFilterMode::Linear;
+		SamplerDesc.MagFilter = ERHIFilterMode::Linear;
+		SamplerDesc.MipFilter = ERHIFilterMode::Linear;
+		SamplerDesc.AddressU = ERHIAddressMode::ClampToEdge;
+		SamplerDesc.AddressV = ERHIAddressMode::ClampToEdge;
+		SamplerDesc.AddressW = ERHIAddressMode::ClampToEdge;
+		SamplerDesc.MinLod = 0.0f;
+		SamplerDesc.MaxLod = 0.0f;
 
-		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		size_t VertexBufferOffset = 0;
+		size_t IndexBufferOffset = 0;
+
+		std::vector<size_t> VertexBaseOffset(DrawData->CmdListsCount);
+		std::vector<size_t> IndexBaseOffset(DrawData->CmdListsCount);
+
+		for (int Index = 0; Index < DrawData->CmdListsCount; ++Index)
 		{
-			const ImDrawList* cl = DrawData->CmdLists[n];
-			const size_t vsz = cl->VtxBuffer.Size * sizeof(ImDrawVert);
-			const size_t isz = cl->IdxBuffer.Size * sizeof(ImDrawIdx);
-			VertexBuffer->Map(cl->VtxBuffer.Data, vsz, vbOff);
-			IndexBuffer->Map(cl->IdxBuffer.Data, isz, ibOff);
-			listVtxBase[n] = vbOff / sizeof(ImDrawVert);
-			listIdxBase[n] = ibOff / sizeof(ImDrawIdx);
-			vbOff += vsz; ibOff += isz;
+			const ImDrawList* DrawList = DrawData->CmdLists[Index];
+			const size_t VertexBufferSize = DrawList->VtxBuffer.Size * sizeof(ImDrawVert);
+			const size_t IndexBufferSize = DrawList->IdxBuffer.Size * sizeof(ImDrawIdx);
+			
+			VertexBuffer->Map(DrawList->VtxBuffer.Data, VertexBufferSize, VertexBufferOffset);
+			IndexBuffer->Map(DrawList->IdxBuffer.Data, IndexBufferSize, IndexBufferOffset);
+
+			VertexBaseOffset[Index] = VertexBufferOffset / sizeof(ImDrawVert);
+			IndexBaseOffset[Index] = IndexBufferOffset / sizeof(ImDrawIdx);
+			VertexBufferOffset += VertexBufferSize; IndexBufferOffset += IndexBufferSize;
 		}
 
-		struct Push { glm::vec2 scale; glm::vec2 translate; } pc;
-		pc.scale.x = 2.0f / DrawData->DisplaySize.x;
-		pc.scale.y = 2.0f / DrawData->DisplaySize.y;
-		pc.translate.x = -1.0f - DrawData->DisplayPos.x * pc.scale.x;
-		pc.translate.y = -1.0f - DrawData->DisplayPos.y * pc.scale.y;
+		const glm::vec2 Scale = { 2.0f / DrawData->DisplaySize.x, 2.0f / DrawData->DisplaySize.y };
+		const glm::vec2 Translate = { -1.0f - DrawData->DisplayPos.x * Scale.x, -1.0f - DrawData->DisplayPos.y * Scale.y };
 
-		for (int n = 0; n < DrawData->CmdListsCount; ++n)
+		for (int Index = 0; Index < DrawData->CmdListsCount; ++Index)
 		{
-			const ImDrawList* cl = DrawData->CmdLists[n];
-			size_t idxOffset = listIdxBase[n];
-			size_t vtxBase = listVtxBase[n];
+			const ImDrawList* CmdList = DrawData->CmdLists[Index];
+			size_t VertexBase = VertexBaseOffset[Index];
+			size_t IndexBase = IndexBaseOffset[Index];
 
-			for (const ImDrawCmd& cmd : cl->CmdBuffer)
+			for (const ImDrawCmd& CommandBuffer : CmdList->CmdBuffer)
 			{
-				if (cmd.UserCallback) { cmd.UserCallback(cl, &cmd); continue; }
-
-				FRHITexture* srcTexture = reinterpret_cast<FRHITexture*>(cmd.GetTexID());
+				FRHITexture* UserTexture = reinterpret_cast<FRHITexture*>(CommandBuffer.GetTexID());
 
 				FRHITextureViewDesc TextureViewDesc;
-				TextureViewDesc.Format = srcTexture->RHIGetTextureDesc().Format;
+				TextureViewDesc.Format = UserTexture->RHIGetTextureDesc().Format;
 				TextureViewDesc.Aspect = ERHITextureAspect::Color;
 				TextureViewDesc.Lifetime = ERHIResourceLifetime::Transient;
 
-				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, srcTexture));
-				Sampler.reset(GetRHI()->RHICreateSampler(desc));
+				TextureView.reset(GetRHI()->RHICreateTextureView(TextureViewDesc, UserTexture));
+				Sampler.reset(GetRHI()->RHICreateSampler(SamplerDesc));
 				
-				ImVec2 clipMin = (ImVec2(ImFloor((cmd.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
-				ImVec2 clipMax = (ImVec2(ImFloor((cmd.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), ImFloor((cmd.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y)));
-				if (clipMax.x <= clipMin.x || clipMax.y <= clipMin.y) { idxOffset += cmd.ElemCount; continue; }
+				ImVec2 ClipMin = ImVec2(Floor((CommandBuffer.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
+				ImVec2 ClipMax = ImVec2(Floor((CommandBuffer.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
+				if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y) 
+				{ 
+					IndexBase += CommandBuffer.ElemCount; continue; 
+				}
 
-				GetRHI()->RHICmdSetScissor(RHICmdList, (int32_t)clipMin.x, (int32_t)clipMin.y, (uint32_t)(clipMax.x - clipMin.x), (uint32_t)(clipMax.y - clipMin.y));
+				GetRHI()->RHICmdSetScissor(RHICmdList, (int32_t)ClipMin.x, (int32_t)ClipMin.y, (uint32_t)(ClipMax.x - ClipMin.x), (uint32_t)(ClipMax.y - ClipMin.y));
 
-				FRHIDrawCommand dc = {};
-				dc.IndexCount = cmd.ElemCount;
-				dc.IndexBuffer = IndexBuffer.get();
-				dc.VertexBuffer = VertexBuffer.get();
-				dc.IndexBufferOffset = cmd.IdxOffset + listIdxBase[n];
-				dc.VertexBufferOffset = cmd.VtxOffset + listVtxBase[n];
-				dc.IndexType = FRHIDrawCommand::EIndexType::U16;
+				FRHIDrawCommand DrawCommand = {};
+				DrawCommand.IndexCount = CommandBuffer.ElemCount;
+				DrawCommand.IndexBuffer = IndexBuffer.get();
+				DrawCommand.VertexBuffer = VertexBuffer.get();
+				DrawCommand.IndexBufferOffset = CommandBuffer.IdxOffset + IndexBaseOffset[Index];
+				DrawCommand.VertexBufferOffset = CommandBuffer.VtxOffset + VertexBaseOffset[Index];
+				DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U16;
 
-				FRHIDrawParams dp = {};
-				dp.DrawParam_U32_1 = TextureView->GetBindingIndex();
-				dp.DrawParam_U32_2 = Sampler->GetBindingIndex();
-				dp.DrawParam_F32_1 = pc.scale[0];
-				dp.DrawParam_F32_2 = pc.scale[1];
-				dp.DrawParam_F32_3 = pc.translate[0];
-				dp.DrawParam_F32_4 = pc.translate[1];
-				
+				FRHIDrawParams DrawParams = {};
+				DrawParams.DrawParam_U32_1 = TextureView->GetBindingIndex();
+				DrawParams.DrawParam_U32_2 = Sampler->GetBindingIndex();
+				DrawParams.DrawParam_F32_1 = Scale[0];
+				DrawParams.DrawParam_F32_2 = Scale[1];
+				DrawParams.DrawParam_F32_3 = Translate[0];
+				DrawParams.DrawParam_F32_4 = Translate[1];
 
-				GetRHI()->RHICmdDrawIndexed(RHICmdList, dc, dp);
+				GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
 
-				idxOffset += cmd.ElemCount;
+				IndexBase += CommandBuffer.ElemCount;
 			}
 		}
 	});
