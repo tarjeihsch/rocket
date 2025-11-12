@@ -90,7 +90,7 @@
         {
             "name": "msvc-release",
             "displayName": "MSVC Release",
-            "generator": "Visual Studio 19 2022",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/Build/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
