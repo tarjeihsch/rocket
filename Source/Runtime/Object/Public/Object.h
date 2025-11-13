@@ -6,15 +6,9 @@
 #include <cstring>
 #include <vector>
 
-class RProperty final
-{
-public:
-    RProperty() = default;
-	virtual ~RProperty() = default;
+#define PURE_VIRTUAL() { }
 
-    void* GetValue() const;
-    void SetValue(const void* Data);
-};
+class RWorld;
 
 /*
  * Each RObject carries its own integrated RClass metadata layer. This results in boilerplate code that is necessary to perform
@@ -42,7 +36,7 @@ public:
     {
         static RObject ClassDefaultObject;
 
-        static RClass Class { nullptr, &ClassDefaultObject, sizeof(RObject), alignof(RObject), C_None };
+        static RClass Class { "RObject", nullptr, &ClassDefaultObject, sizeof(RObject), alignof(RObject), C_None };
 
         return &Class;
     }
@@ -51,22 +45,13 @@ public:
 
     // Runs a deep copy on pointer/heap-owning fields
     virtual void PostConstruct(class RWorld* InWorld, class RObject* InOuter);
-    virtual void Load(const std::vector<uint8_t>& Data) {}
-    virtual void Save(std::vector<uint8_t>& Data) {}
+    virtual void Load(const std::vector<uint8_t>& Data) PURE_VIRTUAL()
+    virtual void Save(std::vector<uint8_t>& Data) PURE_VIRTUAL()
+    virtual void OnPropertyChanged() PURE_VIRTUAL()
 
-    inline RWorld* GetWorld() const
-    {
-        ensure(World != nullptr);
-
-        return World;
-    }
-
-    inline RObject* GetOuter() const
-    {
-        ensure(Outer != nullptr);
-
-        return Outer;
-    }
+    RWorld* GetWorld() const;
+    RObject* GetOuter() const;
+    uint64_t GetUUID() const;
 
 protected:
     static_assert(DoesImplementStaticClass<RObject>, "");
@@ -75,6 +60,8 @@ protected:
     RWorld* World;
 
     RObject* Outer;
+
+    uint64_t UUID;
 };
 
 inline RObject* ConstructObject(RWorld* World, RObject* Owner, RClass* Class)

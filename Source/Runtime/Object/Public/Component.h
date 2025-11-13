@@ -1,11 +1,10 @@
 #pragma once
 
 #include "Object.h"
-#include "Tickable.h"
 
 #include <cstdint>
 
-class RActor;
+class RWorld;
 
 enum class EComponentFlags : uint8_t
 {

@@ -1,7 +1,7 @@
 #include "Class.h"
 
-RClass::RClass(RClass* P_ParentClass, RObject* P_Archetype, uint64_t P_Size, uint64_t P_Alignment, uint32_t P_Flags)
-    : SuperClass(P_ParentClass), Archetype(P_Archetype), Size(P_Size), Alignment(P_Alignment), Flags(P_Flags)
+RClass::RClass(const char* InClassName, RClass* P_ParentClass, RObject* P_Archetype, size_t P_Size, size_t P_Alignment, uint32_t P_Flags, RField* InFields, size_t InFieldCount)
+	: ClassName(InClassName), SuperClass(P_ParentClass), Archetype(P_Archetype), Fields(InFields), FieldCount(InFieldCount), Size(P_Size), Alignment(P_Alignment), Flags(P_Flags)
 {
 }
 

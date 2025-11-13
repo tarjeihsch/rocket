@@ -1,6 +1,5 @@
 #include "CameraComponent.h"
 
-#include "EngineBase.h"
 #include "../../Renderer/Public/PrimitiveManager.h"
 #include "Viewport.h"
 #include "World.h"
@@ -38,7 +37,7 @@ glm::mat4 RCameraComponent::RecalculateProjectionMatrix() const
 }
 
 RCameraComponent::RCameraComponent()
-    : bMarkedDirty(1)
+    : SceneViewID(UINT64_MAX), bCameraDirtyFlag(1)
 {
     FovY = glm::radians(60.0f);
     AspectRatio = 1280 / 720.0f;
@@ -52,7 +51,23 @@ RClass* RCameraComponent::StaticClass()
 {
     static RCameraComponent Archetype;
 
-    static RClass Class = RClass(Super::StaticClass(), &Archetype, sizeof(RCameraComponent), alignof(RCameraComponent), C_ClassDefault | C_Memory_Allocator_Heap);
+    static RField Fields[] =
+    {
+        RK_FIELD(float, RCameraComponent, AspectRatio),
+        RK_FIELD(float, RCameraComponent, ZNear),
+        RK_FIELD(float, RCameraComponent, ZFar),
+    };
+
+    static RClass Class = {
+        "RCameraComponent",
+        Super::StaticClass(),
+        &Archetype,
+        sizeof(RCameraComponent),
+        alignof(RCameraComponent),
+        C_ClassDefault | C_Memory_Allocator_Heap,
+        Fields,
+        std::size(Fields)
+    };
 
     return &Class;
 }
@@ -65,15 +80,13 @@ RClass* RCameraComponent::GetClass() const
 void RCameraComponent::PostConstruct(RWorld* World, RObject* Owner)
 {
     Super::PostConstruct(World, Owner);
-
-	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
 }
 
 void RCameraComponent::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (bMarkedDirty)
+    if (bCameraDirtyFlag || bTransformDirtyFlag)
     {
         OnPropertyChanged();
     }
@@ -81,9 +94,12 @@ void RCameraComponent::Tick(float DeltaTime)
 
 void RCameraComponent::OnPropertyChanged()
 {
-	Super::OnMarkedDirty();
+    if (SceneViewID == UINT64_MAX)
+    {
+    	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
+    }
 
-    LSceneView NewSceneView(SceneViewID, SceneViewID);
+    LSceneView NewSceneView = {};
 
 	NewSceneView.ProjectionMatrix = RecalculateProjectionMatrix();
 	NewSceneView.ViewMatrix = RecalculateViewMatrix();

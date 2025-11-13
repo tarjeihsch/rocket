@@ -21,17 +21,13 @@ public:
     virtual RClass* GetClass() const override;
     virtual void PostConstruct(RWorld* World, RObject* Owner) override;
     virtual void Tick(float DeltaTime) override;
+    virtual void OnPropertyChanged() override;
 
 	glm::mat4 RecalculateViewMatrix() const;
 	glm::mat4 RecalculateProjectionMatrix() const;
 
-protected:
-    void OnPropertyChanged();
-
 public:
     uint64_t SceneViewID;
-
-    float FovY;
 
     float AspectRatio;
 
@@ -51,5 +47,5 @@ public:
     ECameraProjectionMode ProjectionMode;
 
 private:
-    uint8_t bMarkedDirty : 1;
+    uint8_t bCameraDirtyFlag : 1;
 };

@@ -14,6 +14,7 @@ public:
     RSceneComponent();
 
     virtual const RClass* GetClass() const override;
+    virtual void OnPropertyChanged() override;
 
     glm::vec3 GetLocation() const;
     glm::vec3 GetRotation() const;
@@ -24,9 +25,6 @@ public:
     void AddLocation(glm::vec3 Location);
     void AddRotation(glm::vec3 Rotation);
 
-protected:
-    virtual void OnMarkedDirty() {}
-
 public:
     glm::vec3 Location;
 
@@ -35,4 +33,7 @@ public:
     glm::vec3 Scale;
 
     glm::vec3 Velocity;
+
+protected:
+    uint8_t bTransformDirtyFlag : 1;
 };

@@ -32,7 +32,10 @@ static RComponent* SelectedComponent = nullptr;
 static bool S_DockspaceOpen = true;
 static bool S_Fullscreen = true;
 static bool S_Padding = false;
+static bool SShowStatsWindow = false;
 static ImGuiDockNodeFlags S_DockspaceFlags = ImGuiDockNodeFlags_None;
+static float FrameTimes[120] = {};
+static int FrameIndex = 0;
 
 REditorViewportClient::REditorViewportClient()
 {
@@ -134,16 +137,39 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		{
 			if (ImGui::MenuItem("New Actor")) 
 			{
-				RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
-				RActor* Actor = GEditor->GetWorld()->SpawnActor(RActor::StaticClass());
-				RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
-				StaticMeshComponent->SetStaticMesh(StaticMesh);
+			    RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
+			    RActor* Actor = GEditor->GetWorld()->SpawnActor(RActor::StaticClass());
+			    RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
+			    StaticMeshComponent->SetStaticMesh(StaticMesh);
 			}
 
 			ImGui::EndMenu();
 		}
+	    if (ImGui::BeginMenu("Stats"))
+	    {
+	        SShowStatsWindow = true;
+	        ImGui::EndMenu();
+	    }
+
 		ImGui::EndMenuBar();
 	}
+
+    if (SShowStatsWindow)
+    {
+        ImGui::Begin("Stats", &SShowStatsWindow);
+
+        float ms = ImGui::GetIO().DeltaTime * 1000.0f;
+        FrameTimes[FrameIndex] = ms;
+        FrameIndex = (FrameIndex + 1) % IM_ARRAYSIZE(FrameTimes);
+
+        ImGui::Text("Frame Time: %.3f ms", ms);
+        ImGui::Text("FPS: %.1f", 1000.0f / ms);
+
+        ImGui::PlotLines("Frame Time (ms)", FrameTimes, IM_ARRAYSIZE(FrameTimes), FrameIndex, nullptr, 0.0f, 50.0f, ImVec2(0, 80));
+
+        ImGui::End();
+    }
+
 
 	ImGui::Begin("Scene Hierarchy");
 	std::span<RActor*> Actors = GEditor->GetWorld()->GetActors();
@@ -164,7 +190,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	ImGui::Begin("Components");
 	if (SelectedActor)
 	{
-		ImGui::Text("Actor: %s", &SelectedActor);
+		ImGui::Text("%s", SelectedActor->GetClass()->GetClassName());
 		ImGui::Separator();
 
 		std::span<RComponent*> Components = SelectedActor->GetComponents();
@@ -182,6 +208,66 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	ImGui::End();
 
 	ImGui::Begin("Properties");
+	if (SelectedComponent)
+	{
+	    ImGui::Text("%s", SelectedComponent->GetClass()->GetClassName());
+	    ImGui::Separator();
+
+	    for (const RClass* Class = SelectedComponent->GetClass(); Class != nullptr; Class = Class->GetSuperClass())
+	    {
+	        std::span<RField> Fields = Class->GetFields();
+
+	        for (const RField& Field : Fields)
+	        {
+	            switch (Field.FieldType)
+	            {
+
+	            case EFieldType::Bool:
+	            {
+	                bool* Value = static_cast<bool*>(Field.GetValue(SelectedComponent));
+	                if (ImGui::Checkbox(Field.Name, Value))
+	                {
+	                    SelectedComponent->OnPropertyChanged();
+	                }
+	                break;
+	            }
+
+	            case EFieldType::Float:
+	            {
+	                float* Value = static_cast<float*>(Field.GetValue(SelectedComponent));
+	                if (ImGui::DragFloat(Field.Name, Value))
+	                {
+	                    SelectedComponent->OnPropertyChanged();
+	                }
+	                break;
+	            }
+
+	            case EFieldType::Int:
+	            {
+	                int32_t* Value = static_cast<int32_t*>(Field.GetValue(SelectedComponent));
+	                if (ImGui::DragInt(Field.Name, Value))
+	                {
+	                    SelectedComponent->OnPropertyChanged();
+	                }
+	                break;
+	            }
+
+	            case EFieldType::Vector:
+	            {
+	                float* Value = static_cast<float*>(Field.GetValue(SelectedComponent));
+	                if (ImGui::DragFloat3(Field.Name, Value))
+	                {
+                        SelectedComponent->OnPropertyChanged();
+	                }
+	                break;
+	            }
+
+	            default:
+	                break;
+	            }
+	        }
+	    }
+	}
 	ImGui::End();
 
 	ImGui::Begin("Scene Viewport");
@@ -202,9 +288,9 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	PipelineSpec.CullMode = ERHICullMode::Back;
 	PipelineSpec.ColorAttachmentFormats.emplace_back(ERHIFormat::BGRA8_SRGB);
 	PipelineSpec.VertexBindings.emplace_back(FRHIVertexBinding(0, 48, 0));
-	PipelineSpec.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float3, offsetof(FRHIVertex, m_Position));
-	PipelineSpec.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float3, offsetof(FRHIVertex, m_Normal));
-	PipelineSpec.VertexAttributes.emplace_back(2, 0, ERHIFormat::Float2, offsetof(FRHIVertex, m_TexCoord));
+	PipelineSpec.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float3, static_cast<uint32_t>(offsetof(FRHIVertex, m_Position)));
+	PipelineSpec.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float3, static_cast<uint32_t>(offsetof(FRHIVertex, m_Normal)));
+	PipelineSpec.VertexAttributes.emplace_back(2, 0, ERHIFormat::Float2, static_cast<uint32_t>(offsetof(FRHIVertex, m_TexCoord)));
 	PipelineSpec.BlendAttachments.emplace_back(FRHIBlendAttachment(false, ERHIBlendFactor::SrcAlpha, ERHIBlendFactor::OneMinusSrcAlpha, ERHIBlendOp::Add, ERHIBlendFactor::One, ERHIBlendFactor::Zero, ERHIBlendOp::Add, (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)));
 
 	FRHIPipeline* Pipeline = GetRHI()->RHICreatePipelineStateObject(PipelineSpec);

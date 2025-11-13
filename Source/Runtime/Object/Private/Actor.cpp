@@ -6,7 +6,15 @@ RClass *RActor::StaticClass()
 {
     static RActor Archetype;
 
-    static RClass Class { Super::StaticClass(), &Archetype, sizeof(RActor), alignof(RActor), C_ClassDefault | C_Memory_Allocator_Heap };
+    static RClass Class
+    {
+        "RActor",
+        Super::StaticClass(),
+        &Archetype,
+        sizeof(RActor),
+        alignof(RActor),
+        C_ClassDefault | C_Memory_Allocator_Heap
+    };
 
     return &Class;
 }

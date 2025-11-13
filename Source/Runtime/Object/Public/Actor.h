@@ -30,7 +30,7 @@ public:
 
     std::span<RComponent*> GetComponents();
 
-private:
+  private:
     std::vector<RComponent*> Components;
 };
 

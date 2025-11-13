@@ -12,21 +12,10 @@ public:
     RPrimitiveComponent();
 
     virtual const RClass* GetClass() const override;
-    virtual void Tick(float DeltaTime) override;
-
-    void SetVisibility(bool bVisibility);
-    bool IsVisible() const { return bVisible; }
-
-	void MarkDirty() { bDirty = true; }
-
-protected:
-    virtual void OnMarkedDirty() override;
 
 protected:
     uint64_t ProxyHandle = UINT64_MAX;
 
-private:
-    uint8_t bDirty : 1;
-
-    uint8_t bVisible : 1;
+protected:
+    uint8_t bMeshDirtyFlag : 1;
 };

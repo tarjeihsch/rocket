@@ -25,9 +25,27 @@ RClass* RStaticMeshComponent::StaticClass()
 {
     static RStaticMeshComponent Archetype;
 
-    static RClass Class { Super::StaticClass(), &Archetype, sizeof(RStaticMeshComponent), alignof(RStaticMeshComponent), C_ClassDefault | C_Memory_Allocator_Heap };
+    static RClass Class
+	{
+	    "RStaticMeshComponent",
+		Super::StaticClass(), 
+		&Archetype, 
+		sizeof(RStaticMeshComponent), 
+		alignof(RStaticMeshComponent), 
+		C_ClassDefault | C_Memory_Allocator_Heap
+	};
 
     return &Class;
+}
+
+void RStaticMeshComponent::Tick(float DeltaTime)
+{
+    RPrimitiveComponent::Tick(DeltaTime);
+
+    if (bMeshDirtyFlag || bTransformDirtyFlag)
+    {
+        OnPropertyChanged();
+    }
 }
 
 const RClass *RStaticMeshComponent::GetClass() const
@@ -35,34 +53,32 @@ const RClass *RStaticMeshComponent::GetClass() const
     return StaticClass();
 }
 
+void RStaticMeshComponent::OnPropertyChanged()
+{
+    if (ProxyHandle == UINT64_MAX)
+    {
+        ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
+    }
+
+    LSceneProxyGeometry Geometry = {};
+    Geometry.StaticMesh = StaticMesh;
+
+    LSceneProxyTransform Transform = {};
+    Transform.ModelMatrix = ComposeTransformMatrix(Location, Rotation, Scale);
+    Transform.InverseModelMatrix = TransposeInverseTransformMatrix(Location, Rotation, Scale);
+
+    GetWorld()->GetSceneProxyManager()->UpdateProxyGeometry(ProxyHandle, Geometry);
+    GetWorld()->GetSceneProxyManager()->UpdateProxyTransform(ProxyHandle, Transform);
+}
+
 void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)
 {
     StaticMesh = NewStaticMesh;
 
-	MarkDirty();
+    OnPropertyChanged();
 }
 
 RStaticMesh *RStaticMeshComponent::GetStaticMesh() const
 {
     return StaticMesh;
-}
-
-void RStaticMeshComponent::OnMarkedDirty()
-{
-    Super::OnMarkedDirty();
-
-	if (ProxyHandle == UINT64_MAX)
-	{
-		ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
-	}
-
-    LSceneProxyGeometry Geometry = {};
-    Geometry.StaticMesh = StaticMesh;
-
-	LSceneProxyTransform Transform = {};
-    Transform.ModelMatrix = ComposeTransformMatrix(Location, Rotation, Scale);
-	Transform.InverseModelMatrix = TransposeInverseTransformMatrix(Location, Rotation, Scale);
-
-	GetWorld()->GetSceneProxyManager()->UpdateProxyGeometry(ProxyHandle, Geometry);
-	GetWorld()->GetSceneProxyManager()->UpdateProxyTransform(ProxyHandle, Transform);
 }

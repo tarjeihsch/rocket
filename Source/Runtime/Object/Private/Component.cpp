@@ -7,7 +7,7 @@ RClass *RComponent::StaticClass()
 {
     static RComponent Archetype;
 
-    static RClass Class { Super::StaticClass(), &Archetype, sizeof(RComponent), alignof(RComponent), C_ClassDefault | C_Memory_Allocator_Heap };
+    static RClass Class { "RComponent", Super::StaticClass(), &Archetype, sizeof(RComponent), alignof(RComponent), C_ClassDefault | C_Memory_Allocator_Heap };
 
     return &Class;
 }

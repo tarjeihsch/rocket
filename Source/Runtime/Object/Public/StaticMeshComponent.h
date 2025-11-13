@@ -11,13 +11,12 @@ class RStaticMeshComponent final : public RPrimitiveComponent
 public:
     static RClass* StaticClass();
 
+    virtual void Tick(float DeltaTime);
     virtual const RClass* GetClass() const override;
+    virtual void OnPropertyChanged() override;
 
     void SetStaticMesh(RStaticMesh* NewStaticMesh);
     RStaticMesh* GetStaticMesh() const;
-
-protected:
-    virtual void OnMarkedDirty() override;
 
 private:
     RStaticMesh* StaticMesh;

@@ -4,7 +4,7 @@ RClass *RController::StaticClass()
 {
     static RController ClassDefaultObject;
 
-    static RClass Class { Super::StaticClass(), &ClassDefaultObject, sizeof(RController), alignof(RController), C_None };
+    static RClass Class { "RController", Super::StaticClass(), &ClassDefaultObject, sizeof(RController), alignof(RController), C_None };
 
     return &Class;
 }
