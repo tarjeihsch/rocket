@@ -25,9 +25,9 @@ public:
     void AddRotation(glm::vec3 Rotation);
 
 protected:
-    virtual void OnMarkedDirty() {}
+    virtual void OnMarkedDirty();
 
-private:
+public:
     glm::vec3 Location;
 
     glm::vec3 Rotation;

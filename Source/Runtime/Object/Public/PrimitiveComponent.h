@@ -15,6 +15,9 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     void SetVisibility(bool bVisibility);
+    bool IsVisible() const { return bVisible; }
+
+	void MarkDirty() { bDirty = true; }
 
 protected:
     virtual void OnMarkedDirty() override;

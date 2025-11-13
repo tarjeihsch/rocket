@@ -20,8 +20,10 @@ struct FDrawParams
     uint DrawParam_2;
     uint DrawParam_3;
     uint DrawParam_4;
-    uint DrawParam_5;
-    uint DrawParam_6;
+    float DrawParam_5;
+    float DrawParam_6;
+    float DrawParam_7;
+    float DrawParam_8;
 };
 
 [[vk::push_constant]]

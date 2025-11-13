@@ -27,14 +27,4 @@ public:
     virtual void PostConstruct(RWorld* World, RObject* Owner) override;
 
     virtual void Tick(float DeltaTime);
-
-    inline RActor* GetOwner() const;
-
-private:
-    RActor* Owner;
 };
-
-inline RActor *RComponent::GetOwner() const
-{
-    return Owner;
-}

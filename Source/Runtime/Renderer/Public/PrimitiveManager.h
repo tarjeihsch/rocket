@@ -64,9 +64,6 @@ public:
     void UpdateView(uint64_t SceneViewID, const LSceneView& SceneView);
     std::span<LSceneView> GetViews();
 
-    void CreateScene();
-    void DestroyScene();
-
 private:
     std::vector<LSceneProxy> Proxies;
 

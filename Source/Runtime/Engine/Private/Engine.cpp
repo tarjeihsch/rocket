@@ -17,15 +17,11 @@ REngine::REngine()
 void REngine::Start(REngineInitParams& InitParams)
 {
     Game = new RGame();
-
-    Renderer = new RSceneRenderer();
 }
 
 void REngine::Tick(float DeltaTime)
 {
     World->Tick(DeltaTime);
-
-    Renderer->Render();
 }
 
 void REngine::Stop()

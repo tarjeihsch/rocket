@@ -24,29 +24,29 @@ RStaticMesh::~RStaticMesh()
 
 void RStaticMesh::Draw(FRHICommandList& RHICmdList) const
 {
-    RPrimitive::Draw(RHICmdList);
-
-    for (const auto& Section : Sections)
-    {
-        FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-        //ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
-        //ObjectData.Write(Proxy.Transform.InverseModelMatrix);
-        std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
-
-        FRHIDrawCommand DrawCommand = {};
-        DrawCommand.VertexBuffer = M_VertexBuffer;
-        DrawCommand.IndexBuffer = M_IndexBuffer;
-        DrawCommand.IndexCount = Section.M_IndexCount;
-        DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
-        DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
-        DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
-
-        FRHIDrawParams DrawParams = {};
-        //DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
-        //DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
-
-        GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
-    }
+	//RPrimitive::Draw(RHICmdList);
+	//
+	//for (const auto& Section : Sections)
+	//{
+	//    FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+	//    ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
+	//    ObjectData.Write(Proxy.Transform.InverseModelMatrix);
+	//    std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
+	//
+	//    FRHIDrawCommand DrawCommand = {};
+	//    DrawCommand.VertexBuffer = M_VertexBuffer;
+	//    DrawCommand.IndexBuffer = M_IndexBuffer;
+	//    DrawCommand.IndexCount = Section.M_IndexCount;
+	//    DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
+	//    DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
+	//    DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
+	//
+	//    FRHIDrawParams DrawParams = {};
+	//    DrawParams.DrawParam_U32_1 = CameraInterface_GPUBuffer->GetBindingIndex(); // Camera ID
+	//    DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
+	//
+	//    GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
+	//}
 }
 
 void RStaticMesh::Init()
@@ -62,7 +62,7 @@ void RStaticMesh::Init()
 
     for (const auto& Primitive : MeshAsset->Node.Primitives)
     {
-        FPrimitiveMeshSection& Section = Sections.emplace_back();
+        FMeshChildSection& Section = Sections.emplace_back();
         Section.M_IndexCount = Primitive.Indices.size();
         Section.M_VertexCount = Primitive.Vertices.size();
         Section.M_VertexOffset = M_VertexCount;

@@ -1,7 +1,7 @@
 #include "PrimitiveComponent.h"
 
 #include "EngineBase.h"
-#include "../../Renderer/Public/PrimitiveManager.h"
+#include "PrimitiveManager.h"
 #include "World.h"
 
 RClass* RPrimitiveComponent::StaticClass()
@@ -38,11 +38,11 @@ void RPrimitiveComponent::SetVisibility(bool bVisibility)
     // TODO: Use a free list
     if (bVisibility)
     {
-        ProxyHandle = GEngine->GetWorld()->GetPrimitiveProxyManager()->CreateProxy();
+        ProxyHandle = GetWorld()->GetPrimitiveProxyManager()->CreateProxy();
     }
     else
     {
-        GEngine->GetWorld()->GetPrimitiveProxyManager()->RemoveProxy(ProxyHandle);
+        GetWorld()->GetPrimitiveProxyManager()->RemoveProxy(ProxyHandle);
     }
 
     bVisible = bVisibility;
@@ -50,5 +50,6 @@ void RPrimitiveComponent::SetVisibility(bool bVisibility)
 
 void RPrimitiveComponent::OnMarkedDirty()
 {
-    bDirty = true;
+    // Reset dirty flag
+    bDirty = false;
 }

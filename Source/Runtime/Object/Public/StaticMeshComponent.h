@@ -6,7 +6,7 @@ class RStaticMesh;
 
 class RStaticMeshComponent final : public RPrimitiveComponent
 {
-    using Super = RSceneComponent;
+    using Super = RPrimitiveComponent;
 
 public:
     static RClass* StaticClass();
@@ -17,7 +17,7 @@ public:
     RStaticMesh* GetStaticMesh() const;
 
 protected:
-    void OnMeshChanged();
+    virtual void OnMarkedDirty() override;
 
 private:
     RStaticMesh* StaticMesh;

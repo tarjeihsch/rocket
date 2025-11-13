@@ -40,6 +40,7 @@ target_link_libraries(Object
     PUBLIC $<BUILD_INTERFACE:glm::glm>
     PRIVATE Rocket::RHI
     PRIVATE Rocket::RenderCore
+    PRIVATE Rocket::Renderer
 )
 
 set_target_properties(Object PROPERTIES POSITION_INDEPENDENT_CODE ON)

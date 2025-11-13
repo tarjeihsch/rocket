@@ -62,3 +62,11 @@ void RSceneComponent::AddRotation(glm::vec3 InRotation)
 
     OnMarkedDirty();
 }
+
+void RSceneComponent::OnMarkedDirty()
+{
+	const glm::mat4 LocationMatrix = glm::translate(glm::mat4(1.0f), Location);
+	const glm::mat4 RotationMatrix = glm::toMat4(glm::quat(glm::radians(Rotation)));
+    const glm::mat4 ScaleMatrix = glm::scale(glm::mat4(1.0f), Scale);
+    const glm::mat4 FinalMatrix = LocationMatrix * RotationMatrix * ScaleMatrix;
+}

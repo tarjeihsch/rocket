@@ -28,15 +28,19 @@ void REditor::Init()
 
     EditorWorld = new RWorld();
 
-    // TEST
-    for (int Idx = 0; Idx < 10; ++Idx)
-    {
+	// TEST
+	{
+		RActor* Act = EditorWorld->SpawnActor(RActor::StaticClass());
+		RCameraComponent* CamComp = Act->AddComponent<RCameraComponent>();
+        CamComp->SetLocation(glm::vec3(-5.0f, 0.0f, 0.0f));
+	}
+
+	{
 		RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
 		RActor* Actor = EditorWorld->SpawnActor(RActor::StaticClass());
-		RCameraComponent* CamComp = Actor->AddComponent<RCameraComponent>();
 		RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
 		StaticMeshComponent->SetStaticMesh(StaticMesh);
-    }
+	}
 
     // TEST
 }
@@ -53,7 +57,7 @@ void REditor::Tick(float DeltaTime)
         GEngine->Tick(DeltaTime);
         break;
     case EMode::Edit:
-        // Draw editor preview
+        EditorWorld->Tick(DeltaTime);
         break;
     case EMode::Pause:
         // Paused - draw only overlay

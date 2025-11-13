@@ -39,8 +39,8 @@ void FVulkanCommandListContext::RHIDraw(const FRHIDrawCommand& DrawCommand, cons
 
 void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams)
 {
-    VkBuffer VertexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.VertexBuffer->GetHandle());
-    VkBuffer IndexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.IndexBuffer->GetHandle());
+    VkBuffer VertexBufferPtr = static_cast<VkBuffer>(DrawCommand.VertexBuffer->GetHandle());
+    VkBuffer IndexBufferPtr = static_cast<VkBuffer>(DrawCommand.IndexBuffer->GetHandle());
 
     VkDeviceSize Size = 0;
     VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Size);
@@ -103,7 +103,7 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         AttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         AttachmentInfo.loadOp = bClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         AttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        AttachmentInfo.clearValue.color = {{ 1, 1, 1, 1 }};
+        AttachmentInfo.clearValue.color = {{ 0, 0, 0, 1 }};
         AttachmentInfos.push_back(AttachmentInfo);
     }
 

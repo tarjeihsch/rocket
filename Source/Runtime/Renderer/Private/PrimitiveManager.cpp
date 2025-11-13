@@ -14,14 +14,14 @@ void RRenderProxyManager::RemoveProxy(uint64_t ProxyID)
 
 void RRenderProxyManager::UpdateProxyTransform(uint64_t SceneObjectID, const LSceneProxyTransform& Transform)
 {
-    assert(SceneObjectID < Proxies.size());
+    ensure(SceneObjectID < Proxies.size());
 
     Proxies[SceneObjectID].Transform = Transform;
 }
 
 void RRenderProxyManager::UpdateProxyGeometry(uint64_t SceneObjectID, const LSceneProxyGeometry &Geometry)
 {
-    assert(SceneObjectID < Proxies.size());
+    ensure(SceneObjectID < Proxies.size());
 
     Proxies[SceneObjectID].Geometry = Geometry;
 }
@@ -39,7 +39,7 @@ uint64_t RRenderProxyManager::CreateView()
 
 void RRenderProxyManager::UpdateView(uint64_t SceneViewID, const LSceneView& SceneView)
 {
-    assert(SceneViewID < Views.size());
+    ensure(SceneViewID < Views.size());
 
     Views[SceneViewID] = SceneView;
 }

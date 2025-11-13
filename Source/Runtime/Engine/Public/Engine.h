@@ -6,11 +6,11 @@
 #include <span>
 #include <vector>
 
-class RSceneRenderer;
+class RSceneGraph;
 class IRendererSystem;
 class RRenderProxyManager;
 class RViewport;
-class RSceneRenderer;
+class RSceneGraph;
 class RWorld;
 
 // TODO: Later down the road, we will use the scene as the context when rendering.
@@ -34,6 +34,4 @@ private:
     RGame* Game;
 
     RWorld* World;
-
-    RSceneRenderer* Renderer;
 };

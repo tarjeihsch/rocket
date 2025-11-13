@@ -39,18 +39,22 @@ public:
     virtual const RClass* GetClass() const;
 
     // Runs a deep copy on pointer/heap-owning fields
-    virtual void PostConstruct(class RWorld* InWorld, class RObject* InOwner);
+    virtual void PostConstruct(class RWorld* InWorld, class RObject* InOuter);
     virtual void Load(const std::vector<uint8_t>& Data) {}
     virtual void Save(std::vector<uint8_t>& Data) {}
 
     inline RWorld* GetWorld() const
     {
+        ensure(World != nullptr);
+
         return World;
     }
 
-    inline RObject* GetOwner() const
+    inline RObject* GetOuter() const
     {
-        return Owner;
+        ensure(Outer != nullptr);
+
+        return Outer;
     }
 
 protected:
@@ -59,7 +63,7 @@ protected:
 protected:
     RWorld* World;
 
-    RObject* Owner;
+    RObject* Outer;
 };
 
 inline RObject* ConstructObject(RWorld* World, RObject* Owner, RClass* Class)

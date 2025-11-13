@@ -19,7 +19,7 @@ struct RTransform
 struct LDrawItem
 {
     RPrimitive* Primitive;
-    RTransform* Transform;
+    RTransform Transform;
 };
 
 struct LDrawView
@@ -28,24 +28,15 @@ struct LDrawView
     glm::mat4 ProjectionMatrix;
 };
 
-class RSceneRenderer final
+class RSceneGraph final
 {
 public:
-    void AddItem(RPrimitive* Primitive, RMaterial* Material, RTransform* Transform);
-    void AddView();
-
-    void Render();
-    //void Render(RWorld* World, RCamera* Camera);
-
-protected:
-    void Render_Opaque_Internal(FFrameGraphBuilder& Builder);
-
 private:
     std::vector<LDrawItem> ItemData;
     std::vector<LDrawView> ViewData;
 };
 
-extern RSceneRenderer* GRenderer;
+extern RSceneGraph* GRenderer;
 
 #define RENDERER_ENQUEUE_COMMAND(x) ...
 #define RENDERER_ENQUEUE_COMMAND_BATCH(x) ...

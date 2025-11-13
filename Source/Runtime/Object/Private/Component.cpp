@@ -13,7 +13,6 @@ RClass *RComponent::StaticClass()
 }
 
 RComponent::RComponent()
-    : Owner(nullptr)
 {
 }
 
@@ -22,11 +21,11 @@ const RClass *RComponent::GetClass() const
     return StaticClass();
 }
 
-void RComponent::PostConstruct(RWorld* World, RObject* Owner)
+void RComponent::PostConstruct(RWorld* InWorld, RObject* InOuter)
 {
-    Super::PostConstruct(World, Owner);
+    Super::PostConstruct(InWorld, InOuter);
 
-    World->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
+    GetWorld()->GetTickTaskManager()->AddTickFunction<&RComponent::Tick>(ETickGroup::Default, this);
 }
 
 void RComponent::Tick(float DeltaTime)

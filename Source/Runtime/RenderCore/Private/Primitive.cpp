@@ -6,17 +6,17 @@ RPrimitive::RPrimitive()
 {
 }
 
-void RPrimitive::Draw(FRHICommandList &CmdList) const
+void RPrimitive::Draw(FRHICommandList& CmdList) const
 {
-    //Material->Bind();
+    Material->Bind(CmdList);
 }
 
-RMaterial * RPrimitive::GetMaterial() const
+RMaterial* RPrimitive::GetMaterial() const
 {
     return Material;
 }
 
-void RPrimitive::SetMaterial(RMaterial *InMaterial)
+void RPrimitive::SetMaterial(RMaterial* InMaterial)
 {
     Material = InMaterial;
 }

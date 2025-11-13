@@ -5,6 +5,7 @@
 #include "glm/gtx/quaternion.hpp"
 
 #include "Primitive.h"
+#include <span>
 
 struct FRHIBuffer;
 
@@ -15,7 +16,7 @@ struct FVertex
     alignas(16) glm::vec2 M_TexCoord;
 };
 
-struct FPrimitiveMeshSection
+struct FMeshChildSection
 {
     uint32_t M_VertexCount = 0;
     uint32_t M_IndexCount = 0;
@@ -39,12 +40,14 @@ public:
     inline uint32_t GetVertexCount() const;
     inline uint32_t GetIndexCount() const;
 
+    inline std::span<FMeshChildSection> GetSections();
+
 private:
     void Init();
     void Shutdown();
 
 private:
-    std::vector<FPrimitiveMeshSection> Sections;
+    std::vector<FMeshChildSection> Sections;
 
     FRHIBuffer* M_VertexBuffer;
     FRHIBuffer* M_IndexBuffer;
@@ -74,4 +77,9 @@ inline uint32_t RStaticMesh::GetVertexCount() const
 inline uint32_t RStaticMesh::GetIndexCount() const
 {
     return M_IndexCount;
+}
+
+inline std::span<FMeshChildSection> RStaticMesh::GetSections()
+{
+    return Sections;
 }
