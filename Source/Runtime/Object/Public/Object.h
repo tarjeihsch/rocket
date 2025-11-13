@@ -5,6 +5,17 @@
 
 #include <cstring>
 #include <vector>
+
+class RProperty final
+{
+public:
+    RProperty() = default;
+	virtual ~RProperty() = default;
+
+    void* GetValue() const;
+    void SetValue(const void* Data);
+};
+
 /*
  * Each RObject carries its own integrated RClass metadata layer. This results in boilerplate code that is necessary to perform
  * statical reflection-based lookup and comparisons.

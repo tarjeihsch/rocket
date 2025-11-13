@@ -25,6 +25,7 @@
 #include <PrimitiveManager.h>
 #include "StaticMesh.h"
 #include "Attachment.h"
+#include "StaticMeshComponent.h"
 
 static RActor* SelectedActor = nullptr;
 static RComponent* SelectedComponent = nullptr;
@@ -126,6 +127,18 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("Exit")) {}
+
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Object"))
+		{
+			if (ImGui::MenuItem("New Actor")) 
+			{
+				RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
+				RActor* Actor = GEditor->GetWorld()->SpawnActor(RActor::StaticClass());
+				RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
+				StaticMeshComponent->SetStaticMesh(StaticMesh);
+			}
 
 			ImGui::EndMenu();
 		}

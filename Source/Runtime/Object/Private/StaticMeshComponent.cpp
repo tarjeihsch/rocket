@@ -38,6 +38,8 @@ const RClass *RStaticMeshComponent::GetClass() const
 void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)
 {
     StaticMesh = NewStaticMesh;
+
+	MarkDirty();
 }
 
 RStaticMesh *RStaticMeshComponent::GetStaticMesh() const

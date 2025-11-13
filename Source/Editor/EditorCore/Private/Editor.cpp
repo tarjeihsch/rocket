@@ -17,8 +17,6 @@ REditor::REditor()
 {
 }
 
-RStaticMeshComponent* StaticMeshComponent = nullptr;
-RStaticMesh* StaticMesh = nullptr;
 void REditor::Init()
 {
     // Create docking UI, tools, asset database
@@ -37,13 +35,6 @@ void REditor::Init()
         CamComp->SetLocation(glm::vec3(-5.0f, 0.0f, 0.0f));
 	}
 
-	{
-		StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
-		RActor* Actor = EditorWorld->SpawnActor(RActor::StaticClass());
-		StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
-		StaticMeshComponent->SetStaticMesh(StaticMesh);
-	}
-
     // TEST
 }
 
@@ -60,7 +51,6 @@ void REditor::Tick(float DeltaTime)
         break;
     case EMode::Edit:
         EditorWorld->Tick(DeltaTime);
-		StaticMeshComponent->AddRotation(glm::vec3(1.0f) * DeltaTime * 100.0f);
         break;
     case EMode::Pause:
         // Paused - draw only overlay
@@ -87,8 +77,6 @@ void REditor::Shutdown()
     delete Viewport;
 
     delete ScriptClientModule;
-
-    delete StaticMesh;
 }
 
 void REditor::EnterPlayMode()
