@@ -18,6 +18,9 @@ public:
     RWorld();
     ~RWorld();
 
+    void Init();
+    void Cleanup();
+
     void DestroyActor(RActor* Actor);
 
     template<typename TClass>
@@ -26,20 +29,16 @@ public:
 
     void Tick(float DeltaTime);
 
-    void Initialize();
-    void Deinitialize();
-
     std::span<RActor*> GetActors();
 
     inline RTickTaskManager* GetTickTaskManager() const;
-    inline RRenderProxyManager* GetPrimitiveProxyManager() const;
+    inline RRenderProxyManager* GetSceneProxyManager() const;
 
 private:
     std::vector<RActor*> Actors;
 
-    RTickTaskManager* TickTaskManager;
-
-    RRenderProxyManager* PrimitiveProxyManager;
+    std::unique_ptr<RTickTaskManager> TickTaskManager;
+    std::unique_ptr<RRenderProxyManager> PrimitiveProxyManager;
 };
 
 template <typename TActor>
@@ -50,12 +49,12 @@ TActor* RWorld::SpawnActor() const
     return static_cast<TActor*>(SpawnActor(TActor::StaticClass()));
 }
 
-inline RTickTaskManager *RWorld::GetTickTaskManager() const
+inline RTickTaskManager* RWorld::GetTickTaskManager() const
 {
-    return TickTaskManager;
+    return TickTaskManager.get();
 }
 
-inline RRenderProxyManager* RWorld::GetPrimitiveProxyManager() const
+inline RRenderProxyManager* RWorld::GetSceneProxyManager() const
 {
-    return PrimitiveProxyManager;
+    return PrimitiveProxyManager.get();
 }

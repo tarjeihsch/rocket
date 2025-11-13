@@ -38,14 +38,16 @@ void RPrimitiveComponent::SetVisibility(bool bVisibility)
     // TODO: Use a free list
     if (bVisibility)
     {
-        ProxyHandle = GetWorld()->GetPrimitiveProxyManager()->CreateProxy();
+        ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
     }
     else
     {
-        GetWorld()->GetPrimitiveProxyManager()->RemoveProxy(ProxyHandle);
+        GetWorld()->GetSceneProxyManager()->RemoveProxy(ProxyHandle);
     }
 
     bVisible = bVisibility;
+
+    OnMarkedDirty();
 }
 
 void RPrimitiveComponent::OnMarkedDirty()

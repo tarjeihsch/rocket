@@ -42,8 +42,6 @@ void REngine::LoadWorld(const char *Path)
 {
     World = new RWorld();
 
-    World->Initialize();
-
     // TEST BEGIN //
 
 //     RStaticMesh* StaticMesh = new RStaticMesh("/home/acad/Workspace/Atlas/Content/Monkey.glb");
@@ -57,7 +55,5 @@ void REngine::LoadWorld(const char *Path)
 
 void REngine::UnloadWorld()
 {
-    World->Deinitialize();
-
     delete World;
 }

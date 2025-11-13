@@ -66,7 +66,7 @@ void RCameraComponent::PostConstruct(RWorld* World, RObject* Owner)
 {
     Super::PostConstruct(World, Owner);
 
-	SceneViewID = GetWorld()->GetPrimitiveProxyManager()->CreateView();
+	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
 }
 
 void RCameraComponent::Tick(float DeltaTime)
@@ -81,12 +81,12 @@ void RCameraComponent::Tick(float DeltaTime)
 
 void RCameraComponent::OnPropertyChanged()
 {
+	Super::OnMarkedDirty();
+
     LSceneView NewSceneView(SceneViewID, SceneViewID);
 
 	NewSceneView.ProjectionMatrix = RecalculateProjectionMatrix();
 	NewSceneView.ViewMatrix = RecalculateViewMatrix();
 
-    GetWorld()->GetPrimitiveProxyManager()->UpdateView(SceneViewID, NewSceneView);
-
-    bMarkedDirty = false;
+    GetWorld()->GetSceneProxyManager()->UpdateView(SceneViewID, NewSceneView);
 }

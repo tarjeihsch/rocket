@@ -201,14 +201,14 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		[&](FRHICommandList& RHICmdList)
 		{
 			GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
-			for (const LSceneView& View : GEditor->GetWorld()->GetPrimitiveProxyManager()->GetViews())
+			for (const LSceneView& View : GEditor->GetWorld()->GetSceneProxyManager()->GetViews())
 			{
 				FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
 				CameraData.Write(View.ViewMatrix);
 				CameraData.Write(View.ProjectionMatrix);
 				std::shared_ptr<FRHIBuffer> ViewBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
 
-				for (const LSceneProxy& Proxy : GEditor->GetWorld()->GetPrimitiveProxyManager()->GetProxies())
+				for (const LSceneProxy& Proxy : GEditor->GetWorld()->GetSceneProxyManager()->GetProxies())
 				{
 					RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
 					for (const auto& Section : StaticMesh->GetSections())

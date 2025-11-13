@@ -23,16 +23,26 @@ RActor *RWorld::SpawnActor(RClass *Class)
 
 RWorld::RWorld()
 {
-	TickTaskManager = new RTickTaskManager();
-
-	PrimitiveProxyManager = new RRenderProxyManager();
+    Init();
 }
 
 RWorld::~RWorld()
 {
-    delete TickTaskManager;
+    Cleanup();
+}
 
-    delete PrimitiveProxyManager;
+void RWorld::Init()
+{
+	TickTaskManager = std::make_unique<RTickTaskManager>();
+	PrimitiveProxyManager = std::make_unique<RRenderProxyManager>();
+}
+
+void RWorld::Cleanup()
+{
+	for (auto Actor : Actors)
+	{
+        DestructObject(Actor);
+	}
 }
 
 void RWorld::DestroyActor(RActor *P_Actor)
@@ -45,7 +55,11 @@ void RWorld::DestroyActor(RActor *P_Actor)
         {
             std::swap(Actors[i], Actors.back());
 
+            RActor* Actor = Actors.back();
+
             Actors.pop_back();
+
+            DestructObject(Actor);
             
             break;
         }
@@ -55,61 +69,6 @@ void RWorld::DestroyActor(RActor *P_Actor)
 void RWorld::Tick(float DeltaTime)
 {
     TickTaskManager->TickFrame(DeltaTime);
-}
-
-void RWorld::Initialize()
-{
-    //FAssetLoaderRequest Request = { "/home/user/Workspace/Spaceship/Content/World.json" };
-    //FJsonAssetOptions Options;
-    //FAssetHandle<FJsonAsset> AssetHandle = FAssetManager::Get().Load<FJsonAsset>(Request, Options);
-    //FJsonAsset* JsonAsset = FAssetManager::Get().GetAsset(AssetHandle);
-//
-    //// Top-level is an array
-    //auto& rootArray = std::get<FJsonAsset::Array>(JsonAsset->Value);
-//
-    //for (auto& entry : rootArray)
-    //{
-    //    auto& obj = std::get<FJsonAsset::Object>(entry.Value);
-    //    auto& actors = std::get<FJsonAsset::Array>(obj["Actors"].Value);
-//
-    //    for (auto& actorVal : actors)
-    //    {
-    //        auto& actorObj = std::get<FJsonAsset::Object>(actorVal.Value);
-//
-    //        std::string className = std::get<std::string>(actorObj["Class"].Value);
-    //        std::string symbolName = "Z_Class_" + className + "_StaticClass";
-//
-    //        using GetStaticClassFun = RClass* (*)();
-    //        GetStaticClassFun GetStaticClass = reinterpret_cast<GetStaticClassFun>(GScriptModule->GetSymbol((GScriptModule, symbolName.c_str())));
-//
-    //        if (GetStaticClass)
-    //        {
-    //            RClass* Class = GetStaticClass();
-    //            RActor* Actor = SpawnActor(Class);
-    //            //Actor->Deserialize(actorObj);
-    //        }
-    //        else
-    //        {
-    //            RClass* Class = RActor::StaticClass();
-    //            RActor* Actor = SpawnActor(Class);
-    //            //Actor->Deserialize(actorObj);
-    //        }
-    //    }
-    //}
-
-    //RClass* Class = GetStaticClass();
-    //RActor* Actor = GetWorld()->SpawnActor(Class);
-}
-void RWorld::Deinitialize()
-{
-    for (auto Actor : Actors)
-    {
-        delete Actor;
-    }
-
-    delete TickTaskManager;
-
-    delete PrimitiveProxyManager;
 }
 
 std::span<RActor*> RWorld::GetActors()

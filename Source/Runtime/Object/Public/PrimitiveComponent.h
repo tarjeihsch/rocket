@@ -23,7 +23,7 @@ protected:
     virtual void OnMarkedDirty() override;
 
 protected:
-    uint64_t ProxyHandle;
+    uint64_t ProxyHandle = UINT64_MAX;
 
 private:
     uint8_t bDirty : 1;

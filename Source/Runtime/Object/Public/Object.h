@@ -85,7 +85,6 @@ inline void DestructObject(RObject* Object)
 {
     if ((Object->GetClass()->GetFlags() & C_Memory_Allocator_Heap) == C_Memory_Allocator_Heap)
     {
-        Object->~RObject();
 		::operator delete(Object, static_cast<std::align_val_t>(Object->GetClass()->GetAlignment()));
         return;
     }
