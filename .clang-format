@@ -5,3 +5,24 @@ UseTab: Never
 
 BreakBeforeBraces: Allman
 PointerAlignment: Left
+
+# Disable all single-line block/statement compression
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: None
+AllowShortLoopsOnASingleLine: false
+
+# Keep access specifiers at column 0
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+
+# Disable all text wrapping
+ColumnLimit: 0
+
+BraceWrapping:
+  AfterClass: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterNamespace: true
+  AfterFunction: true
