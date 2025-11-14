@@ -156,8 +156,6 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
             VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
             if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampler(It->m_DescriptorHandle); }
             break;
-        case EType::Texture:
-            delete (FVulkanTexture*)It->Handle;
         default: break;
         }
 

@@ -70,8 +70,7 @@ public:
         DescriptorSetLayout,
         Sampler,
         Semaphore,
-        ShaderModule,
-        Texture
+        ShaderModule
     };
 
     template <typename T>
