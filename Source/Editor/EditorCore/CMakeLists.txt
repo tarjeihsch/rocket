@@ -38,6 +38,7 @@ target_link_libraries(EditorCore
 	PUBLIC Rocket::Core
     PUBLIC Rocket::Engine
 	PUBLIC Rocket::Renderer
+	PUBLIC imgui::imgui
 )
 
 set_target_properties(EditorCore PROPERTIES POSITION_INDEPENDENT_CODE ON)

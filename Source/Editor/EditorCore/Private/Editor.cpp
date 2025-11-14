@@ -1,14 +1,10 @@
 #include "Editor.h"
 
-#include "EditorRenderer.h"
+#include "EditorViewportClient.h"
 #include "Engine.h"
-#include "EngineBase.h"
 #include "Module.h"
 #include "Viewport.h"
 #include "World.h"
-#include <StaticMeshComponent.h>
-#include "CameraComponent.h"
-#include "StaticMesh.h"
 
 REditor::REditor()
     : Mode(EMode::Edit),
@@ -27,15 +23,6 @@ void REditor::Init()
     ScriptClientModule = new RModule("");
 
     EditorWorld = new RWorld();
-
-	// TEST
-	{
-		RActor* Act = EditorWorld->SpawnActor(RActor::StaticClass());
-		RCameraComponent* CamComp = Act->AddComponent<RCameraComponent>();
-        CamComp->SetLocation(glm::vec3(-5.0f, 0.0f, 0.0f));
-	}
-
-    // TEST
 }
 
 void REditor::Tick(float DeltaTime)
@@ -109,7 +96,12 @@ IEditorBase::EMode REditor::GetMode() const
     return Mode;
 }
 
-RWorld* REditor::GetWorld() const
+RWorld* REditor::GetEditorWorld() const
 {
     return EditorWorld;
+}
+
+RSelection* REditor::GetSelection() const 
+{
+    return Selection;
 }

@@ -7,6 +7,7 @@ class RViewport;
 class REditorViewportClient;
 class RLevelEditorViewportClient;
 class RWorld;
+class RSelection;
 
 class REditor final : public IEditorBase
 {
@@ -21,7 +22,8 @@ public:
     virtual void PauseFrame() override;
     virtual void StepFrame() override;
     virtual EMode GetMode() const override;
-    virtual RWorld* GetWorld() const override;
+    virtual RWorld* GetEditorWorld() const override;
+    virtual RSelection* GetSelection() const override;
 
 private:
     EMode Mode;
@@ -35,4 +37,6 @@ private:
     REditorViewportClient* EditorViewportClient;
 
     RLevelEditorViewportClient* LevelEditorViewportClient;
+
+    RSelection* Selection;
 };

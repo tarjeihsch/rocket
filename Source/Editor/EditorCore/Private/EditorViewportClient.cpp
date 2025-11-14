@@ -1,13 +1,11 @@
-#include "EditorRenderer.h"
+#include "EditorViewportClient.h"
 
 #include "Renderer.h"
-#include "Viewport.h"
 #include "FrameGraph.h"
 #include "RenderTarget.h"
 #include "Common/RHIDrawCommand.h"
-#include <memory>
 #include <Common/RHI.h>
-#include "../imgui/imgui.h"
+#include "imgui.h"
 #include <Input.h>
 #include <KeyCode.h>
 #include <Pipeline.h>
@@ -26,6 +24,7 @@
 #include "StaticMesh.h"
 #include "Attachment.h"
 #include "StaticMeshComponent.h"
+#include <cstring>
 
 static RActor* SelectedActor = nullptr;
 static RComponent* SelectedComponent = nullptr;
@@ -59,14 +58,14 @@ void REditorViewportClient::Init()
 	int Width, Height;
 	ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&Data, &Width, &Height);
 	
-	ImGui_FontAtlas = std::make_unique<RTexture2D>(ETextureType::Linear, Width, Height);
-	ImGui_FontAtlas->LoadRawTextureData(Data);
-	IO.Fonts->SetTexID((ImTextureID)ImGui_FontAtlas->GetHandle());
+	FontAtlas = std::make_unique<RTexture2D>(ETextureType::Linear, Width, Height);
+	FontAtlas->LoadRawTextureData(Data);
+	IO.Fonts->SetTexID((ImTextureID)FontAtlas->GetHandle());
 }
 
 void REditorViewportClient::Shutdown()
 {
-	ImGui_FontAtlas = nullptr;
+	FontAtlas = nullptr;
 }
 
 void REditorViewportClient::Draw(RFrameContext& Ctx)
@@ -138,7 +137,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 			if (ImGui::MenuItem("New Actor")) 
 			{
 			    RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
-			    RActor* Actor = GEditor->GetWorld()->SpawnActor(RActor::StaticClass());
+			    RActor* Actor = GEditor->GetEditorWorld()->SpawnActor(RActor::StaticClass());
 			    RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
 			    StaticMeshComponent->SetStaticMesh(StaticMesh);
 			}
@@ -170,9 +169,8 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
         ImGui::End();
     }
 
-
 	ImGui::Begin("Scene Hierarchy");
-	std::span<RActor*> Actors = GEditor->GetWorld()->GetActors();
+	std::span<RActor*> Actors = GEditor->GetEditorWorld()->GetActors();
 	for (size_t Index = 0; Index < Actors.size(); ++Index)
 	{
 		RActor* Actor = Actors[Index];
@@ -300,14 +298,14 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		[&](FRHICommandList& RHICmdList)
 		{
 			GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
-			for (const LSceneView& View : GEditor->GetWorld()->GetSceneProxyManager()->GetViews())
+			for (const LSceneView& View : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetViews())
 			{
 				FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
 				CameraData.Write(View.ViewMatrix);
 				CameraData.Write(View.ProjectionMatrix);
 				std::shared_ptr<FRHIBuffer> ViewBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
 
-				for (const LSceneProxy& Proxy : GEditor->GetWorld()->GetSceneProxyManager()->GetProxies())
+				for (const LSceneProxy& Proxy : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetProxies())
 				{
 					RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
 					for (const auto& Section : StaticMesh->GetSections())
