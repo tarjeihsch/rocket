@@ -1,5 +1,7 @@
 #include "Actor.h"
 
+#include "Component.h"
+#include "ObjectUtils.h"
 #include "World.h"
 
 RClass *RActor::StaticClass()
@@ -33,7 +35,7 @@ void RActor::PostConstruct(RWorld* InWorld, RObject* InOwner)
 
 RComponent* RActor::AddComponent(RClass *Class)
 {
-    RComponent* Component = (RComponent*)ConstructObject(World, this, Class);
+    RComponent* Component = static_cast<RComponent*>(ConstructObject(World, this, Class));
     Components.push_back(Component);
     return Component;
 }

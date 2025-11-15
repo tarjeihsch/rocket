@@ -1,7 +1,6 @@
 #pragma once
 
 class RWorld;
-class RSelection;
 
 class IEditorBase
 {
@@ -22,10 +21,6 @@ public:
     virtual void StepFrame() = 0;
     virtual EMode GetMode() const = 0;
     virtual RWorld* GetEditorWorld() const = 0;
-    virtual RSelection* GetSelection() const = 0;
-
-private:
-    EMode Mode;
 };
 
 extern IEditorBase* GEditor;

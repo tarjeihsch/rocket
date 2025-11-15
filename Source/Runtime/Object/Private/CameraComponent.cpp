@@ -1,6 +1,6 @@
 #include "CameraComponent.h"
 
-#include "../../Renderer/Public/PrimitiveManager.h"
+#include "Scene.h"
 #include "Viewport.h"
 #include "World.h"
 
@@ -99,7 +99,7 @@ void RCameraComponent::OnPropertyChanged()
     	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
     }
 
-    LSceneView NewSceneView = {};
+    LSceneCamera NewSceneView = {};
 
 	NewSceneView.ProjectionMatrix = RecalculateProjectionMatrix();
 	NewSceneView.ViewMatrix = RecalculateViewMatrix();

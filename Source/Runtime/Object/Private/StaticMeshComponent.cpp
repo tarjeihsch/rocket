@@ -1,9 +1,9 @@
 #include "StaticMeshComponent.h"
 
-#include "PrimitiveManager.h"
+#include "Scene.h"
 #include "World.h"
 
-static glm::mat4 ComposeTransformMatrix(glm::vec3 Location, glm::vec3 Rotation, glm::vec3 Scale)
+static glm::mat4 ComposeTransformMatrix(const glm::vec3& Location, const glm::vec3& Rotation, const glm::vec3& Scale)
 {
 	glm::mat4 LocationMatrix = glm::translate(glm::mat4(1.0f), Location);
 	glm::mat4 RotationMatrix = glm::toMat4(glm::quat(glm::radians(Rotation)));
@@ -11,7 +11,7 @@ static glm::mat4 ComposeTransformMatrix(glm::vec3 Location, glm::vec3 Rotation, 
 	return LocationMatrix * RotationMatrix * ScaleMatrix;
 }
 
-static glm::mat4 TransposeInverseTransformMatrix(glm::vec3 Location, glm::vec3 Rotation, glm::vec3 Scale)
+static glm::mat4 TransposeInverseTransformMatrix(const glm::vec3& Location, const glm::vec3& Rotation, const glm::vec3& Scale)
 {
 	glm::mat4 LocationMatrix = glm::translate(glm::mat4(1.0f), Location);
 	glm::mat4 RotationMatrix = glm::toMat4(glm::quat(glm::radians(Rotation)));

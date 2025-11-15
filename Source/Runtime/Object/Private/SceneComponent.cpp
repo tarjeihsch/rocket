@@ -1,7 +1,6 @@
 #include "SceneComponent.h"
 
 #include "EngineBase.h"
-#include "../../Renderer/Public/PrimitiveManager.h"
 
 RClass *RSceneComponent::StaticClass()
 {

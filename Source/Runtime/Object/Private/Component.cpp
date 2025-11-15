@@ -1,6 +1,5 @@
 #include "Component.h"
 
-#include "../../Engine/Public/EngineBase.h"
 #include "World.h"
 
 RClass *RComponent::StaticClass()

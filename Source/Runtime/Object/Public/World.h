@@ -1,16 +1,15 @@
 #pragma once
 
 #include "Tickable.h"
+#include "Actor.h"
 
-#include <Actor.h>
 #include <vector>
 #include <span>
 
 // TODO: Use an ActorProxy for cache-friendly iteration
 // Store a pointer to the real Actor object for cleanup++
 
-class RRenderProxyManager;
-class ITickable;
+class RScene;
 
 class RWorld final
 {
@@ -32,13 +31,13 @@ public:
     std::span<RActor*> GetActors();
 
     inline RTickTaskManager* GetTickTaskManager() const;
-    inline RRenderProxyManager* GetSceneProxyManager() const;
+    inline RScene* GetSceneProxyManager() const;
 
 private:
     std::vector<RActor*> Actors;
 
     std::unique_ptr<RTickTaskManager> TickTaskManager;
-    std::unique_ptr<RRenderProxyManager> PrimitiveProxyManager;
+    std::unique_ptr<RScene> PrimitiveProxyManager;
 };
 
 template <typename TActor>
@@ -54,7 +53,7 @@ inline RTickTaskManager* RWorld::GetTickTaskManager() const
     return TickTaskManager.get();
 }
 
-inline RRenderProxyManager* RWorld::GetSceneProxyManager() const
+inline RScene* RWorld::GetSceneProxyManager() const
 {
     return PrimitiveProxyManager.get();
 }

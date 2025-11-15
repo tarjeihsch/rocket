@@ -4,8 +4,6 @@
 
 #include <cstdint>
 
-class RWorld;
-
 enum class EComponentFlags : uint8_t
 {
     None = 0,

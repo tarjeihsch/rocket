@@ -1,9 +1,5 @@
 #include "PrimitiveComponent.h"
 
-#include "EngineBase.h"
-#include "PrimitiveManager.h"
-#include "World.h"
-
 RClass* RPrimitiveComponent::StaticClass()
 {
     static RPrimitiveComponent Archetype;
@@ -30,18 +26,3 @@ const RClass* RPrimitiveComponent::GetClass() const
 {
     return StaticClass();
 }
-
-//void RPrimitiveComponent::SetVisibility(bool bVisibility)
-//{
-//    // TODO: Use a free list
-//    if (bVisibility)
-//    {
-//        ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
-//    }
-//    else
-//    {
-//        GetWorld()->GetSceneProxyManager()->RemoveProxy(ProxyHandle);
-//    }
-//
-//    bVisible = bVisibility;
-//}

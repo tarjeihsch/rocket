@@ -25,47 +25,40 @@ struct LSceneProxyTransform
     glm::mat4 InverseModelMatrix;
 };
 
-struct LSceneProxy
+struct LSceneActor
 {
     LSceneProxyGeometry Geometry;
 
     LSceneProxyTransform Transform;
 };
 
-struct LSceneView
+struct LSceneCamera
 {
     alignas(16)
     glm::mat4 ProjectionMatrix;
 
     alignas(16)
     glm::mat4 ViewMatrix;
-
-    // Main, Shadows, UI
-    uint32_t ViewFlags;
 };
 
-typedef uint64_t LPrimitiveObjectID;
-typedef uint64_t LPrimitiveViewID;
-
-class RRenderProxyManager
+class RScene
 {
 public:
-    TDelegate<> OnCreateProxy;
-    TDelegate<> OnDestroyProxy;
-
     [[nodiscard]] uint64_t CreateProxy();
     void RemoveProxy(uint64_t ProxyID);
 
     void UpdateProxyTransform(uint64_t SceneObjectID, const LSceneProxyTransform& Transform);
     void UpdateProxyGeometry(uint64_t SceneObjectID, const LSceneProxyGeometry& Geometry);
-    std::span<LSceneProxy> GetProxies();
+    std::span<LSceneActor> GetProxies();
 
-    uint64_t CreateView();
-    void UpdateView(uint64_t SceneViewID, const LSceneView& SceneView);
-    std::span<LSceneView> GetViews();
+    [[nodiscard]] uint64_t CreateView();
+    void UpdateView(uint64_t SceneViewID, const LSceneCamera& SceneView);
+    std::span<LSceneCamera> GetViews();
 
 private:
-    std::vector<LSceneProxy> Proxies;
-
-    std::vector<LSceneView> Views;
+    std::vector<LSceneActor> Proxies;
+    std::vector<LSceneCamera> Views;
 };
+
+#define RENDERER_ENQUEUE_COMMAND(x) ...
+#define RENDERER_ENQUEUE_COMMAND_BATCH(x) ...

@@ -1,15 +1,10 @@
 #pragma once
 
-#include "Component.h"
-#include "Delegate.h"
-#include "JsonAsset.h"
 #include "Object.h"
-#include "Tickable.h"
+
 #include <span>
 
 class RComponent;
-class RSceneComponent;
-class RStaticMeshComponent;
 
 class RActor : public RObject
 {
@@ -21,8 +16,8 @@ public:
     virtual const RClass* GetClass() const override;
     virtual void PostConstruct(RWorld* World, RObject* Owner) override;
 
-    virtual void BeginPlay() {}
-    virtual void EndPlay() {}
+    virtual void BeginPlay() PURE_VIRTUAL;
+    virtual void EndPlay() PURE_VIRTUAL;
 
     template<typename TComponent>
     TComponent* AddComponent();

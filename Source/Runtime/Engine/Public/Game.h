@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 
 // Persistent game data seamlessly carried between map changes

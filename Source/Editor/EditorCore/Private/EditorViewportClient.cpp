@@ -1,30 +1,23 @@
 #include "EditorViewportClient.h"
 
-#include "Renderer.h"
-#include "FrameGraph.h"
-#include "RenderTarget.h"
-#include "Common/RHIDrawCommand.h"
-#include <Common/RHI.h>
-#include "imgui.h"
-#include <Input.h>
-#include <KeyCode.h>
-#include <Pipeline.h>
-#include "Common/RHIBuffer.h"
-#include "Common/RHISampler.h"
-#include "Common/RHITexture.h"
-#include <Logger.h>
+#include "Actor.h"
 #include "Texture2D.h"
-#include <Material.h>
-#include <MathTypes.h>
-#include <Editor.h>
-#include <Actor.h>
+#include "RenderTarget.h"
+#include "Input.h"
+#include "KeyCode.h"
+#include "Editor.h"
 #include "World.h"
-#include "EditorBase.h"
-#include <PrimitiveManager.h>
-#include "StaticMesh.h"
 #include "Attachment.h"
-#include "StaticMeshComponent.h"
-#include <cstring>
+#include "Component.h"
+#include "StaticMesh.h"
+#include "Material.h"
+#include "MathTypes.h"
+#include "Scene.h"
+#include "Common/RHISampler.h"
+#include "Common/RHIDrawCommand.h"
+#include "Common/RHIBuffer.h"
+
+#include <imgui.h>
 
 static RActor* SelectedActor = nullptr;
 static RComponent* SelectedComponent = nullptr;
@@ -136,10 +129,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		{
 			if (ImGui::MenuItem("New Actor")) 
 			{
-			    RStaticMesh* StaticMesh = new RStaticMesh("C:/Users/Tarjei/Downloads/Untitled.glb");
 			    RActor* Actor = GEditor->GetEditorWorld()->SpawnActor(RActor::StaticClass());
-			    RStaticMeshComponent* StaticMeshComponent = Actor->AddComponent<RStaticMeshComponent>();
-			    StaticMeshComponent->SetStaticMesh(StaticMesh);
 			}
 
 			ImGui::EndMenu();
@@ -298,14 +288,14 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		[&](FRHICommandList& RHICmdList)
 		{
 			GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
-			for (const LSceneView& View : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetViews())
+			for (const LSceneCamera& View : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetViews())
 			{
 				FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
 				CameraData.Write(View.ViewMatrix);
 				CameraData.Write(View.ProjectionMatrix);
 				std::shared_ptr<FRHIBuffer> ViewBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
 
-				for (const LSceneProxy& Proxy : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetProxies())
+				for (const LSceneActor& Proxy : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetProxies())
 				{
 					RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
 					for (const auto& Section : StaticMesh->GetSections())

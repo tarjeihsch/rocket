@@ -2,14 +2,12 @@
 
 #include "EditorViewportClient.h"
 #include "Engine.h"
-#include "Module.h"
 #include "Viewport.h"
 #include "World.h"
 
 REditor::REditor()
     : Mode(EMode::Edit),
-    Viewport(nullptr),
-    ScriptClientModule(nullptr)
+    Viewport(nullptr)
 {
 }
 
@@ -19,8 +17,6 @@ void REditor::Init()
     Viewport = new RViewport();
 
     EditorViewportClient = new REditorViewportClient();
-
-    ScriptClientModule = new RModule("");
 
     EditorWorld = new RWorld();
 }
@@ -62,8 +58,6 @@ void REditor::Shutdown()
     delete EditorViewportClient;
 
     delete Viewport;
-
-    delete ScriptClientModule;
 }
 
 void REditor::EnterPlayMode()
@@ -99,9 +93,4 @@ IEditorBase::EMode REditor::GetMode() const
 RWorld* REditor::GetEditorWorld() const
 {
     return EditorWorld;
-}
-
-RSelection* REditor::GetSelection() const 
-{
-    return Selection;
 }

@@ -1,6 +1,4 @@
 #include "Object.h"
-#include "Assertion.h"
-#include "UUID64.h"
 
 RObject::RObject()
     : World(nullptr), 
@@ -14,7 +12,7 @@ const RClass* RObject::GetClass() const
     return StaticClass();
 }
 
-void RObject::PostConstruct(class RWorld* InWorld, class RObject* InOuter)
+void RObject::PostConstruct(RWorld* InWorld, RObject* InOuter)
 {
     ensure(InWorld);
 
@@ -24,6 +22,7 @@ void RObject::PostConstruct(class RWorld* InWorld, class RObject* InOuter)
 
     UUID = RUUID64();
 }
+
 RWorld *RObject::GetWorld() const
 {
     ensure(World != nullptr);
