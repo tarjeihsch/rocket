@@ -24,6 +24,7 @@ struct FRHITexture;
 struct FRHIDrawParams;
 class IRHICommandListContext;
 class FRHICommandList;
+struct FRHIDrawCall;
 
 enum class ERHIResourceLifetime : uint8_t
 {
@@ -94,6 +95,7 @@ public:
     virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
+    virtual void RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawCall& DrawCall) = 0;
     virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
     virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
     virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;

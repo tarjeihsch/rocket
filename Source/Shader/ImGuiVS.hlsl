@@ -25,9 +25,20 @@ struct FDrawParams
 [[vk::push_constant]]
 FDrawParams DrawParams;
 
+struct FView
+{
+    float2 Scale;
+    float2 Translate;
+};
+
+StructuredBuffer<FView> SB_Alias_View[] : register(t3, space0);
+
 VSOut main(VSIn i) {
     VSOut o;
-    float2 p = i.pos * float2(DrawParams.uScaleX, DrawParams.uScaleY) + float2(DrawParams.uTranslateX, DrawParams.uTranslateY);
+
+    FView View = SB_Alias_View[NonUniformResourceIndex(DrawParams.tras)][0];
+
+    float2 p = i.pos * float2(View.Scale.x, View.Scale.y) + float2(View.Translate.x, View.Translate.y);
     o.pos = float4(p, 0.0f, 1.0f);
     o.uv = i.uv;
     o.color = i.color;

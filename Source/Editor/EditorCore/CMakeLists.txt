@@ -37,7 +37,8 @@ target_include_directories(EditorCore
 target_link_libraries(EditorCore
 	PUBLIC Rocket::Core
     PUBLIC Rocket::Engine
-	PUBLIC Rocket::Renderer
+	PUBLIC Rocket::Rendering
+	PRIVATE Rocket::EditorUI
 	PUBLIC imgui::imgui
 )
 

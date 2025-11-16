@@ -3,12 +3,12 @@
 #include "Game.h"
 
 #include <cstdint>
-#include <span>
 #include <string>
 
 class RRenderProxyManager;
 class RViewport;
 class RWorld;
+class RRenderer;
 enum class ERHIInterfaceType : uint8_t;
 
 struct REngineInitParams
@@ -44,6 +44,7 @@ public:
     virtual void UnloadWorld() = 0;
     virtual RWorld* GetWorld() const = 0;
     virtual RGame* GetGame() const = 0;
+    virtual RRenderer* GetRenderer() const = 0;
 };
 
 extern IEngineBase* GEngine;

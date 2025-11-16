@@ -118,19 +118,6 @@ struct FFrameGraphBuilder
 
     void Execute();
 
-    void Present(FRHITexture* Present);
-
-private:
-    void AddFirstTextureTransition(FFGTextureRef TextureRef);
-    void AddLastTextureTransition(FFGTextureRef TextureRef);
-
 private:
     std::vector<FFrameGraphPass> Passes;
 };
-
-class RFrameGraph
-{
-
-};
-
-extern class RFrameGraph* GFrameGraph;

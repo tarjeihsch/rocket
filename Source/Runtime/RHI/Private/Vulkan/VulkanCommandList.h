@@ -21,6 +21,7 @@ public:
     virtual void RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height) override;
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) override;
+    virtual void RHIDrawIndexed2(const FRHIDrawCall& DrawCall) override;
     virtual void RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) override;
     virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor) override;
     virtual void RHIEndRendering() override;
@@ -159,6 +160,23 @@ struct FVulkanCommandDrawIndexed : TRHICommand<FVulkanCommandDrawIndexed>
         Ctx.RHIDrawIndexed(DrawCommand, DrawParams);
     }
 };
+
+struct FVulkanCommandDrawIndexed2 : TRHICommand<FVulkanCommandDrawIndexed2>
+{
+    FRHIDrawCall DrawCall;
+
+    FVulkanCommandDrawIndexed2(const FRHIDrawCall& InDrawCall)
+        : DrawCall(InDrawCall)
+    {
+    }
+
+    void Execute_Internal(IRHICommandListContext& CmdListCtx)
+    {
+        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        Ctx.RHIDrawIndexed2(DrawCall);
+    }
+};
+
 
 struct FVulkanCommandCopyBuffer : TRHICommand<FVulkanCommandCopyBuffer>
 {

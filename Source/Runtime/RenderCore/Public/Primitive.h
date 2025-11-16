@@ -1,18 +1,32 @@
 #pragma once
 
-class FRHICommandList;
-class RMaterial;
+#include <glm/glm.hpp>
+#include <memory>
+
+struct FRHICommandList;
+struct FRHIDrawCall;
+struct FRHIBuffer;
+
+struct RVertex
+{
+    glm::vec2 Position;
+    glm::vec2 UV;
+    glm::vec4 Color;
+};
+
+using RIndex = uint16_t;
 
 class RPrimitive
 {
 public:
-    RPrimitive();
+    RPrimitive(const std::vector<RVertex>& Vertices, const std::vector<RIndex>& Indices);
+    RPrimitive(FRHIBuffer* VertexBuffer, FRHIBuffer* IndexBuffer);
 
-    virtual void Draw(FRHICommandList& CmdList) const;
-
-    RMaterial* GetMaterial() const;
-    void SetMaterial(RMaterial* InMaterial);
+    FRHIBuffer* GetVB() const;
+    FRHIBuffer* GetIB() const;
+    int32_t GetIndexCount();
 
 private:
-    RMaterial* Material;
+    std::unique_ptr<FRHIBuffer> VertexBuffer;
+    std::unique_ptr<FRHIBuffer> IndexBuffer;
 };

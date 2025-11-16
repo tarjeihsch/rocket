@@ -10,17 +10,16 @@ class RSceneGraph;
 class IRendererSystem;
 class RRenderProxyManager;
 class RViewport;
-class RSceneGraph;
 class RWorld;
 
 // TODO: Later down the road, we will use the scene as the context when rendering.
 // Renderer->RenderScene(*Scene, EditorCameraView);
 // Renderer->RenderScene(*Scene, GameCameraView);
 
-class REngine : public IEngineBase
+class RGameEngine : public IEngineBase
 {
 public:
-    REngine();
+    RGameEngine();
 
     virtual void Start(REngineInitParams& InitParams) override;
     virtual void Tick(float DeltaTime) override;
@@ -29,6 +28,7 @@ public:
     virtual void UnloadWorld() override;
     virtual RWorld* GetWorld() const override;
     virtual RGame* GetGame() const override;
+    virtual RRenderer* GetRenderer() const override;
 
 private:
     RGame* Game;

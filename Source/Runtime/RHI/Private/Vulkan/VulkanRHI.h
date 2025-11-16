@@ -42,6 +42,7 @@ public:
     virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) override;
     virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
+    virtual void RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawCall& DrawCall) override;
     virtual void RHICmdBlitImage(FRHICommandList& RHICmdList, FRHITexture* Src, FRHITexture* Dst) override;
     virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) override;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) override;

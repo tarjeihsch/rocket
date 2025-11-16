@@ -5,14 +5,13 @@
 #include "RenderTarget.h"
 #include "Input.h"
 #include "KeyCode.h"
-#include "Editor.h"
+#include "EditorEngine.h"
 #include "World.h"
 #include "Attachment.h"
 #include "Component.h"
 #include "StaticMesh.h"
 #include "Material.h"
 #include "MathTypes.h"
-#include "Scene.h"
 #include "Common/RHISampler.h"
 #include "Common/RHIDrawCommand.h"
 #include "Common/RHIBuffer.h"
@@ -65,9 +64,8 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 {
 	FRenderTarget EditorViewportRenderTarget = FRenderTarget(Ctx.ViewportWidth, Ctx.ViewportHeight);
 	FRenderTarget SceneViewportRenderTarget = FRenderTarget(Ctx.ViewportWidth, Ctx.ViewportHeight);
-	
-	/* ---- Begin ImGUI ---- */
 
+    // Transient resources
 	std::unique_ptr<FRHIBuffer> VertexBuffer;
 	std::unique_ptr<FRHIBuffer> IndexBuffer;
 	std::unique_ptr<FRHITextureView> TextureView;
@@ -129,7 +127,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 		{
 			if (ImGui::MenuItem("New Actor")) 
 			{
-			    RActor* Actor = GEditor->GetEditorWorld()->SpawnActor(RActor::StaticClass());
+			    RActor* Actor = GEngine->GetWorld()->SpawnActor(RActor::StaticClass());
 			}
 
 			ImGui::EndMenu();
@@ -160,7 +158,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
     }
 
 	ImGui::Begin("Scene Hierarchy");
-	std::span<RActor*> Actors = GEditor->GetEditorWorld()->GetActors();
+	std::span<RActor*> Actors = GEngine->GetWorld()->GetActors();
 	for (size_t Index = 0; Index < Actors.size(); ++Index)
 	{
 		RActor* Actor = Actors[Index];
@@ -172,7 +170,6 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 			SelectedComponent = nullptr;
 		}
 	}
-
 	ImGui::End();
 
 	ImGui::Begin("Components");
@@ -284,53 +281,53 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	FRHIPipeline* Pipeline = GetRHI()->RHICreatePipelineStateObject(PipelineSpec);
 	FAttachment DepthAttachment = FAttachment(GetRHI()->RHIGetViewportExtent()[0], GetRHI()->RHIGetViewportExtent()[1], ERHITextureFormat::D32_SFLOAT_S8_UINT, ERHITextureUsage::Depth | ERHITextureUsage::Stencil);
 
-	FFrameGraphPass& SceneColorPass = Ctx.Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor,
-		[&](FRHICommandList& RHICmdList)
-		{
-			GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
-			for (const LSceneCamera& View : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetViews())
-			{
-				FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-				CameraData.Write(View.ViewMatrix);
-				CameraData.Write(View.ProjectionMatrix);
-				std::shared_ptr<FRHIBuffer> ViewBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
-
-				for (const LSceneActor& Proxy : GEditor->GetEditorWorld()->GetSceneProxyManager()->GetProxies())
-				{
-					RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
-					for (const auto& Section : StaticMesh->GetSections())
-					{
-					    FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
-					    ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
-					    ObjectData.Write(Proxy.Transform.InverseModelMatrix);
-					    std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
-					
-					    FRHIDrawCommand DrawCommand = {};
-					    DrawCommand.VertexBuffer = StaticMesh->GetVertexBuffer();
-					    DrawCommand.IndexBuffer = StaticMesh->GetIndexBuffer();
-					    DrawCommand.IndexCount = Section.M_IndexCount;
-					    DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
-					    DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
-					    DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
-					
-					    FRHIDrawParams DrawParams = {};
-					    DrawParams.DrawParam_U32_1 = ViewBuffer->GetBindingIndex(); // Camera ID
-						DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
-						DrawParams.DrawParam_U32_3 = 0;
-						DrawParams.DrawParam_U32_4 = 0;
-
-						DrawParams.DrawParam_F32_1 = 0.0f;
-						DrawParams.DrawParam_F32_2 = 0.0f;
-						DrawParams.DrawParam_F32_3 = 0.0f;
-						DrawParams.DrawParam_F32_4 = 0.0f;
-
-					    GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
-					}
-				}
-			}
-		});
-	SceneColorPass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
-	SceneColorPass.AddDepthAttachment(DepthAttachment.GetHandle());
+	//FFrameGraphPass& SceneColorPass = Ctx.Builder.AddPass("Opaque", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor,
+	//	[&](FRHICommandList& RHICmdList)
+	//	{
+	//		GetRHI()->RHICmdBindPipeline(RHICmdList, Pipeline);
+	//		for (const LSceneCamera& View : GEngine->GetWorld()->GetSceneProxyManager()->GetViews())
+	//		{
+	//			FRHIBufferMemoryPacker CameraData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+	//			CameraData.Write(View.ViewMatrix);
+	//			CameraData.Write(View.ProjectionMatrix);
+	//			std::shared_ptr<FRHIBuffer> ViewBuffer = GetRHI()->RHIBindBuffer(CameraData.GetData(), CameraData.GetSize());
+//
+	//			for (const LSceneActor& Proxy : GEngine->GetWorld()->GetSceneProxyManager()->GetProxies())
+	//			{
+	//				RStaticMesh* StaticMesh = Proxy.Geometry.StaticMesh;
+	//				for (const auto& Section : StaticMesh->GetSections())
+	//				{
+	//				    FRHIBufferMemoryPacker ObjectData(ERHIBufferMemoryPackerAlignmentLayout::STD430);
+	//				    ObjectData.Write(Proxy.Transform.ModelMatrix * Section.LocalMatrix);
+	//				    ObjectData.Write(Proxy.Transform.InverseModelMatrix);
+	//				    std::shared_ptr<FRHIBuffer> ObjectInterface_GPUBuffer = GetRHI()->RHIBindBuffer(ObjectData.GetData(), ObjectData.GetSize());
+	//
+	//				    FRHIDrawCommand DrawCommand = {};
+	//				    DrawCommand.VertexBuffer = StaticMesh->GetVertexBuffer();
+	//				    DrawCommand.IndexBuffer = StaticMesh->GetIndexBuffer();
+	//				    DrawCommand.IndexCount = Section.M_IndexCount;
+	//				    DrawCommand.VertexBufferOffset = Section.M_VertexOffset;
+	//				    DrawCommand.IndexBufferOffset = Section.M_IndexOffset;
+	//				    DrawCommand.IndexType = FRHIDrawCommand::EIndexType::U32;
+	//
+	//				    FRHIDrawParams DrawParams = {};
+	//				    DrawParams.DrawParam_U32_1 = ViewBuffer->GetBindingIndex(); // Camera ID
+	//					DrawParams.DrawParam_U32_2 = ObjectInterface_GPUBuffer->GetBindingIndex(); // Instance ID
+	//					DrawParams.DrawParam_U32_3 = 0;
+	//					DrawParams.DrawParam_U32_4 = 0;
+//
+	//					DrawParams.DrawParam_F32_1 = 0.0f;
+	//					DrawParams.DrawParam_F32_2 = 0.0f;
+	//					DrawParams.DrawParam_F32_3 = 0.0f;
+	//					DrawParams.DrawParam_F32_4 = 0.0f;
+//
+	//				    GetRHI()->RHICmdDrawIndexed(RHICmdList, DrawCommand, DrawParams);
+	//				}
+	//			}
+	//		}
+	//	});
+	//SceneColorPass.AddColorAttachment(SceneViewportRenderTarget.GetHandle());
+	//SceneColorPass.AddDepthAttachment(DepthAttachment.GetHandle());
 
 	FFrameGraphPass& UIPass = Ctx.Builder.AddPass("UI Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
 	{
@@ -416,9 +413,11 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 				
 				glm::vec2 ClipMin = glm::vec2(Floor((CommandBuffer.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
 				glm::vec2 ClipMax = glm::vec2(Floor((CommandBuffer.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x), Floor((CommandBuffer.ClipRect.w - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y));
-				if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y) 
+
+			    if (ClipMax.x <= ClipMin.x || ClipMax.y <= ClipMin.y)
 				{ 
-					IndexBase += CommandBuffer.ElemCount; continue; 
+					IndexBase += CommandBuffer.ElemCount;
+				    continue;
 				}
 
 				GetRHI()->RHICmdSetScissor(RHICmdList, (int32_t)ClipMin.x, (int32_t)ClipMin.y, (uint32_t)(ClipMax.x - ClipMin.x), (uint32_t)(ClipMax.y - ClipMin.y));

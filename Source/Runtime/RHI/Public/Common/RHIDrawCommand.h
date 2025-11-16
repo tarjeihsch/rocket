@@ -1,8 +1,10 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
+#include <memory>
 
-#include "glm/fwd.hpp"
+class RMaterial;
 
 struct FRHIDrawCommand
 {
@@ -10,10 +12,6 @@ struct FRHIDrawCommand
 
     FRHIBuffer* VertexBuffer;
     FRHIBuffer* IndexBuffer;
-
-    glm::vec3 Translation;
-    glm::vec3 Rotation;
-    glm::vec3 Scale;
 
     uint32_t IndexCount;
     uint32_t VertexBufferOffset;
@@ -33,4 +31,24 @@ struct FRHIDrawParams
     float DrawParam_F32_2 = 0.0f;
     float DrawParam_F32_3 = 0.0f;
     float DrawParam_F32_4 = 0.0f;
+};
+
+class RPrimitive;
+
+struct FRHIDrawCall
+{
+    enum class EIndexType : uint8_t
+    {
+        U32, U16
+    };
+
+    std::shared_ptr<RPrimitive> Primitive;
+    std::shared_ptr<RMaterial> Material;
+
+    FRHIDrawParams Params;
+
+    std::array<float, 2> ScissorPosition;
+    std::array<float, 2> ScissorExtent;
+
+    EIndexType IndexType;
 };

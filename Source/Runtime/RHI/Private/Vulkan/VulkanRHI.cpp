@@ -303,7 +303,12 @@ void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, const FRHIDrawCommand& 
 
 void CVulkanRHI::RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
 {
-    RHICmdList.Enqueue<FVulkanCommandDrawIndexed>(DrawCommand, Params);
+    // RHICmdList.Enqueue<FVulkanCommandDrawIndexed>(DrawCommand, Params);
+}
+
+void CVulkanRHI::RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawCall& DrawCall)
+{
+    RHICmdList.Enqueue<FVulkanCommandDrawIndexed2>(DrawCall);
 }
 
 FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const

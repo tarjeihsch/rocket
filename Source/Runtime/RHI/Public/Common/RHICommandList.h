@@ -10,6 +10,7 @@
 struct RRHIRect;
 struct FRHIDrawCommand;
 struct FRHIDrawParams;
+struct FRHIDrawCall;
 struct FRHIBuffer;
 struct FRHIPipeline;
 struct FRHITexture;
@@ -30,6 +31,7 @@ public:
     virtual void RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) = 0;
+    virtual void RHIDrawIndexed2(const FRHIDrawCall& DrawCall) = 0;
     virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) = 0;
     virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachment, bool bClearColor) = 0;
     virtual void RHIEndRendering() = 0;

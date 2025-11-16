@@ -2,7 +2,7 @@
 
 #include "Common/RHI.h"
 #include "ConfigFile.h"
-#include "Engine.h"
+#include "GameEngine.h"
 #include "GLFWWindow.h"
 #include "Logger.h"
 #include "Module.h"
@@ -43,7 +43,7 @@ int main(int P_Argc, char* P_Argv[])
     SetRHIModule(ERHIInterfaceType::Vulkan);
     GRHI->Init();
 
-    GEngine = new REngine();
+    GEngine = new RGameEngine();
     GEngine->Start(EngineInitParams);
     GEngine->LoadWorld("Content/Start.pkg");
 

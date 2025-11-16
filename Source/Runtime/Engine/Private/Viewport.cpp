@@ -2,10 +2,8 @@
 
 #include "Common/RHI.h"
 #include "glm/ext/matrix_clip_space.hpp"
-#include "LocalPlayer.h"
 #include "RenderTarget.h"
 #include <Assertion.h>
-#include "Renderer.h"
 
 glm::mat4 LRenderView::GetViewMatrix() const
 {

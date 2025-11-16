@@ -12,7 +12,8 @@ RStaticMesh::RStaticMesh(const char* InFilePath)
     M_IndexBuffer(nullptr),
     M_VertexCount(0),
     M_IndexCount(0),
-    FilePath(InFilePath)
+    FilePath(InFilePath),
+      RPrimitive({}, {})
 {
     Init();
 }

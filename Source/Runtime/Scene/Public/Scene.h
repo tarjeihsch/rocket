@@ -9,6 +9,13 @@ class RStaticMesh;
 class RMaterial;
 class RViewport;
 
+struct LScenePrimitive2D
+{
+    float Scale[2];
+
+    float Translate[2];
+};
+
 struct LSceneProxyGeometry
 {
     RStaticMesh* StaticMesh;

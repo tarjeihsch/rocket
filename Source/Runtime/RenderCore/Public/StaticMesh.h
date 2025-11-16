@@ -33,7 +33,7 @@ public:
     RStaticMesh(const char* InFilePath);
     ~RStaticMesh();
 
-    virtual void Draw(FRHICommandList& CmdList) const override;
+    virtual void Draw(FRHICommandList& CmdList) const;
 
     inline FRHIBuffer* GetVertexBuffer() const;
     inline FRHIBuffer* GetIndexBuffer() const;

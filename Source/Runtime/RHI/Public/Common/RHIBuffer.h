@@ -48,6 +48,16 @@ struct FRHIBufferDesc
         return Desc;
     }
 
+    static FRHIBufferDesc CreateTransientVertexBuffer(uint64_t InSize)
+    {
+        FRHIBufferDesc Desc = {};
+        Desc.Size = InSize;
+        Desc.Lifetime = ERHIResourceLifetime::Transient;
+        Desc.Memory = ERHIResourceMemory::HostVisible;
+        Desc.Usage = ERHIBufferUsage::Vertex;
+        return Desc;
+    }
+
     static FRHIBufferDesc CreateIndexBuffer(uint64_t InSize)
     {
         FRHIBufferDesc Desc = {};
@@ -55,6 +65,16 @@ struct FRHIBufferDesc
         Desc.Lifetime = ERHIResourceLifetime::Persistent;
         Desc.Memory = ERHIResourceMemory::DeviceLocal;
         Desc.Usage = ERHIBufferUsage::Index | ERHIBufferUsage::TransferDst;
+        return Desc;
+    }
+
+    static FRHIBufferDesc CreateTransientIndexBuffer(uint64_t InSize)
+    {
+        FRHIBufferDesc Desc = {};
+        Desc.Size = InSize;
+        Desc.Lifetime = ERHIResourceLifetime::Transient;
+        Desc.Memory = ERHIResourceMemory::HostVisible;
+        Desc.Usage = ERHIBufferUsage::Index;
         return Desc;
     }
 
