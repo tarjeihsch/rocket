@@ -1,12 +1,12 @@
 ﻿#pragma once
 
-#include "Panel.h"
+#include "Widget.h"
 
-class RLevelEditorPanel : public RPanel
+class RLevelEditorPanel : public RWidget
 {
 public:
     explicit RLevelEditorPanel();
 
 protected:
-    virtual void UpdatePanelImpl() override;
+    virtual void UpdateImpl() override;
 };

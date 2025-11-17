@@ -1,16 +1,18 @@
 ﻿#include "LevelEditorPanel.h"
 
 #include "EngineBase.h"
+#include "RenderTarget.h"
 #include "Renderer.h"
 
 #include <imgui.h>
 
 RLevelEditorPanel::RLevelEditorPanel()
-    : RPanel("Level Editor")
+    : RWidget("Level Editor")
 {
 }
 
-void RLevelEditorPanel::UpdatePanelImpl()
+void RLevelEditorPanel::UpdateImpl()
 {
-    //ImGui::Image(GEngine->GetRenderer()->GetColorRenderTarget(), ImGui::GetContentRegionAvail());
+    //if (!GEngine->GetRenderer()->ColorRT) return;
+    //ImGui::Image(GEngine->GetRenderer()->ColorRT->GetHandle(), ImGui::GetContentRegionAvail());
 }

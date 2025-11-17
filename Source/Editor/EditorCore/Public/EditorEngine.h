@@ -4,7 +4,8 @@
 
 #include <memory>
 
-class REditorUI;
+class RWidget;
+class RViewport;
 class RWorld;
 class RRenderer;
 
@@ -26,6 +27,7 @@ public:
     virtual RWorld* GetWorld() const override;
     virtual RGame* GetGame() const override;
     virtual RRenderer* GetRenderer() const override;
+    virtual RViewport* GetViewport() const override;
 
     void EnterPlayMode();
     void ExitPlayMode();
@@ -35,10 +37,11 @@ public:
 private:
     // Editable world - copied to game world on play
     std::unique_ptr<RWorld> World;
-
     std::unique_ptr<RRenderer> Renderer;
+    std::unique_ptr<RViewport> Viewport;
 
-    std::unique_ptr<REditorUI> UI;
+	// Top-level widget
+    std::unique_ptr<RWidget> Widget;
 
     // Current editor mode
     EMode Mode;

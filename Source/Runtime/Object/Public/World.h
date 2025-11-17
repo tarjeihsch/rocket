@@ -31,13 +31,11 @@ public:
     std::span<RActor*> GetActors();
 
     inline RTickTaskManager* GetTickTaskManager() const;
-    inline RScene* GetSceneProxyManager() const;
 
 private:
     std::vector<RActor*> Actors;
 
     std::unique_ptr<RTickTaskManager> TickTaskManager;
-    std::unique_ptr<RScene> PrimitiveProxyManager;
 };
 
 template <typename TActor>
@@ -51,9 +49,4 @@ TActor* RWorld::SpawnActor() const
 inline RTickTaskManager* RWorld::GetTickTaskManager() const
 {
     return TickTaskManager.get();
-}
-
-inline RScene* RWorld::GetSceneProxyManager() const
-{
-    return PrimitiveProxyManager.get();
 }

@@ -45,6 +45,7 @@ public:
     virtual RWorld* GetWorld() const = 0;
     virtual RGame* GetGame() const = 0;
     virtual RRenderer* GetRenderer() const = 0;
+    virtual RViewport* GetViewport() const = 0;
 };
 
 extern IEngineBase* GEngine;

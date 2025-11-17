@@ -106,6 +106,7 @@ void* FVulkanTextureView::GetHandle() const
 {
     return ImageView;
 }
+
 uint32_t FVulkanTextureView::GetBindingIndex() const
 {
     return DescriptorHandle.Index;
@@ -122,16 +123,14 @@ void FVulkanTextureView::Alloc()
     {
         if (Desc.Aspect == ERHITextureAspect::Color || Desc.Aspect == ERHITextureAspect::Depth)
         {
-            DescriptorHandle = Device.GetDescriptorManager()->AddSampledImage(
-                ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            DescriptorHandle = Device.GetDescriptorManager()->AddSampledImage(ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
     }
     else if ((Texture->RHIGetTextureDesc().Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
     {
         if (Desc.Aspect == ERHITextureAspect::Color)
         {
-            DescriptorHandle = Device.GetDescriptorManager()->AddStorageImage(
-                ImageView, VK_IMAGE_LAYOUT_GENERAL);
+            DescriptorHandle = Device.GetDescriptorManager()->AddStorageImage(ImageView, VK_IMAGE_LAYOUT_GENERAL);
         }
     }
 }

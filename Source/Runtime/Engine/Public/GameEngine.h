@@ -29,6 +29,7 @@ public:
     virtual RWorld* GetWorld() const override;
     virtual RGame* GetGame() const override;
     virtual RRenderer* GetRenderer() const override;
+    virtual RViewport* GetViewport() const override;
 
 private:
     RGame* Game;

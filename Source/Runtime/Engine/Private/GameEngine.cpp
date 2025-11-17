@@ -37,6 +37,11 @@ RRenderer* RGameEngine::GetRenderer() const
     return nullptr;
 }
 
+RViewport* RGameEngine::GetViewport() const
+{
+    return nullptr;
+}
+
 void RGameEngine::LoadWorld(const char *Path)
 {
     World = new RWorld();

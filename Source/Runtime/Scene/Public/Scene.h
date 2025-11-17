@@ -66,6 +66,3 @@ private:
     std::vector<LSceneActor> Proxies;
     std::vector<LSceneCamera> Views;
 };
-
-#define RENDERER_ENQUEUE_COMMAND(x) ...
-#define RENDERER_ENQUEUE_COMMAND_BATCH(x) ...

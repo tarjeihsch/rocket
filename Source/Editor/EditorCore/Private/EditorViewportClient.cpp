@@ -1,3 +1,4 @@
+/*
 #include "EditorViewportClient.h"
 
 #include "Actor.h"
@@ -161,7 +162,7 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	std::span<RActor*> Actors = GEngine->GetWorld()->GetActors();
 	for (size_t Index = 0; Index < Actors.size(); ++Index)
 	{
-		RActor* Actor = Actors[Index];
+		RActor* Actor = Actors[Index];z
 		std::string ActorLabel = "Actor##" + std::to_string(Index);
 
 		if (ImGui::Selectable(ActorLabel.c_str(), (SelectedActor == Actor)))
@@ -463,3 +464,4 @@ void REditorViewportClient::Draw(RFrameContext& Ctx)
 	// Should take all the builder's and combine them. (eg. Editor, Game)
 	Ctx.Builder.Execute();
 }
+*/

@@ -1,91 +1,33 @@
 #pragma once
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <cstdint>
+#include <memory>
 
-#include "glm/ext/matrix_transform.hpp"
-#include "glm/fwd.hpp"
-#include "glm/vec3.hpp"
-#include "FrameGraph.h"
+class FRenderTarget;
 
-struct FRenderTarget;
-class IRenderer;
+struct FFrameGraphBuilder;
 
-enum class ERenderViewProjectionMode
+enum EViewportMode : uint8_t
 {
-    Perspective, Orthographic
+    VT_Game,
+    VT_GamePreview,
+    VT_MaterialPreview,
+    VT_Count
 };
 
-struct LRect2D
-{
-    float Offset[2];
-    float Extent[2];
-};
-
-struct LRenderView
-{
-    // Location in world space
-    alignas(16)
-    glm::vec3 Location;
-
-    // Rotation in euler angles
-    alignas(16)
-    glm::vec3 Rotation;
-
-    // Offset and extent of the viewport
-    LRect2D ViewRect;
-
-    // Viewing volume
-    ERenderViewProjectionMode ProjectionMode;
-
-    float ZNear;
-    float ZFar;
-    float AspectRatio;
-
-    union
-    {
-        // Orthographic (Note: input must be in radians)
-        float Zoom;
-
-        // Perspective (Note: input must be in radians)
-        float FovY;
-    };
-
-    glm::mat4 GetViewMatrix() const;
-    glm::mat4 GetProjection() const;
-};
-
-class FRHITexture;
-class RViewportClient;
-
-// Rendering, audio, input systems
 class RViewport
 {
 public:
     RViewport();
     ~RViewport();
 
-    void Update(RViewportClient* ViewportClient, float DeltaTime);
+    void Update(float DeltaTime);
+    void Present();
 
 private:
     void Init();
     void Shutdown();
-    
-private:
-    FRHITexture* RenderTarget;
-};
 
-struct RFrameContext
-{
-    float ViewportWidth;
-    float ViewportHeight;
-    float Timestep;
-
-	FFrameGraphBuilder Builder;
-};
-
-class RViewportClient
-{
 public:
-	virtual void Draw(RFrameContext& Context) = 0;
+    std::shared_ptr<FRenderTarget> RenderTarget;
 };

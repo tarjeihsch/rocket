@@ -1,6 +1,5 @@
 #include "CameraComponent.h"
 
-#include "Scene.h"
 #include "Viewport.h"
 #include "World.h"
 
@@ -94,15 +93,15 @@ void RCameraComponent::Tick(float DeltaTime)
 
 void RCameraComponent::OnPropertyChanged()
 {
-    if (SceneViewID == UINT64_MAX)
-    {
-    	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
-    }
-
-    LSceneCamera NewSceneView = {};
-
-	NewSceneView.ProjectionMatrix = RecalculateProjectionMatrix();
-	NewSceneView.ViewMatrix = RecalculateViewMatrix();
-
-    GetWorld()->GetSceneProxyManager()->UpdateView(SceneViewID, NewSceneView);
+    // if (SceneViewID == UINT64_MAX)
+    //{
+    //	SceneViewID = GetWorld()->GetSceneProxyManager()->CreateView();
+    // }
+    //
+    // LSceneCamera NewSceneView = {};
+    //
+    // NewSceneView.ProjectionMatrix = RecalculateProjectionMatrix();
+    // NewSceneView.ViewMatrix = RecalculateViewMatrix();
+    //
+    // GetWorld()->GetSceneProxyManager()->UpdateView(SceneViewID, NewSceneView);
 }

@@ -40,7 +40,7 @@ target_link_libraries(Engine
     PUBLIC Rocket::Object
     PRIVATE Rocket::RHI
     PRIVATE Rocket::RenderCore
-    PRIVATE Rocket::Renderer
+    PRIVATE Rocket::Rendering
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 

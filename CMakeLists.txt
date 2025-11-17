@@ -79,7 +79,7 @@ set(ROCKET_EXPORT_LIBS
     Engine
     RHI
     RenderCore
-    Renderer
+    Rendering
     Window
     Asset
     Math

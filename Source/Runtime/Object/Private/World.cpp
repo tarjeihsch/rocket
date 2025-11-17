@@ -2,7 +2,6 @@
 
 #include "AssetManager.h"
 #include "ObjectUtils.h"
-#include "Scene.h"
 
 #ifdef RK_PLATFORM_LINUX
 #include <dlfcn.h>
@@ -32,7 +31,6 @@ RWorld::~RWorld()
 void RWorld::Init()
 {
 	TickTaskManager = std::make_unique<RTickTaskManager>();
-	PrimitiveProxyManager = std::make_unique<RScene>();
 }
 
 void RWorld::Cleanup()

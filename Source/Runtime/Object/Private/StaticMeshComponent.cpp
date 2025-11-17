@@ -1,6 +1,5 @@
 #include "StaticMeshComponent.h"
 
-#include "Scene.h"
 #include "World.h"
 
 static glm::mat4 ComposeTransformMatrix(const glm::vec3& Location, const glm::vec3& Rotation, const glm::vec3& Scale)
@@ -55,20 +54,20 @@ const RClass *RStaticMeshComponent::GetClass() const
 
 void RStaticMeshComponent::OnPropertyChanged()
 {
-    if (ProxyHandle == UINT64_MAX)
-    {
-        ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
-    }
-
-    LSceneProxyGeometry Geometry = {};
-    Geometry.StaticMesh = StaticMesh;
-
-    LSceneProxyTransform Transform = {};
-    Transform.ModelMatrix = ComposeTransformMatrix(Location, Rotation, Scale);
-    Transform.InverseModelMatrix = TransposeInverseTransformMatrix(Location, Rotation, Scale);
-
-    GetWorld()->GetSceneProxyManager()->UpdateProxyGeometry(ProxyHandle, Geometry);
-    GetWorld()->GetSceneProxyManager()->UpdateProxyTransform(ProxyHandle, Transform);
+    //if (ProxyHandle == UINT64_MAX)
+    //{
+    //    ProxyHandle = GetWorld()->GetSceneProxyManager()->CreateProxy();
+    //}
+    //
+    //LSceneProxyGeometry Geometry = {};
+    //Geometry.StaticMesh = StaticMesh;
+    //
+    //LSceneProxyTransform Transform = {};
+    //Transform.ModelMatrix = ComposeTransformMatrix(Location, Rotation, Scale);
+    //Transform.InverseModelMatrix = TransposeInverseTransformMatrix(Location, Rotation, Scale);
+    //
+    //GetWorld()->GetSceneProxyManager()->UpdateProxyGeometry(ProxyHandle, Geometry);
+    //GetWorld()->GetSceneProxyManager()->UpdateProxyTransform(ProxyHandle, Transform);
 }
 
 void RStaticMeshComponent::SetStaticMesh(RStaticMesh *NewStaticMesh)

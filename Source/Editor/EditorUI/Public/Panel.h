@@ -1,28 +1,12 @@
 ﻿#pragma once
 
-#include <cstdint>
+#include "Widget.h"
 
-enum class EPanelVisiblityState : uint8_t
-{
-    Hidden = 0,
-
-    Visible,
-};
-
-class RPanel
+class RPanel : public RWidget
 {
 public:
-    explicit RPanel(const char* InPanelName);
-    virtual ~RPanel() = default;
-
-    void UpdatePanel();
+    explicit RPanel();
 
 protected:
-    // Implementation entrypoint as per child class
-    virtual void UpdatePanelImpl() = 0;
-
-protected:
-    const char* PanelName;
-
-    EPanelVisiblityState Visibility;
+    virtual void UpdateImpl() override;
 };

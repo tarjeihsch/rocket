@@ -38,7 +38,6 @@ target_link_libraries(Rendering
     PUBLIC Rocket::Core
     PUBLIC Rocket::RenderCore
     PUBLIC Rocket::RHI
-    PRIVATE imgui::imgui
 )
 
 set_target_properties(Rendering PROPERTIES POSITION_INDEPENDENT_CODE ON)

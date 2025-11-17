@@ -1,16 +1,18 @@
-﻿#include "EditorUI.h"
+﻿#include "ViewportHost.h"
 
 #include "EngineBase.h"
 #include "Input.h"
 #include "KeyCode.h"
 #include "LevelEditorPanel.h"
-#include "Panel.h"
 #include "Renderer.h"
 #include "Texture2D.h"
 
 #include <imgui.h>
 #include <Common/RHIBuffer.h>
 #include "Primitive.h"
+#include "SceneHierarchyPanel.h"
+#include "World.h"
+
 #include <MathTypes.h>
 #include <Material.h>
 #include <Sampler.h>
@@ -39,16 +41,14 @@ void REditorUI::Initialize()
     FontTex2D = std::make_unique<RTexture2D>(ETextureType::Linear, Width, Height);
     FontTex2D->LoadRawTextureData(Data);
     IO.Fonts->SetTexID((ImTextureID)FontTex2D->GetHandle());
-
-    AddPanel(new RLevelEditorPanel());
 }
 
-void REditorUI::AddPanel(RPanel* Panel)
-{
-    const std::shared_ptr<RPanel> Ref(Panel);
-
-    Panels.push_back(Ref);
-}
+//void REditorUI::AddPanel(RPanel* Panel)
+//{
+//    const std::shared_ptr<RPanel> Ref(Panel);
+//
+//    Panels.push_back(Ref);
+//}
 
 void REditorUI::Update(float DeltaTime)
 {
@@ -96,44 +96,33 @@ void REditorUI::Update(float DeltaTime)
         ImGui::DockSpace(DockspaceID, ImVec2(0.0f, 0.0f), DockspaceFlags);
     }
 
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::BeginMenuBar())
         {
-            if (ImGui::MenuItem("Exit"))
+            if (ImGui::BeginMenu("File"))
             {
+                if (ImGui::MenuItem("Exit"))
+                {
+                }
+
+                ImGui::EndMenu();
             }
 
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Object"))
-        {
-            if (ImGui::MenuItem("New Actor"))
+            if (ImGui::BeginMenu("Object"))
             {
+                if (ImGui::MenuItem("New Actor"))
+                {
+                    GEngine->GetWorld()->SpawnActor(RActor::StaticClass());
+                }
+
+                ImGui::EndMenu();
             }
 
-            ImGui::EndMenu();
+            ImGui::EndMenuBar();
         }
-
-        ImGui::EndMenuBar();
-    }
-
-    for (auto& Panel : Panels)
-    {
-        Panel->UpdatePanel();
-    }
 
     ImGui::End();
     ImGui::Render();
 
-    BuildDrawData();
-    BuildDrawData();
-
-}
-
-void REditorUI::BuildDrawData()
-{
     ImDrawData* DrawData = ImGui::GetDrawData();
 
     glm::vec2 Scale = {};
@@ -157,33 +146,25 @@ void REditorUI::BuildDrawData()
 
         for (const ImDrawCmd& CommandBuffer : CmdList->CmdBuffer)
         {
-            // Each draw command corresponds to a draw call, so we need to extract the vertex and index data for this command.
-            // Create a new vertex buffer for this draw call.
             size_t VertexBufferSize = CommandBuffer.ElemCount * sizeof(ImDrawVert);
             size_t IndexBufferSize = CommandBuffer.ElemCount * sizeof(ImDrawIdx);
 
-            // Create a new vertex buffer and copy the relevant data from the ImDrawList's VtxBuffer
             FRHIBuffer* VertexBuffer = GetRHI()->RHICreateBuffer(FRHIBufferDesc::CreateTransientVertexBuffer(VertexBufferSize));
             VertexBuffer->Map(&CmdList->VtxBuffer[(int32_t)CommandBuffer.VtxOffset], VertexBufferSize);
 
-            // Create a new index buffer and copy the relevant data from the ImDrawList's IdxBuffer
             FRHIBuffer* IndexBuffer = GetRHI()->RHICreateBuffer(FRHIBufferDesc::CreateTransientIndexBuffer(IndexBufferSize));
             IndexBuffer->Map(&CmdList->IdxBuffer[(int32_t)CommandBuffer.IdxOffset], IndexBufferSize);
 
-            // Create the texture view for the current draw call's texture
+            FRHITexture* UserTexture = reinterpret_cast<FRHITexture*>(CommandBuffer.GetTexID());
             FRHITextureViewDesc UserTextureViewDesc = {};
-            UserTextureViewDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
+            UserTextureViewDesc.Format = UserTexture->RHIGetTextureDesc().Format;
             UserTextureViewDesc.Aspect = ERHITextureAspect::Color;
             UserTextureViewDesc.Lifetime = ERHIResourceLifetime::Transient;
-            FRHITexture* UserTexture = reinterpret_cast<FRHITexture*>(CommandBuffer.GetTexID());
             std::shared_ptr<FRHITextureView> UserTextureView(GetRHI()->RHICreateTextureView(UserTextureViewDesc, UserTexture));
-
-            // Create the primitive and material for the draw call
             std::shared_ptr<RPrimitive> Primitive = std::make_shared<RPrimitive>(VertexBuffer, IndexBuffer);
             std::shared_ptr<RMaterial> Material = std::make_shared<RMaterial>(EMaterialPass::UI, EMaterialBlendMode::Transparent, ROCKET_SRC "/Shader/ImGuiVS.hlsl", ROCKET_SRC "/Shader/ImGuiPS.hlsl");
             std::shared_ptr<RSampler> Sampler = std::make_shared<RSampler>();
-
-            // Clip rect calculations
+            
             float ClipMinX = Floor((CommandBuffer.ClipRect.x - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x);
             float ClipMinY = Floor((CommandBuffer.ClipRect.y - DrawData->DisplayPos.y) * DrawData->FramebufferScale.y);
             float ClipMaxX = Floor((CommandBuffer.ClipRect.z - DrawData->DisplayPos.x) * DrawData->FramebufferScale.x);
@@ -192,7 +173,6 @@ void REditorUI::BuildDrawData()
             std::array<float, 2> ScissorPosition = { ClipMinX, ClipMinY };
             std::array<float, 2> ScissorExtent = { ClipMaxX - ClipMinX, ClipMaxY - ClipMinY};
 
-            // Setup the draw call with its parameters
             FRHIDrawCall DrawCommand;
             DrawCommand.Primitive = Primitive;
             DrawCommand.Material = Material;
@@ -203,11 +183,7 @@ void REditorUI::BuildDrawData()
             DrawCommand.Params.DrawParam_U32_2 = Sampler->GetBindingIndex();
             DrawCommand.Params.DrawParam_U32_3 = ProjectionBuffer->GetBindingIndex();
 
-            // Add the draw command to the list
             DrawCommands.push_back(DrawCommand);
         }
     }
-
-    // Submit all the draw calls
-    GEngine->GetRenderer()->DrawIndexed(DrawCommands);
 }
