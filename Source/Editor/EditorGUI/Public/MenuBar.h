@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Dockspace.h"
+#include "../../../Runtime/IMGUIModule/Public/Dockspace.h"
 
 class RMenuBar : public RDockspace
 {

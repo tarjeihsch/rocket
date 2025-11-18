@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Widget.h"
+#include "../../../Runtime/IMGUIModule/Public/Widget.h"
 
 class RLevelEditorPanel : public RWidget
 {

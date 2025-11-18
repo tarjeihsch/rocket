@@ -3,14 +3,12 @@
 #include "EngineBase.h"
 #include "Input.h"
 #include "KeyCode.h"
-#include "LevelEditorPanel.h"
 #include "Renderer.h"
 #include "Texture2D.h"
 
 #include <imgui.h>
 #include <Common/RHIBuffer.h>
 #include "Primitive.h"
-#include "SceneHierarchyPanel.h"
 #include "World.h"
 
 #include <MathTypes.h>
