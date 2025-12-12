@@ -14,6 +14,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 
+set(BUILD_SHARED_LIBS OFF)
+
 set(RK_ENABLE_DEBUG_OVERLAY 0 CACHE BOOL "Enable Rocket debug overlay")
 set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
 
@@ -67,7 +69,6 @@ add_subdirectory(Source/Runtime/RenderCore)
 add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Asset)
-add_subdirectory(Source/Runtime/Application)
 
 set(ROCKET_EXPORT_LIBS
     Core
@@ -91,10 +92,6 @@ install(TARGETS ${ROCKET_EXPORT_LIBS}
     EXPORT RocketTargets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-)
-
-install(TARGETS Application
     RUNTIME DESTINATION bin
 )
 
