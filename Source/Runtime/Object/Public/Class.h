@@ -5,6 +5,7 @@
 #include <concepts>
 #include <cstdint>
 #include <span>
+#include <cstring>
 
 class RObject;
 class RActor;
@@ -23,11 +24,11 @@ enum class EFieldType : uint8_t
 class RField final
 {
 public:
-	const char* Name;
-	size_t Offset;
-	size_t Size;
-	size_t Alignment;
-	RClass* FieldClass;
+    const char* Name;
+    size_t Offset;
+    size_t Size;
+    size_t Alignment;
+    RClass* FieldClass;
     EFieldType FieldType;
 
     void SetValue(RObject* Object, const void* Value) const
@@ -164,7 +165,8 @@ concept DoesImplementStaticClass = requires()
         #Member, \
         offsetof(Class, Member), \
         sizeof(((Class*)0)->Member), \
-		alignof(Type), \
+        alignof(Type), \
         nullptr, \
-		RTypeTag<Type>::Value \
+        RTypeTag<Type>::Value \
     }
+

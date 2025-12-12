@@ -51,17 +51,12 @@ add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 # Third Party modules
 add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
-add_subdirectory(Source/ThirdParty/imgui EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/spdlog EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/tinygltf EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/rapidjson EXCLUDE_FROM_ALL)
 
 # Rocket modules
-add_subdirectory(Source/Editor/Application)
-add_subdirectory(Source/Editor/EditorCore)
-add_subdirectory(Source/Editor/EditorGUI)
-add_subdirectory(Source/Runtime/IMGUIModule)
 add_subdirectory(Source/Runtime/Rendering)
 add_subdirectory(Source/Runtime/Object)
 add_subdirectory(Source/Runtime/Math)
@@ -125,11 +120,6 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
     @ONLY
 )
-
-#target_include_directories(Core PUBLIC
-#    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Generated>
-#    $<INSTALL_INTERFACE:include>
-#)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Generated/RocketConfig.h
     DESTINATION include/Rocket

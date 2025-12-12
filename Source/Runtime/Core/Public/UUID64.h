@@ -18,7 +18,7 @@ struct RUUID64
         UUID = RUUID64Utils::UniformDistribution(RUUID64Utils::Engine);
     }
 
-    RUUID64(uint32_t InUUID)
+    RUUID64(uint64_t InUUID)
     {
         UUID = InUUID;
     }
