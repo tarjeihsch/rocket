@@ -11,7 +11,7 @@ class RStaticMeshComponent final : public RPrimitiveComponent
 public:
     static RClass* StaticClass();
 
-    virtual void Tick(float DeltaTime);
+    virtual void Tick(float DeltaTime) override;
     virtual const RClass* GetClass() const override;
     virtual void OnPropertyChanged() override;
 
