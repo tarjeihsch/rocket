@@ -38,4 +38,9 @@ target_link_libraries(Math
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 
+target_compile_definitions(Math 
+    PUBLIC
+        MATH_REAL_64
+)
+
 set_target_properties(Math PROPERTIES POSITION_INDEPENDENT_CODE ON)

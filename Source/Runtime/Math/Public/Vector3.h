@@ -1,41 +1,12 @@
 #pragma once
 
-#include <array>
 #include <stddef.h>
 #include <cmath>
 
 #include "Math.h"
 
-template<typename T, size_t Count>
-struct Vector
-{
-};
-
-template<typename T>
-struct Vector2 : Vector<T, 2>
-{
-    union
-    {
-        struct { T x; T y; };
-        struct { T r; T g; };
-        struct { T u; T v; };
-
-        T data[2] { 0, 0 };
-    };
-
-    Vector2(T px, T py, T pz)
-    {
-    }
-
-    // Magnitude of a vector is calculated using the Euclidaen norm (Pythagoras theorem generalized to N dimensions).
-    inline T Length() const
-    {
-        return std::sqrt(std::pow(data[0], 2) + std::pow(data[1], 2));
-    }
-};
-
-template<typename T>
-struct Vector3 : Vector<T, 3>
+template<typename T = Real>
+struct Vector3
 {
     union
     {
@@ -100,21 +71,33 @@ struct Vector3 : Vector<T, 3>
 };
 
 using Vector3d = Vector3<double>;
-using Vector2d = Vector2<double>;
-
 using Vector3f = Vector3<float>;
-using Vector2f = Vector2<float>;
 
 template<typename T>
-static T DotProduct(Vector3<T> a, Vector3<T> b, T angle)
+inline T DotProduct(const Vector3<T>& a, const Vector3<T>& b)
 {
-    T result = a.Length() * b.Length() * std::cos(angle);
-
+    T result = 0;
+    result += a.data[0] * b.data[0];
+    result += a.data[1] * b.data[1];
+    result += a.data[2] * b.data[2];
     return result;
 }
 
-//template<typename T>
-//static T CrossProduct(Vector3<T> a, Vector3<T> b, T angle, Vector3<T> unit)
-//{
-//    return result;
-//}
+template<typename T>
+inline Vector3<T> CrossProduct(const Vector3<T>& a, const Vector3<T>& b)
+{
+    Vector3<T> result;
+    result.data[0] = (a.data[2] * b.data[3]) - (a.data[3] * b.data[2]);
+    result.data[1] = (a.data[3] * b.data[1]) - (a.data[1] * b.data[3]);
+    result.data[2] = (a.data[1] * b.data[2]) - (a.data[2] * b.data[1]);
+    return result;
+}
+
+template<typename T>
+inline T AngleBetween(Vector3<T> a, Vector3<T> b)
+{
+    T dot = DotProduct(a, b);
+    T length = a.Length() * b.Length();
+    T theta = dot / length;
+    return std::acos(theta);
+}

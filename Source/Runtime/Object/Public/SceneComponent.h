@@ -2,7 +2,6 @@
 
 #include "Component.h"
 #include "Transform.h"
-#include "Vector.h"
 
 class RSceneComponent : public RComponent
 {
