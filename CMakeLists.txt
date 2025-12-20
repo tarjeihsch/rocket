@@ -70,6 +70,12 @@ add_subdirectory(Source/Runtime/Scene)
 add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Asset)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
+set_target_properties(glm  PROPERTIES FOLDER "ThirdParty/glm")
+set_target_properties(tinygltf  PROPERTIES FOLDER "ThirdParty/tinygltf")
+set_target_properties(spdlog  PROPERTIES FOLDER "ThirdParty/spdlog")
+
 set(ROCKET_EXPORT_LIBS
     Core
     Object
