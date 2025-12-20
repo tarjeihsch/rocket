@@ -45,6 +45,6 @@ target_link_libraries(Object
 
 set_target_properties(Object PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_compile_options(Object PRIVATE 
-    -Wno-invalid-offsetof
+target_compile_options(Object PRIVATE
+  $<$<CXX_COMPILER_ID:Clang,GNU>:-Wno-invalid-offsetof>
 )

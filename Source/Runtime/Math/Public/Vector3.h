@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <cmath>
 
-#include "Math.h"
+#include "MathTypes.h"
 
 template<typename T = Real>
 struct Vector3
