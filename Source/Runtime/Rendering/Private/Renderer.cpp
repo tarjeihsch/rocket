@@ -5,7 +5,6 @@
 #include "Material.h"
 #include "RenderTarget.h"
 #include "Texture2D.h"
-#include "Viewport.h"
 
 RRenderer::RRenderer()
 {
@@ -25,25 +24,25 @@ void RRenderer::EndFrame()
     FrameGraph->Execute();
 }
 
-void RRenderer::DrawIndexed(RViewport* Viewport, std::span<FRHIDrawCall> Commands)
-{
-    ensure(Viewport->RenderTarget != nullptr);
-
-    DrawIndexed(Viewport->RenderTarget, Commands);
-}
-
-void RRenderer::DrawIndexed(RViewport* Viewport, const FRHIDrawCall& Commands)
-{
-    ensure(Viewport->RenderTarget != nullptr);
-
-    auto& Pass = FrameGraph->AddPass("Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
-    {
-        Commands.Material->Bind(RHICmdList);
-
-        GetRHI()->RHICmdDrawIndexed2(RHICmdList, Commands);
-    });
-    Pass.AddColorAttachment(Viewport->RenderTarget->GetHandle());
-}
+//void RRenderer::DrawIndexed(RViewport* Viewport, std::span<FRHIDrawCall> Commands)
+//{
+//    ensure(Viewport->RenderTarget != nullptr);
+//
+//    DrawIndexed(Viewport->RenderTarget, Commands);
+//}
+//
+//void RRenderer::DrawIndexed(RViewport* Viewport, const FRHIDrawCall& Commands)
+//{
+//    ensure(Viewport->RenderTarget != nullptr);
+//
+//    auto& Pass = FrameGraph->AddPass("Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+//    {
+//        Commands.Material->Bind(RHICmdList);
+//
+//        GetRHI()->RHICmdDrawIndexed2(RHICmdList, Commands);
+//    });
+//    Pass.AddColorAttachment(Viewport->RenderTarget->GetHandle());
+//}
 
 void RRenderer::DrawIndexed(const std::shared_ptr<FRenderTarget>& RenderTarget, std::span<FRHIDrawCall> Commands)
 {
@@ -61,10 +60,10 @@ void RRenderer::DrawIndexed(const std::shared_ptr<FRenderTarget>& RenderTarget, 
     Pass.AddColorAttachment(RenderTarget->GetHandle());
 }
 
-void RRenderer::Present(RViewport* Viewport)
-{
-    Present(Viewport->RenderTarget);
-}
+//void RRenderer::Present(RViewport* Viewport)
+//{
+//    Present(Viewport->RenderTarget);
+//}
 
 void RRenderer::Present(const std::shared_ptr<FRenderTarget>& RenderTarget)
 {

@@ -36,8 +36,11 @@ target_include_directories(Rendering
 
 target_link_libraries(Rendering
     PUBLIC Rocket::Core
-    PUBLIC Rocket::RenderCore
     PUBLIC Rocket::RHI
+    PUBLIC Rocket::Asset
+    PUBLIC Rocket::Window
+    PUBLIC Rocket::Math
+    PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 
 set_target_properties(Rendering PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -36,7 +36,7 @@ target_include_directories(Asset
 
 target_link_libraries(Asset
     PUBLIC Rocket::Core
-    PUBLIC Rocket::RenderCore
+    PUBLIC Rocket::Rendering
     PRIVATE $<BUILD_INTERFACE:RapidJSON>
     PRIVATE $<BUILD_INTERFACE:glm::glm>
     PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>

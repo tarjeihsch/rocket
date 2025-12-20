@@ -59,14 +59,10 @@ add_subdirectory(Source/ThirdParty/tinygltf EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/rapidjson EXCLUDE_FROM_ALL)
 
 # Rocket modules
-add_subdirectory(Source/Runtime/Rendering)
-add_subdirectory(Source/Runtime/Object)
 add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
-add_subdirectory(Source/Runtime/Engine)
 add_subdirectory(Source/Runtime/RHI)
-add_subdirectory(Source/Runtime/RenderCore)
-add_subdirectory(Source/Runtime/Scene)
+add_subdirectory(Source/Runtime/Rendering)
 add_subdirectory(Source/Runtime/Window)
 add_subdirectory(Source/Runtime/Asset)
 
@@ -78,10 +74,7 @@ set_target_properties(spdlog  PROPERTIES FOLDER "ThirdParty/spdlog")
 
 set(ROCKET_EXPORT_LIBS
     Core
-    Object
-    Engine
     RHI
-    RenderCore
     Rendering
     Window
     Asset
