@@ -9,8 +9,8 @@
 class FRenderTarget;
 class FFrameGraphBuilder;
 
-using TOnFrameBegin = TMulticastDelegate<FFrameGraphBuilder&>;
-using TOnFrameEnd = TMulticastDelegate<FFrameGraphBuilder&>;
+//using TOnFrameBegin = TMulticastDelegate<FFrameGraphBuilder&>;
+//using TOnFrameEnd = TMulticastDelegate<FFrameGraphBuilder&>;
 
 // Renderer acts as a high-level wrapper over the RHI render graph
 class RRenderer final
