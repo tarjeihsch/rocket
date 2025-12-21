@@ -1,12 +1,9 @@
 #pragma once
 
-#include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
-
-#include <vma/vk_mem_alloc.h>
-#include <vulkan/vulkan_core.h>
+#include "VulkanDescriptorManager.h"
 
 #include <vector>
+#include <vma/vk_mem_alloc.h>
 
 class FVulkanCommandListContext;
 class FVulkanDevice;
@@ -88,7 +85,6 @@ public:
     }
 
     void EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation);
-
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
 private:
@@ -147,15 +143,10 @@ private:
     std::vector<FVulkanQueue*> Queues;
 
     FVulkanPipelineManager* PipelineManager;
-
     VulkanDescriptorManager* DescriptorManager;
-
     FDeferredDeletionQueue* DeferredDeletionQueue;
-
     FVulkanCommandListContext* CommandListContext;
-
     FVulkanCommandListContext* ImmediateCommandListContext;
-
     FTransientResourceAllocator* TransientResourceAllocator;
 
 private:

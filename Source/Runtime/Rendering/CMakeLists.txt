@@ -26,6 +26,9 @@ target_sources(Rendering PRIVATE
     ${RENDERING_PRIVATE_SOURCES}
 )
 
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Public"  PREFIX "Public"  FILES ${RENDERING_PUBLIC_HEADERS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Private" PREFIX "Private" FILES ${RENDERING_PRIVATE_HEADERS} ${RENDERING_PRIVATE_SOURCES})
+
 target_include_directories(Rendering
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
@@ -37,9 +40,7 @@ target_include_directories(Rendering
 target_link_libraries(Rendering
     PUBLIC Rocket::Core
     PUBLIC Rocket::RHI
-    PUBLIC Rocket::Asset
-    PUBLIC Rocket::Window
-    PUBLIC Rocket::Math
+    PUBLIC Rocket::Platform
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 

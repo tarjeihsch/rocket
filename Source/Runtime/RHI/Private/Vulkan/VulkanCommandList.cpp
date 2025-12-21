@@ -7,8 +7,9 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
+#include "VulkanPipeline.h"
 #include "Common/RHIDrawCommand.h"
-#include "Primitive.h"
+#include "VulkanTexture.h"
 
 FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
     : FVulkanCommandBufferContext(*InDevice.GetGraphicsQueue()->GetCommandBufferPool())
@@ -53,17 +54,17 @@ void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawComman
 
 void FVulkanCommandListContext::RHIDrawIndexed2(const FRHIDrawCall& DrawCall)
 {
-    VkBuffer VertexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetVB()->GetHandle());
-    VkBuffer IndexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetIB()->GetHandle());
-    
-    VkRect2D Scissor = { static_cast<int32_t>(DrawCall.ScissorPosition[0]), static_cast<int32_t>(DrawCall.ScissorPosition[1]), static_cast<uint32_t>(DrawCall.ScissorExtent[0]), static_cast<uint32_t>(DrawCall.ScissorExtent[1])};
-    VkDeviceSize Size = 0;
-
-    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
-    VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Size);
-    VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), IndexBufferPtr, 0, DrawCall.IndexType == FRHIDrawCall::EIndexType::U32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
-    VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &DrawCall.Params);
-    VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCall.Primitive->GetIndexCount(), 1, 0, 0, 0);
+    //VkBuffer VertexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetVB()->GetHandle());
+    //VkBuffer IndexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetIB()->GetHandle());
+    //
+    //VkRect2D Scissor = { static_cast<int32_t>(DrawCall.ScissorPosition[0]), static_cast<int32_t>(DrawCall.ScissorPosition[1]), static_cast<uint32_t>(DrawCall.ScissorExtent[0]), static_cast<uint32_t>(DrawCall.ScissorExtent[1])};
+    //VkDeviceSize Size = 0;
+    //
+    //VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
+    //VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Size);
+    //VulkanRHI::vkCmdBindIndexBuffer(GetCurrentCommandBuffer()->GetHandle(), IndexBufferPtr, 0, DrawCall.IndexType == FRHIDrawCall::EIndexType::U32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
+    //VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &DrawCall.Params);
+    //VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCall.Primitive->GetIndexCount(), 1, 0, 0, 0);
 }
 
 void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex)

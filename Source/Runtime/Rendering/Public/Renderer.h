@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "MulticastDelegate.h"
+#include "Events/MulticastDelegate.h"
 #include "Common/RHIDrawCommand.h"
 
 #include <span>

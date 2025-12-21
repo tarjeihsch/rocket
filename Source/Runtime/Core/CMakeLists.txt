@@ -26,6 +26,9 @@ target_sources(Core PRIVATE
     ${CORE_PRIVATE_SOURCES}
 )
 
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Public"  PREFIX "Public"  FILES ${CORE_PUBLIC_HEADERS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Private" PREFIX "Private" FILES ${CORE_PRIVATE_HEADERS} ${CORE_PRIVATE_SOURCES})
+
 target_include_directories(Core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Public>
@@ -35,7 +38,6 @@ target_include_directories(Core
 )
 
 target_link_libraries(Core
-    PUBLIC Rocket::Asset
     PRIVATE $<BUILD_INTERFACE:spdlog::spdlog>
 )
 

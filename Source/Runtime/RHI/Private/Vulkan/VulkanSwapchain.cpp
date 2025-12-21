@@ -5,7 +5,7 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanTexture.h"
-#include "WindowBase.h"
+#include "Window.h"
 #include <GLFW/glfw3.h>
 
 RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)

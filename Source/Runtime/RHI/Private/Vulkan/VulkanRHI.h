@@ -2,9 +2,7 @@
 
 #include "Vulkan/VulkanRHIMinimal.h"
 
-#include "vector"
-#include <array>
-#include "Common/RHIDrawCommand.h"
+#include <vector>
 
 struct FRHITextureView;
 struct FRHITextureAttachment;

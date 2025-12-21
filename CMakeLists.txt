@@ -55,30 +55,23 @@ add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/spdlog EXCLUDE_FROM_ALL)
-add_subdirectory(Source/ThirdParty/tinygltf EXCLUDE_FROM_ALL)
-add_subdirectory(Source/ThirdParty/rapidjson EXCLUDE_FROM_ALL)
 
 # Rocket modules
-add_subdirectory(Source/Runtime/Math)
 add_subdirectory(Source/Runtime/Core)
+add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)
 add_subdirectory(Source/Runtime/Rendering)
-add_subdirectory(Source/Runtime/Window)
-add_subdirectory(Source/Runtime/Asset)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
-set_target_properties(glm  PROPERTIES FOLDER "ThirdParty/glm")
-set_target_properties(tinygltf  PROPERTIES FOLDER "ThirdParty/tinygltf")
-set_target_properties(spdlog  PROPERTIES FOLDER "ThirdParty/spdlog")
+set_target_properties(glm PROPERTIES FOLDER "ThirdParty/glm")
+set_target_properties(spdlog PROPERTIES FOLDER "ThirdParty/spdlog")
 
 set(ROCKET_EXPORT_LIBS
     Core
+    Platform
     RHI
     Rendering
-    Window
-    Asset
-    Math
 )
 
 configure_package_config_file(

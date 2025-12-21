@@ -1,11 +1,9 @@
 #pragma once
 
 #include "Common/RHIPipeline.h"
-#include <Vulkan/vulkan_core.h>
 
-#include <cstdint>
 #include <unordered_map>
-#include <vector>
+#include <vulkan/vulkan_core.h>
 
 class FVulkanShader
 {

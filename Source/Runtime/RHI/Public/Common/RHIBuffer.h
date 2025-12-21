@@ -2,9 +2,10 @@
 
 #include "RHI.h"
 
-#include <cstdint>
-
 #include <glm/glm.hpp>
+
+enum class ERHIResourceAccess : uint16_t;
+enum class ERHIPipelineStage : uint16_t;
 
 enum class ERHIBufferUsage : uint32_t
 {
@@ -98,9 +99,9 @@ struct FRHIBuffer
     virtual uint32_t GetBindingIndex() const = 0;
     virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
 
-    ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
-    ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
-    uint32_t CurrentQueueFamilyIndex = ~(0U);
+    ERHIResourceAccess CurrentAccess;
+    ERHIPipelineStage CurrentPipelineStage;
+    uint32_t CurrentQueueFamilyIndex;
 };
 
 enum class ERHIBufferMemoryPackerAlignmentLayout

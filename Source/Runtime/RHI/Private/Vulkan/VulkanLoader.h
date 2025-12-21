@@ -1,8 +1,21 @@
 #pragma once
 
-#include "Common/RHIPipeline.h"
-#include "Common/RHISampler.h"
-#include "Common/RHITexture.h"
+enum class ERHITextureLayout : uint8_t;
+enum class ERHIBorderColor : uint8_t;
+enum class ERHITextureUsage : uint8_t;
+enum class ERHITextureFormat;
+enum class ERHITextureAspect;
+enum class ERHIFilterMode : uint8_t;
+enum class ERHIFormat : uint8_t;
+enum class ERHIAddressMode : uint8_t;
+enum class ERHICompareOp : uint8_t;
+enum class ERHIBlendFactor : uint8_t;
+enum class ERHIBlendOp : uint8_t;
+enum class ERHIPrimitiveTopology : uint8_t;
+enum class ERHICullMode : uint8_t;
+enum class ERHIPolygonMode : uint8_t;
+enum class ERHIResourceAccess : uint16_t;
+enum class ERHIPipelineStage : uint16_t;
 
 #if defined(_WIN32)
     #define VK_USE_PLATFORM_WIN32_KHR
@@ -162,9 +175,10 @@
 
 enum class ERHIResourceMemory;
 enum class ERHIBufferUsage : uint32_t;
+
 namespace VulkanRHI
 {
-    // Opaque handle to dynamic library
+    // Opaque handle to Vulkan dynamic library
     extern void* Library;
 
 #define DECLARE_PFN(name) extern PFN_##name name;

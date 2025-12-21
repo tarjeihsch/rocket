@@ -2,8 +2,6 @@
 
 #include <cstdint>
 
-#include "Common/RHITexture.h"
-
 struct FRHITexture;
 
 enum class ETextureType

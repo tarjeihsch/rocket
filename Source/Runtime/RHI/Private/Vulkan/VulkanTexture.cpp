@@ -5,11 +5,6 @@
 #include "VulkanLoader.h"
 #include "VulkanResourceManager.h"
 #include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanDescriptorManager.h"
-
-#include <cassert>
-
-#include "VulkanDescriptorManager.h"
 
 FVulkanTexture::FVulkanTexture(FVulkanDevice& InDevice)
     : Device(InDevice)

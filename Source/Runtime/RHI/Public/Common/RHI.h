@@ -1,11 +1,10 @@
 #pragma once
 
-#include "RHICommandList.h"
-#include "RHIPipeline.h"
-
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <array>
+#include <assert.h>
 
 class RRHISwapchain;
 struct RRHISamplerDesc;
@@ -25,6 +24,8 @@ struct FRHIDrawParams;
 class IRHICommandListContext;
 class FRHICommandList;
 struct FRHIDrawCall;
+class FRHIPipeline;
+struct FRHIPipelineDesc;
 
 enum class ERHIResourceLifetime : uint8_t
 {

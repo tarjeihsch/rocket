@@ -1,5 +1,6 @@
 ﻿#include "Renderer.h"
 
+#include "Common/RHI.h"
 #include "Assertion.h"
 #include "FrameGraph.h"
 #include "Material.h"
@@ -46,18 +47,18 @@ void RRenderer::EndFrame()
 
 void RRenderer::DrawIndexed(const std::shared_ptr<FRenderTarget>& RenderTarget, std::span<FRHIDrawCall> Commands)
 {
-    ensure(RenderTarget != nullptr);
-
-    auto& Pass = FrameGraph->AddPass("Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
-    {
-        for (const auto& DrawCommand : Commands)
-        {
-            DrawCommand.Material->Bind(RHICmdList);
-
-            GetRHI()->RHICmdDrawIndexed2(RHICmdList, DrawCommand);
-        }
-    });
-    Pass.AddColorAttachment(RenderTarget->GetHandle());
+    //ensure(RenderTarget != nullptr);
+    //
+    //auto& Pass = FrameGraph->AddPass("Pass", EFGPassFlags::Graphics | EFGPassFlags::Dynamic | EFGPassFlags::ClearColor, [&](FRHICommandList& RHICmdList)
+    //{
+    //    for (const auto& DrawCommand : Commands)
+    //    {
+    //        DrawCommand.Material->Bind(RHICmdList);
+    //
+    //        GetRHI()->RHICmdDrawIndexed2(RHICmdList, DrawCommand);
+    //    }
+    //});
+    //Pass.AddColorAttachment(RenderTarget->GetHandle());
 }
 
 //void RRenderer::Present(RViewport* Viewport)
@@ -67,15 +68,15 @@ void RRenderer::DrawIndexed(const std::shared_ptr<FRenderTarget>& RenderTarget, 
 
 void RRenderer::Present(const std::shared_ptr<FRenderTarget>& RenderTarget)
 {
-    ensure(RenderTarget != nullptr);
-
-    FFrameGraphPass& CompositionPass = FrameGraph->AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
-    {
-        GetRHI()->RHICmdBlitImage(RHICmdList, RenderTarget->GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
-    });
-    CompositionPass.AddTransferSrc(RenderTarget->GetHandle());
-    CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
-
-    FFrameGraphPass& PresentPass = FrameGraph->AddPass("Present", EFGPassFlags::Graphics, nullptr);
-    PresentPass.AddPresentSrc(GetRHI()->RHIGetBackBufferRenderTarget());
+    //ensure(RenderTarget != nullptr);
+    //
+    //FFrameGraphPass& CompositionPass = FrameGraph->AddPass("Composition", EFGPassFlags::Compute, [&](FRHICommandList& RHICmdList)
+    //{
+    //    GetRHI()->RHICmdBlitImage(RHICmdList, RenderTarget->GetHandle(), GetRHI()->RHIGetBackBufferRenderTarget());
+    //});
+    //CompositionPass.AddTransferSrc(RenderTarget->GetHandle());
+    //CompositionPass.AddTransferDst(GetRHI()->RHIGetBackBufferRenderTarget());
+    //
+    //FFrameGraphPass& PresentPass = FrameGraph->AddPass("Present", EFGPassFlags::Graphics, nullptr);
+    //PresentPass.AddPresentSrc(GetRHI()->RHIGetBackBufferRenderTarget());
 }

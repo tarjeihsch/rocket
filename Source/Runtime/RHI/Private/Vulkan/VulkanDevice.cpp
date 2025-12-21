@@ -1,13 +1,14 @@
 #include "VulkanDevice.h"
 #include "Assertion.h"
-#include "FVulkanPipeline.h"
+#include "VulkanPipeline.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanCommandList.h"
 #include "VulkanDescriptorManager.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
-#include "VulkanResourceManager.h"
 #include "VulkanTexture.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandList.h"
 
 void FTransientResourceAllocator::Init()
 {

@@ -1,10 +1,12 @@
 #pragma once
 
-#include "VulkanDescriptorManager.h"
+#include <vma/vk_mem_alloc.h>
+
 #include "Common/RHITexture.h"
-#include "vma/vk_mem_alloc.h"
+#include "VulkanDescriptorManager.h"
 
 class FVulkanDevice;
+struct RDescriptorHandle;
 
 // Both persistent and transient textures will only ever live within the duration of this wrapper.
 struct FVulkanTexture : FRHITexture
@@ -54,6 +56,5 @@ private:
 private:
     FRHITextureViewDesc Desc;
     FVulkanDevice& Device;
-
     RDescriptorHandle DescriptorHandle;
 };

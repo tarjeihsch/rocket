@@ -2,7 +2,6 @@
 
 #include "Assertion.h"
 #include "Logger.h"
-#include "ShaderAsset.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanDescriptorManager.h"
 #include "VulkanDevice.h"
@@ -102,35 +101,36 @@ FVulkanPipelineManager::~FVulkanPipelineManager()
 
 FVulkanPipeline* FVulkanPipelineManager::GetPipeline(const FRHIPipelineDesc &Desc)
 {
-    const uint64_t Key = Hash(Desc);
-    if (auto It = Data.find(Key); It != Data.end())
-    {
-        return It->second;
-    }
-
-    FAssetLoaderRequest VSRequest = { Desc.VertexShaderPath };
-    ShaderAssetOptions VSOptions = { "main", "vs_6_6" };
-    FAssetHandle<ShaderAsset> VertexShader = FAssetManager::Get().Load<ShaderAsset>(VSRequest, VSOptions);
-    ShaderAsset* VertexShaderAsset = FAssetManager::Get().GetAsset(VertexShader);
-
-    FAssetLoaderRequest PSRequest = { Desc.PixelShaderPath };
-    ShaderAssetOptions PSOptions = { "main", "ps_6_6" };
-    FAssetHandle<ShaderAsset> PixelShader = FAssetManager::Get().Load<ShaderAsset>(PSRequest, PSOptions);
-    ShaderAsset* PixelShaderAsset = FAssetManager::Get().GetAsset(PixelShader);
-
-    FVulkanShaderRef VertexShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT));
-    FVulkanShaderRef PixelShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT));
-
-    VertexShaderRef.Shader->Create(VertexShaderAsset->Data(), VertexShaderAsset->WordCount());
-    PixelShaderRef.Shader->Create(PixelShaderAsset->Data(), PixelShaderAsset->WordCount());
-
-    FAssetManager::Get().Unload(VertexShader);
-    FAssetManager::Get().Unload(PixelShader);
-
-    VkPipeline Pipeline = Compile(Desc, VertexShaderRef, PixelShaderRef);
-    FVulkanPipeline* PSO = new FVulkanPipeline(VertexShaderRef, PixelShaderRef, Pipeline);
-    Data.emplace(Key, PSO);
-    return PSO;
+    //const uint64_t Key = Hash(Desc);
+    //if (auto It = Data.find(Key); It != Data.end())
+    //{
+    //    return It->second;
+    //}
+    //
+    //FAssetLoaderRequest VSRequest = { Desc.VertexShaderPath };
+    //ShaderAssetOptions VSOptions = { "main", "vs_6_6" };
+    //FAssetHandle<ShaderAsset> VertexShader = FAssetManager::Get().Load<ShaderAsset>(VSRequest, VSOptions);
+    //ShaderAsset* VertexShaderAsset = FAssetManager::Get().GetAsset(VertexShader);
+    //
+    //FAssetLoaderRequest PSRequest = { Desc.PixelShaderPath };
+    //ShaderAssetOptions PSOptions = { "main", "ps_6_6" };
+    //FAssetHandle<ShaderAsset> PixelShader = FAssetManager::Get().Load<ShaderAsset>(PSRequest, PSOptions);
+    //ShaderAsset* PixelShaderAsset = FAssetManager::Get().GetAsset(PixelShader);
+    //
+    //FVulkanShaderRef VertexShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT));
+    //FVulkanShaderRef PixelShaderRef = FVulkanShaderRef::Capture(new FVulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT));
+    //
+    //VertexShaderRef.Shader->Create(VertexShaderAsset->Data(), VertexShaderAsset->WordCount());
+    //PixelShaderRef.Shader->Create(PixelShaderAsset->Data(), PixelShaderAsset->WordCount());
+    //
+    //FAssetManager::Get().Unload(VertexShader);
+    //FAssetManager::Get().Unload(PixelShader);
+    //
+    //VkPipeline Pipeline = Compile(Desc, VertexShaderRef, PixelShaderRef);
+    //FVulkanPipeline* PSO = new FVulkanPipeline(VertexShaderRef, PixelShaderRef, Pipeline);
+    //Data.emplace(Key, PSO);
+    //return PSO;
+    return nullptr;
 }
 
 void FVulkanPipelineManager::GC()

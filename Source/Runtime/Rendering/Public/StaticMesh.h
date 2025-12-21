@@ -4,7 +4,6 @@
 #include "glm/fwd.hpp"
 #include "glm/gtx/quaternion.hpp"
 
-#include "Primitive.h"
 #include <span>
 
 struct FRHIBuffer;
@@ -27,13 +26,11 @@ struct FMeshChildSection
     glm::mat4 LocalMatrix;
 };
 
-class RStaticMesh : public RPrimitive
+class RStaticMesh
 {
 public:
     RStaticMesh(const char* InFilePath);
     ~RStaticMesh();
-
-    virtual void Draw(FRHICommandList& CmdList) const;
 
     inline FRHIBuffer* GetVertexBuffer() const;
     inline FRHIBuffer* GetIndexBuffer() const;

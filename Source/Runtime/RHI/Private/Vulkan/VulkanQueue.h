@@ -1,19 +1,16 @@
 #pragma once
 
-#include "Common/RHICommandList.h"
-
 #include <functional>
-#include <memory>
 #include <queue>
 #include <vulkan/vulkan_core.h>
 
 class IRHICommandListContext;
 class FRHICommandList;
 class FVulkanDevice;
-struct FVulkanCommandBufferPayload;
 class FVulkanCommandBufferPool;
 class FVulkanCommandBufferContext;
 class FVulkanCommandBuffer;
+struct FVulkanCommandBufferPayload;
 
 class FVulkanQueue
 {

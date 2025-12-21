@@ -1,7 +1,5 @@
 #pragma once
 
-#include "RHITexture.h"
-
 #include <cstdint>
 #include <memory>
 #include <span>

@@ -1,7 +1,4 @@
 #pragma once
-#include <cstdint>
-
-#include "RHI.h"
 
 enum class ERHIResourceLifetime : uint8_t;
 
