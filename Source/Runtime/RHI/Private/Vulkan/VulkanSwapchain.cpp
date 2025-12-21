@@ -8,6 +8,8 @@
 #include "Window.h"
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
+
 RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),

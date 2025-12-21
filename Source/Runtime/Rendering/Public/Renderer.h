@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Events/MulticastDelegate.h"
 #include "Common/RHIDrawCommand.h"
 
 #include <span>
@@ -16,8 +15,8 @@ class FFrameGraphBuilder;
 class RRenderer final
 {
 public:
-    TOnFrameBegin OnFrameBegin;
-    TOnFrameEnd OnFrameEnd;
+//    TOnFrameBegin OnFrameBegin;
+//    TOnFrameEnd OnFrameEnd;
 
     RRenderer();
     ~RRenderer();
