@@ -5,7 +5,6 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanTexture.h"
-#include "Window.h"
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
@@ -19,47 +18,47 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     NumAcquireCalls(0),
     NumPresentCalls(0)
 {
-    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GWindow->GetNativeWindow()), nullptr, &Surface);
-    ensure(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
-
-    uint32_t SurfaceFormatCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
-
-    std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
-    if (SurfaceFormatCount)
-    {
-        SurfaceFormats.resize(SurfaceFormatCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
-    }
-
-    for (const auto& Element : SurfaceFormats)
-    {
-        if (Element.format == VK_FORMAT_B8G8R8A8_SRGB && Element.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            SurfaceFormat = Element;
-        }
-    }
-
-    uint32_t PresentModeCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
-
-    std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
-    if (PresentModeCount)
-    {
-        PresentModes.resize(PresentModeCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
-    }
-
-    for (const auto& Element : PresentModes)
-    {
-        if (Element == VK_PRESENT_MODE_FIFO_KHR)
-        {
-            PresentMode = Element;
-        }
-    }
-
-    CreateSwapchain();
-    AcquireNextImageIndex();
+//    VkResult Result = glfwCreateWindowSurface(GetVulkanRHIMinimal()->RHIGetVkInstance(), static_cast<GLFWwindow *>(GWindow->GetNativeWindow()), nullptr, &Surface);
+//    ensure(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
+//
+//    uint32_t SurfaceFormatCount;
+//    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
+//
+//    std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
+//    if (SurfaceFormatCount)
+//    {
+//        SurfaceFormats.resize(SurfaceFormatCount);
+//        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
+//    }
+//
+//    for (const auto& Element : SurfaceFormats)
+//    {
+//        if (Element.format == VK_FORMAT_B8G8R8A8_SRGB && Element.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+//        {
+//            SurfaceFormat = Element;
+//        }
+//    }
+//
+//    uint32_t PresentModeCount;
+//    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
+//
+//    std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
+//    if (PresentModeCount)
+//    {
+//        PresentModes.resize(PresentModeCount);
+//        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
+//    }
+//
+//    for (const auto& Element : PresentModes)
+//    {
+//        if (Element == VK_PRESENT_MODE_FIFO_KHR)
+//        {
+//            PresentMode = Element;
+//        }
+//    }
+//
+//    CreateSwapchain();
+//    AcquireNextImageIndex();
 }
 
 RVulkanSwapchain::~RVulkanSwapchain()
@@ -71,94 +70,94 @@ RVulkanSwapchain::~RVulkanSwapchain()
 
 void RVulkanSwapchain::CreateSwapchain()
 {
-    VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
-
-    const uint32_t Width = static_cast<uint32_t>(GWindow->GetFramebufferWidth());
-    const uint32_t Height = static_cast<uint32_t>(GWindow->GetFramebufferHeight());
-
-    Extent = { Width, Height };
-    Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
-    Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
-
-    // Surface size is fixed (eg. fullscreen)
-    if (SurfaceCapabilities.currentExtent.width != UINT32_MAX)
-    {
-        Extent = SurfaceCapabilities.currentExtent;
-    }
-
-    uint32_t ImageCount = SurfaceCapabilities.minImageCount;
-    if (SurfaceCapabilities.maxImageCount > 0 && ImageCount > SurfaceCapabilities.maxImageCount)
-    {
-        ImageCount = SurfaceCapabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR SwapchainCreateInfo = {};
-    SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    SwapchainCreateInfo.surface = Surface;
-    SwapchainCreateInfo.minImageCount = ImageCount;
-    SwapchainCreateInfo.imageFormat = SurfaceFormat.format;
-    SwapchainCreateInfo.imageColorSpace = SurfaceFormat.colorSpace;
-    SwapchainCreateInfo.imageExtent = Extent;
-    SwapchainCreateInfo.imageArrayLayers = 1;
-    SwapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    SwapchainCreateInfo.preTransform = SurfaceCapabilities.currentTransform;
-    SwapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    SwapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    SwapchainCreateInfo.clipped = VK_TRUE;
-
-    if (GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex() != GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex())
-    {
-        std::vector<uint32_t> QueueFamilyIndices = { GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex(), GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex() };
-
-        // Images can be used across multiple queue families without explicit ownership transfers.
-        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        SwapchainCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-        SwapchainCreateInfo.pQueueFamilyIndices = QueueFamilyIndices.data();
-    }
-    else
-    {
-        // An image is owned by one queue family at a time and ownership must be explicitly
-        // transferred before using it in another queue family. This option offers the best performance.
-        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
-    ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
-
-    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
-
-    std::vector<VkImage> Images;
-    std::vector<VkImageView> Views;
-
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
-    Images.resize(ImageCount);
-    Views.resize(ImageCount);
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
-
-    for (uint32_t Index = 0; Index < ImageCount; ++Index)
-    {
-        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
-        FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
-        Backbuffer.push_back(std::make_unique<FVulkanTexture>(Device, Desc, Images[Index]));
-        BackbufferView.push_back(std::make_unique<FVulkanTextureView>(Device, ViewDesc, Backbuffer.back().get()));
-    }
-
-    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
-    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    ImageAcquiredSemaphores.resize(ImageCount - 1);
-    RenderFinishedSemaphores.resize(ImageCount);
-
-    for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
-    {
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
-    }
-
-    for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
-    {
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
-    }
+//    VkSurfaceCapabilitiesKHR SurfaceCapabilities;
+//    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
+//
+//    const uint32_t Width = static_cast<uint32_t>(GWindow->GetFramebufferWidth());
+//    const uint32_t Height = static_cast<uint32_t>(GWindow->GetFramebufferHeight());
+//
+//    Extent = { Width, Height };
+//    Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
+//    Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
+//
+//    // Surface size is fixed (eg. fullscreen)
+//    if (SurfaceCapabilities.currentExtent.width != UINT32_MAX)
+//    {
+//        Extent = SurfaceCapabilities.currentExtent;
+//    }
+//
+//    uint32_t ImageCount = SurfaceCapabilities.minImageCount;
+//    if (SurfaceCapabilities.maxImageCount > 0 && ImageCount > SurfaceCapabilities.maxImageCount)
+//    {
+//        ImageCount = SurfaceCapabilities.maxImageCount;
+//    }
+//
+//    VkSwapchainCreateInfoKHR SwapchainCreateInfo = {};
+//    SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+//    SwapchainCreateInfo.surface = Surface;
+//    SwapchainCreateInfo.minImageCount = ImageCount;
+//    SwapchainCreateInfo.imageFormat = SurfaceFormat.format;
+//    SwapchainCreateInfo.imageColorSpace = SurfaceFormat.colorSpace;
+//    SwapchainCreateInfo.imageExtent = Extent;
+//    SwapchainCreateInfo.imageArrayLayers = 1;
+//    SwapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+//    SwapchainCreateInfo.preTransform = SurfaceCapabilities.currentTransform;
+//    SwapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+//    SwapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+//    SwapchainCreateInfo.clipped = VK_TRUE;
+//
+//    if (GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex() != GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex())
+//    {
+//        std::vector<uint32_t> QueueFamilyIndices = { GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex(), GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex() };
+//
+//        // Images can be used across multiple queue families without explicit ownership transfers.
+//        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+//        SwapchainCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
+//        SwapchainCreateInfo.pQueueFamilyIndices = QueueFamilyIndices.data();
+//    }
+//    else
+//    {
+//        // An image is owned by one queue family at a time and ownership must be explicitly
+//        // transferred before using it in another queue family. This option offers the best performance.
+//        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+//    }
+//
+//    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
+//    ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
+//
+//    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
+//
+//    std::vector<VkImage> Images;
+//    std::vector<VkImageView> Views;
+//
+//    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
+//    Images.resize(ImageCount);
+//    Views.resize(ImageCount);
+//    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
+//
+//    for (uint32_t Index = 0; Index < ImageCount; ++Index)
+//    {
+//        FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
+//        FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
+//        Backbuffer.push_back(std::make_unique<FVulkanTexture>(Device, Desc, Images[Index]));
+//        BackbufferView.push_back(std::make_unique<FVulkanTextureView>(Device, ViewDesc, Backbuffer.back().get()));
+//    }
+//
+//    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
+//    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+//
+//    ImageAcquiredSemaphores.resize(ImageCount - 1);
+//    RenderFinishedSemaphores.resize(ImageCount);
+//
+//    for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
+//    {
+//        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
+//    }
+//
+//    for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
+//    {
+//        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
+//    }
 }
 
 bool RVulkanSwapchain::AcquireNextImageIndex()

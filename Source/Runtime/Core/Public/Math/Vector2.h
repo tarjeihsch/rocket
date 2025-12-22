@@ -17,6 +17,10 @@ struct Vector2
         T data[2] { 0, 0 };
     };
 
+    Vector2()
+    {
+    }
+
     Vector2(T px, T py)
     {
         data[0] = px;
@@ -42,6 +46,7 @@ struct Vector2
 
 using Vector2d = Vector2<double>;
 using Vector2f = Vector2<float>;
+using Vector2i = Vector2<int>;
 
 template<typename T>
 inline T DotProduct(const Vector2<T>& a, const Vector2<T>& b)
