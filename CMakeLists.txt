@@ -34,18 +34,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_compile_definitions(RK_PLATFORM_WINDOWS)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(RK_DEBUG=1)
-endif()
-
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_definitions(RK_RELEASE=1)
-endif()
-
-if (MINGW)
-    add_link_options(-static -static-libgcc -static-libstdc++)
-endif()
-
+add_compile_definitions($<$<CONFIG:Debug>:RK_DEBUG=1>)
+add_compile_definitions($<$<CONFIG:Release>:RK_RELEASE=1>)
 add_compile_definitions(ROCKET_BINARIES=\"${CMAKE_CURRENT_SOURCE_DIR}/Binaries\")
 add_compile_definitions(ROCKET_SRC=\"${CMAKE_CURRENT_SOURCE_DIR}/Source\")
 add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
@@ -57,6 +47,7 @@ add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/spdlog EXCLUDE_FROM_ALL)
 
 # Rocket modules
+add_subdirectory(Source/Runtime/Main)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)

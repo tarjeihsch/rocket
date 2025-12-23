@@ -41,7 +41,6 @@ target_link_libraries(RHI
     PUBLIC Rocket::Core
     PRIVATE Rocket::Platform
     PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>
-    PRIVATE $<BUILD_INTERFACE:glfw>
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 
