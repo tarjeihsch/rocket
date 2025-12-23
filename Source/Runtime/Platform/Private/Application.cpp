@@ -50,8 +50,8 @@ static EventQueue eventQueue;
 
 Application::Application()
 {
-    m_MessageController = nullptr;
-    m_Valid = false;
+    M_MessageController = nullptr;
+    M_IsValid = false;
 }
 
 Application& Application::Get()
@@ -62,7 +62,7 @@ Application& Application::Get()
 
 bool Application::Initialize()
 {
-    if (m_Valid)
+    if (M_IsValid)
     {
         return true;
     }
@@ -72,23 +72,23 @@ bool Application::Initialize()
         return false;
     }
 
-    m_Valid = true;
+    M_IsValid = true;
     return true;
 }
 
 void Application::Shutdown()
 {
-    if (!m_Valid)
+    if (!M_IsValid)
     {
         return;
     }
 
     eventQueue.Clear();
 
+    M_Windows.clear();
+    M_IsValid = false;
+
     glfwTerminate();
-    
-    m_Windows.clear();
-    m_Valid = false;
 }
 
 void Application::PumpMessageQueue()
@@ -104,43 +104,43 @@ void Application::PumpMessageQueue()
 
 void Application::ProcessDeferredMessage(const Event& event)
 {
-    std::shared_ptr<Window> window = FindWindowByHandle(event.windowHandle);
+    Window* window = FindWindowByHandle(event.windowHandle);
     
     switch (event.type)
     {
         case EventType::Quit:
         {
-            m_MessageController->OnExit();
+            M_MessageController->OnExit();
             break;
         }
 
         case EventType::WindowCloseRequested:
         {
-            m_MessageController->OnWindowClose(window);
+            M_MessageController->OnWindowClose(window);
             break;
         }
 
         case EventType::WindowResized:
         {
-            m_MessageController->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, false);
+            M_MessageController->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, false);
             break;
         }
 
         case EventType::WindowMoved:
         {
-            m_MessageController->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
+            M_MessageController->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
             break;
         }
 
         case EventType::WindowFocusGained:
         {
-            m_MessageController->OnWindowFocusGained();
+            M_MessageController->OnWindowFocusGained();
             break;
         }
 
         case EventType::WindowFocusLost:
         {
-            m_MessageController->OnWindowFocusLost();
+            M_MessageController->OnWindowFocusLost();
             break;
         }
 
@@ -149,15 +149,15 @@ void Application::ProcessDeferredMessage(const Event& event)
             const bool repeat = event.key.repeat;
             const uint32_t charcode = 0;
 
-            m_MessageController->OnKeyDown(event.key.value, charcode, repeat);
+            M_MessageController->OnKeyDown(event.key.value, charcode, repeat);
 
             if (event.key.value == Key::Backspace)
             {
-                m_MessageController->OnKeyChar('\b', repeat);
+                M_MessageController->OnKeyChar('\b', repeat);
             }
             else if (event.key.value == Key::Enter) 
             {
-                m_MessageController->OnKeyChar('\r', repeat);
+                M_MessageController->OnKeyChar('\r', repeat);
             }
             break;
         }
@@ -165,7 +165,7 @@ void Application::ProcessDeferredMessage(const Event& event)
         case EventType::KeyUp:
         {
             const uint32_t charcode = 0;
-            m_MessageController->OnKeyUp(event.key.value, charcode, false);
+            M_MessageController->OnKeyUp(event.key.value, charcode, false);
             break;
         }
 
@@ -208,33 +208,33 @@ void Application::ProcessDeferredMessage(const Event& event)
                     continue;
                 }
 
-                m_MessageController->OnKeyChar(Codepoint, repeat);
+                M_MessageController->OnKeyChar(Codepoint, repeat);
                 break;
             }
         }
 
         case EventType::MouseMove:
         {
-            m_MessageController->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
+            M_MessageController->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
             break;
         }
 
         case EventType::MouseButtonDown:
         {
-            m_MessageController->OnMouseDown(window, event.button.value);
+            M_MessageController->OnMouseDown(window, event.button.value);
             break;
         }
 
         case EventType::MouseButtonUp:
         {
-            m_MessageController->OnMouseUp(event.button.value);
+            M_MessageController->OnMouseUp(event.button.value);
             break;
         }
 
         case EventType::MouseWheel:
         {
             const float amount = event.wheel.value.y * 1.0f;
-            m_MessageController->OnMouseWheel(amount);
+            M_MessageController->OnMouseWheel(amount);
             break;
         }
 
@@ -247,31 +247,31 @@ void Application::ProcessDeferredMessage(const Event& event)
 
 void Application::SetMessageController(MessageController* messageController)
 {
-    m_MessageController = messageController;
+    M_MessageController = messageController;
 }
 
-std::shared_ptr<Window> Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
+Window* Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
 {
-    std::shared_ptr<Window> window = std::make_shared<Window>();
+    std::unique_ptr<Window> window = std::make_unique<Window>();
     if (!window->Create(windowCreateInfo))
     {
         return nullptr;
     }
 
-    m_Windows.push_back(window);
+    RegisterPlatformWindow(window->m_NativeWindow, window->GetHandle(), &eventQueue);
 
-    RegisterPlatformWindow(window->nativeWindow, window->GetHandle(), &eventQueue);
+    M_Windows.emplace_back(std::move(window));
 
-    return window;
+    return M_Windows.back().get();
 }
 
-std::shared_ptr<Window> Application::FindWindowByHandle(uint64_t windowHandle)
+Window* Application::FindWindowByHandle(uint64_t windowHandle)
 {
-    for (const std::shared_ptr<Window>& window : m_Windows)
+    for (const std::unique_ptr<Window>& window : M_Windows)
     {
         if (window && window->GetHandle() == windowHandle)
         {
-            return window;
+            return window.get();
         }
     }
 

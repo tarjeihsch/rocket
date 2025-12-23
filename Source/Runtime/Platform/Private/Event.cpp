@@ -146,7 +146,6 @@ static void OnWindowClose(GLFWwindow* glfwWindow)
     Enqueue(*userData->eventSink, event);
 }
 
-
 static void OnWindowSize(GLFWwindow* glfwWindow, int32_t width, int32_t height)
 {
     NativeWindowUserData* userData = GetUserData(glfwWindow);

@@ -11,7 +11,7 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
 }
 
 Window::Window()
-    : nativeWindow(nullptr), 
+    : m_NativeWindow(nullptr), 
     windowHandle(0)
 {
 }
@@ -35,7 +35,7 @@ bool Window::Create(const WindowCreateInfo& createInfo)
         return false;
     }
 
-    nativeWindow = glfwWindow;
+    m_NativeWindow = glfwWindow;
     windowHandle = MakeWindowHandle(glfwWindow);
 
     return true;
@@ -48,11 +48,11 @@ void Window::Destroy()
         return;
     }
 
-    UnregisterPlatformWindow(nativeWindow);
+    UnregisterPlatformWindow(m_NativeWindow);
 
-    glfwDestroyWindow(static_cast<GLFWwindow*>(nativeWindow));
+    glfwDestroyWindow(static_cast<GLFWwindow*>(m_NativeWindow));
 
-    nativeWindow = nullptr;
+    m_NativeWindow = nullptr;
     windowHandle = 0;
 }
 
@@ -63,7 +63,7 @@ void Window::Show()
         return;
     }
 
-    glfwShowWindow(static_cast<GLFWwindow*>(nativeWindow));
+    glfwShowWindow(static_cast<GLFWwindow*>(m_NativeWindow));
 }
 
 void Window::Hide()
@@ -73,7 +73,7 @@ void Window::Hide()
         return;
     }
 
-    glfwHideWindow(static_cast<GLFWwindow*>(nativeWindow));
+    glfwHideWindow(static_cast<GLFWwindow*>(m_NativeWindow));
 }
 
 void Window::SetTitle(const ANSICHAR* title)
@@ -83,7 +83,7 @@ void Window::SetTitle(const ANSICHAR* title)
         return;
     }
 
-    glfwSetWindowTitle(static_cast<GLFWwindow*>(nativeWindow), title);
+    glfwSetWindowTitle(static_cast<GLFWwindow*>(m_NativeWindow), title);
 }
 
 Vector2i Window::GetSize() const
@@ -94,7 +94,7 @@ Vector2i Window::GetSize() const
     }
 
     Vector2i result;
-    glfwGetWindowSize(static_cast<GLFWwindow*>(nativeWindow), &result.data[0], &result.data[1]);
+    glfwGetWindowSize(static_cast<GLFWwindow*>(m_NativeWindow), &result.data[0], &result.data[1]);
     return result;
 }
 
@@ -106,7 +106,7 @@ Vector2i Window::GetPosition() const
     }
 
     Vector2i result;
-    glfwGetWindowPos(static_cast<GLFWwindow*>(nativeWindow), &result.data[0], &result.data[1]);
+    glfwGetWindowPos(static_cast<GLFWwindow*>(m_NativeWindow), &result.data[0], &result.data[1]);
     return result;
 }
 
@@ -117,5 +117,5 @@ uint64_t Window::GetHandle() const
 
 bool Window::IsValid() const
 {
-    return nativeWindow != nullptr;
+    return m_NativeWindow != nullptr;
 }

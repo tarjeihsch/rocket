@@ -38,7 +38,7 @@ public:
     bool IsValid() const;
 
 private:
-    void* nativeWindow;
+    void* m_NativeWindow;
     uint64_t windowHandle;
 
     friend class Application;

@@ -2,13 +2,17 @@
 #include "Window.h"
 #include "MessageController.h"
 
-#include <memory>
+bool shouldClose = false;
 
 class EngineMessageController : public MessageController
 {
+	void OnWindowClose(Window* Window) override
+	{
+		shouldClose = true;
+	}
 };
 
-static EngineMessageController g_MessageController;
+static EngineMessageController G_MessageController;
 
 int main()
 {
@@ -22,13 +26,15 @@ int main()
 
 	// Initialize platform layer
 	Application::Get().Initialize();
-	Application::Get().SetMessageController(&g_MessageController);
+	Application::Get().SetMessageController(&G_MessageController);
 
 	// Create and forward a surface
-	std::shared_ptr<Window> window = Application::Get().CreateWindow(windowCreateInfo);
+	Window* window = Application::Get().CreateWindow(windowCreateInfo);
 
-	while (true)
+	while (!shouldClose)
 	{
 		Application::Get().PumpMessageQueue();
 	}
+
+	Application::Get().Shutdown();
 }

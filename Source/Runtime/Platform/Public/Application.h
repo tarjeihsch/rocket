@@ -36,15 +36,15 @@ public:
     void SetMessageController(MessageController* messageController);
 
     /* Creates a new window with set flags */
-    std::shared_ptr<Window> CreateWindow(const WindowCreateInfo& windowCreateInfo);
+    Window* CreateWindow(const WindowCreateInfo& windowCreateInfo);
 
     /* Fetch window object by window handle */
-    std::shared_ptr<Window> FindWindowByHandle(uint64_t windowHandle);
+    Window* FindWindowByHandle(uint64_t windowHandle);
 
 private:
-    std::vector<std::shared_ptr<Window>> m_Windows;
+    std::vector<std::unique_ptr<Window>> M_Windows;
 
-    MessageController* m_MessageController;
+    MessageController* M_MessageController;
 
-    bool m_Valid;
+    bool M_IsValid;
 };
