@@ -2,6 +2,17 @@
 
 #include <GLFW/glfw3.h>
 
+#if defined(_WIN32)
+    #define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+    #define GLFW_EXPOSE_NATIVE_X11
+    #define GLFW_EXPOSE_NATIVE_WAYLAND
+#elif defined(__APPLE__)
+    #define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+
+#include <GLFW/glfw3native.h>
+
 /* Private function implemented in PlatformEvent.cpp - accessed as friend */
 void UnregisterPlatformWindow(void* nativeWindow);
 
@@ -10,18 +21,18 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
     return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(glfwWindow));
 }
 
-Window::Window()
+Platform::Window::Window()
     : m_NativeWindow(nullptr), 
     windowHandle(0)
 {
 }
 
-Window::~Window()
+Platform::Window::~Window()
 {
     Destroy();
 }
 
-bool Window::Create(const WindowCreateInfo& createInfo)
+bool Platform::Window::Create(const WindowCreateInfo& createInfo)
 {
     Destroy();
 
@@ -38,10 +49,45 @@ bool Window::Create(const WindowCreateInfo& createInfo)
     m_NativeWindow = glfwWindow;
     windowHandle = MakeWindowHandle(glfwWindow);
 
+    WindowInfo windowInfo = {};
+
+#if defined(_WIN32)
+    windowInfo.serverType = WindowServerType::Win32;
+    windowInfo.display = (void*)glfwGetWin32Window(m_NativeWindow);
+    windowInfo.instance = (void*)GetModuleHandle(nullptr);
+#elif defined(__linux__)
+    #if defined(GLFW_NATIVE_WAYLAND)
+        if (auto* wlDisplay = glfwGetWaylandDisplay(); wlDisplay != nullptr)
+        {
+            windowInfo.serverType = WindowServerType::Wayland;
+            windowInfo.display = (void*)wlDisplay;
+            windowInfo.instance = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(m_NativeWindow));
+        }
+        else
+    #endif
+
+    #if defined(GLFW_NATIVE_X11)
+        {
+            auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(m_NativeWindow));
+            windowInfo.serverType = WindowServerType::X11;
+            windowInfo.display = (void*)glfwGetX11Display();
+            windowInfo.instance = (void*)(uintptr_t)x11Window;
+        }
+    #else
+        {
+            static_assert("No support for Linux backend exposed.");
+        }
+    #endif
+#elif defined(__APPLE__)
+        windowInfo.serverType = WindowServerType::Cocoa;
+        windowInfo.display = (void*)glfwGetCocoaWindow(m_NativeWindow);
+        windowInfo.instance = nullptr;
+#endif
+
     return true;
 }
 
-void Window::Destroy()
+void Platform::Window::Destroy()
 {
     if (!IsValid())
     {
@@ -56,7 +102,7 @@ void Window::Destroy()
     windowHandle = 0;
 }
 
-void Window::Show()
+void Platform::Window::Show()
 {
     if (!IsValid())
     {
@@ -66,7 +112,7 @@ void Window::Show()
     glfwShowWindow(static_cast<GLFWwindow*>(m_NativeWindow));
 }
 
-void Window::Hide()
+void Platform::Window::Hide()
 {
     if (!IsValid())
     {
@@ -76,7 +122,7 @@ void Window::Hide()
     glfwHideWindow(static_cast<GLFWwindow*>(m_NativeWindow));
 }
 
-void Window::SetTitle(const ANSICHAR* title)
+void Platform::Window::SetTitle(const ANSICHAR* title)
 {
     if (!IsValid())
     {
@@ -86,7 +132,7 @@ void Window::SetTitle(const ANSICHAR* title)
     glfwSetWindowTitle(static_cast<GLFWwindow*>(m_NativeWindow), title);
 }
 
-Vector2i Window::GetSize() const
+Vector2i Platform::Window::GetSize() const
 {
     if (!IsValid())
     {
@@ -98,7 +144,7 @@ Vector2i Window::GetSize() const
     return result;
 }
 
-Vector2i Window::GetPosition() const
+Vector2i Platform::Window::GetPosition() const
 {
     if (!IsValid())
     {
@@ -109,13 +155,17 @@ Vector2i Window::GetPosition() const
     glfwGetWindowPos(static_cast<GLFWwindow*>(m_NativeWindow), &result.data[0], &result.data[1]);
     return result;
 }
+const WindowInfo& Platform::Window::GetWindowInfo() const
+{
+    return windowInfo;
+}
 
-uint64_t Window::GetHandle() const
+uint64_t Platform::Window::GetHandle() const
 {
     return windowHandle;
 }
 
-bool Window::IsValid() const
+bool Platform::Window::IsValid() const
 {
     return m_NativeWindow != nullptr;
 }

@@ -104,7 +104,7 @@ void Application::PumpMessageQueue()
 
 void Application::ProcessDeferredMessage(const Event& event)
 {
-    Window* window = FindWindowByHandle(event.windowHandle);
+    Platform::Window* window = FindWindowByHandle(event.windowHandle);
     
     switch (event.type)
     {
@@ -250,9 +250,9 @@ void Application::SetMessageController(MessageController* messageController)
     M_MessageController = messageController;
 }
 
-Window* Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
+Platform::Window* Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
 {
-    std::unique_ptr<Window> window = std::make_unique<Window>();
+    std::unique_ptr<Platform::Window> window = std::make_unique<Platform::Window>();
     if (!window->Create(windowCreateInfo))
     {
         return nullptr;
@@ -265,9 +265,9 @@ Window* Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
     return M_Windows.back().get();
 }
 
-Window* Application::FindWindowByHandle(uint64_t windowHandle)
+Platform::Window* Application::FindWindowByHandle(uint64_t windowHandle)
 {
-    for (const std::unique_ptr<Window>& window : M_Windows)
+    for (const std::unique_ptr<Platform::Window>& window : M_Windows)
     {
         if (window && window->GetHandle() == windowHandle)
         {
@@ -276,4 +276,25 @@ Window* Application::FindWindowByHandle(uint64_t windowHandle)
     }
 
     return nullptr;
+}
+
+Platform::Window* Application::FindWindowByIndex(uint32_t index)
+{
+    if (M_Windows.size() >= index)
+    {
+        return M_Windows[index].get();
+    }
+
+    return nullptr;
+}
+
+std::vector<const char*> Application::GetSurfaceExtensions() const
+{
+    uint32_t surfaceExtensionCount = 0;
+    const char** surfaceExtensionData = glfwGetRequiredInstanceExtensions(&surfaceExtensionCount);
+
+    std::vector<const char*> data;
+    data.insert(data.end(), surfaceExtensionData, surfaceExtensionData + surfaceExtensionCount);
+
+    return data;
 }

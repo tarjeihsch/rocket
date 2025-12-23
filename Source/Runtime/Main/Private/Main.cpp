@@ -6,7 +6,7 @@ bool shouldClose = false;
 
 class EngineMessageController : public MessageController
 {
-	void OnWindowClose(Window* Window) override
+	void OnWindowClose(Platform::Window* Window) override
 	{
 		shouldClose = true;
 	}
@@ -29,7 +29,7 @@ int main()
 	Application::Get().SetMessageController(&G_MessageController);
 
 	// Create and forward a surface
-	Window* window = Application::Get().CreateWindow(windowCreateInfo);
+	Platform::Window* window = Application::Get().CreateWindow(windowCreateInfo);
 
 	while (!shouldClose)
 	{

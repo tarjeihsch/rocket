@@ -1,8 +1,10 @@
 #include "VulkanRHI.h"
 
 #include "Assertion.h"
-#include "VulkanPipeline.h"
 #include "Logger.h"
+#include "Events/Delegate.h"
+#include "Platform.h"
+#include "VulkanPipeline.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandList.h"
@@ -12,9 +14,6 @@
 #include "VulkanSampler.h"
 #include "VulkanSwapchain.h"
 #include "VulkanTexture.h"
-#include "Events/Delegate.h"
-
-#include <GLFW/glfw3.h>
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -51,9 +50,8 @@ void CVulkanRHI::Init()
         }
     });
 
-    uint32_t GlfwExtensionCount = 0;
-    const char** GlfwExtensions = glfwGetRequiredInstanceExtensions(&GlfwExtensionCount);
-    InstanceExtensions.insert(InstanceExtensions.end(), GlfwExtensions, GlfwExtensions + GlfwExtensionCount);
+    std::vector<const char*> surfaceInstanceExtensions = Platform::GetSurfaceExtensions();
+    InstanceExtensions.insert(InstanceExtensions.end(), surfaceInstanceExtensions.begin(), surfaceInstanceExtensions.end());
     InstanceExtensions.push_back("VK_EXT_swapchain_colorspace");
     PhysicalDeviceExtensions.push_back("VK_KHR_swapchain");
 

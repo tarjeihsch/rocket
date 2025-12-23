@@ -49,7 +49,7 @@ public:
         return false; 
     }
 
-    virtual bool OnMouseDown(Window* Window, Button Button)
+    virtual bool OnMouseDown(Platform::Window* Window, Button Button)
     { 
         return false; 
     }
@@ -64,20 +64,20 @@ public:
         return false; 
     }
 
-    virtual bool OnWindowSizeChanged(Window* Window, int32_t Width, int32_t Height, bool bWasMinimized)
+    virtual bool OnWindowSizeChanged(Platform::Window* Window, int32_t Width, int32_t Height, bool bWasMinimized)
     { 
         return false; 
     }
     
-    virtual void OnResizingWindow(Window* Window)
+    virtual void OnResizingWindow(Platform::Window* Window)
     {
     }
     
-    virtual void OnWindowClose(Window* Window)
+    virtual void OnWindowClose(Platform::Window* Window)
     {
     }
     
-    virtual void OnWindowMoved(Window* Window, int32_t X, int32_t Y)
+    virtual void OnWindowMoved(Platform::Window* Window, int32_t X, int32_t Y)
     {
     }
 };
