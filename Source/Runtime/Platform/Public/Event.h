@@ -177,7 +177,7 @@ struct Event
 {
     EventType type = EventType::None;
 
-    uint64_t windowHandle = 0;
+    uint64_t WindowHandleID = 0;
 
     union
     {

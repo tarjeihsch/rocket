@@ -1,7 +1,23 @@
 #pragma once
 
+#include "Math/Vector2.h"
+#include "PlatformTypes.h"
+
 struct FRHITextureView;
 struct FRHITexture;
+
+struct RRHISwapchainDesc
+{
+    ENativePlatformBackend Backend;
+
+    // A process instance of the native window system
+    RNativeWindowSystemHandle NativeInstanceHandle;
+    
+    // A platform-owned handle identifying the drawable OS window
+    RNativeWindowHandle NativeWindowHandle;
+        
+    Vector2i Size;
+};
 
 class RRHISwapchain
 {

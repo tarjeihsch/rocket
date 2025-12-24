@@ -11,7 +11,7 @@
 #include <deque>
 #include <GLFW/glfw3.h>
 
-void RegisterPlatformWindow(void* nativeWindow, uint64_t windowHandle, EventSink* eventSink);
+void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSink* eventSink);
 
 class EventQueue : public EventSink
 {
@@ -104,7 +104,7 @@ void Application::PumpMessageQueue()
 
 void Application::ProcessDeferredMessage(const Event& event)
 {
-    Platform::Window* window = FindWindowByHandle(event.windowHandle);
+    RWindow* window = FindWindowByHandle(event.WindowHandleID);
     
     switch (event.type)
     {
@@ -250,39 +250,29 @@ void Application::SetMessageController(MessageController* messageController)
     M_MessageController = messageController;
 }
 
-Platform::Window* Application::CreateWindow(const WindowCreateInfo& windowCreateInfo)
+RWindow* Application::InitWindow(const WindowCreateInfo& windowCreateInfo)
 {
-    std::unique_ptr<Platform::Window> window = std::make_unique<Platform::Window>();
+    std::unique_ptr<RWindow> window = std::make_unique<RWindow>();
     if (!window->Create(windowCreateInfo))
     {
         return nullptr;
     }
 
-    RegisterPlatformWindow(window->m_NativeWindow, window->GetHandle(), &eventQueue);
+    RegisterPlatformWindow(window->WindowHandle, window->GetWindowHandleID(), &eventQueue);
 
     M_Windows.emplace_back(std::move(window));
 
     return M_Windows.back().get();
 }
 
-Platform::Window* Application::FindWindowByHandle(uint64_t windowHandle)
+RWindow* Application::FindWindowByHandle(uint64_t WindowHandleID)
 {
-    for (const std::unique_ptr<Platform::Window>& window : M_Windows)
+    for (const std::unique_ptr<RWindow>& window : M_Windows)
     {
-        if (window && window->GetHandle() == windowHandle)
+        if (window && window->GetWindowHandleID() == WindowHandleID)
         {
             return window.get();
         }
-    }
-
-    return nullptr;
-}
-
-Platform::Window* Application::FindWindowByIndex(uint32_t index)
-{
-    if (M_Windows.size() >= index)
-    {
-        return M_Windows[index].get();
     }
 
     return nullptr;

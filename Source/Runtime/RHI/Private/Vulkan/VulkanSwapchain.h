@@ -17,7 +17,7 @@ private:
     FVulkanDevice& Device;
 
 public:
-    explicit RVulkanSwapchain(FVulkanDevice& InDevice);
+    explicit RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& Desc);
     virtual ~RVulkanSwapchain() override;
 
     virtual bool AcquireNextImageIndex() override;
@@ -37,7 +37,7 @@ public:
     VkImageView GetImageView() const;
 
 private:
-    void CreateSwapchain();
+    void CreateSwapchain(Vector2i Size);
     void DestroySwapchain();
     
 private:
@@ -52,6 +52,8 @@ private:
 
     std::vector<VkSemaphore> ImageAcquiredSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
+
+    RRHISwapchainDesc Desc;
 
     uint32_t CurrentImageIndex;
     uint32_t SemaphoreIndex;

@@ -41,7 +41,7 @@ target_link_libraries(Platform
     PUBLIC 
         Rocket::Core
     PRIVATE 
-    $<BUILD_INTERFACE:glfw>
+        $<BUILD_INTERFACE:glfw>
 )
 
 set_target_properties(Platform PROPERTIES POSITION_INDEPENDENT_CODE ON)

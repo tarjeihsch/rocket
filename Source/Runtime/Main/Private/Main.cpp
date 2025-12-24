@@ -1,12 +1,14 @@
 #include "Application.h"
 #include "Window.h"
 #include "MessageController.h"
+#include "Display.h"
+#include "Logger.h"
 
 bool shouldClose = false;
 
 class EngineMessageController : public MessageController
 {
-	void OnWindowClose(Platform::Window* Window) override
+	void OnWindowClose(RWindow* Window) override
 	{
 		shouldClose = true;
 	}
@@ -16,6 +18,8 @@ static EngineMessageController G_MessageController;
 
 int main()
 {
+	FLogger::Init();
+
 	WindowCreateInfo windowCreateInfo = {};
 	windowCreateInfo.title = "Rocket Engine";
 	windowCreateInfo.width = 1280;
@@ -28,8 +32,7 @@ int main()
 	Application::Get().Initialize();
 	Application::Get().SetMessageController(&G_MessageController);
 
-	// Create and forward a surface
-	Platform::Window* window = Application::Get().CreateWindow(windowCreateInfo);
+	RDisplay* Display = new RDisplay();
 
 	while (!shouldClose)
 	{

@@ -23,7 +23,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType GetInterfaceType() const noexcept override;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
-    virtual RRHISwapchain* GetSwapchain() const override;
+    virtual RRHISwapchain* CreateSwapchain(RRHISwapchainDesc& Desc) const override;
     virtual void RHIWaitUntilIdle() const override;
     virtual uint64_t GetFrameCounter() const noexcept override;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;

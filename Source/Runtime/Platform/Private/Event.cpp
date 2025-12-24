@@ -11,7 +11,7 @@ static double lastMouseY = 0.0;
 
 struct NativeWindowUserData
 {
-    uint64_t windowHandle;
+    uint64_t WindowHandleID;
     EventSink* eventSink;
 };
 
@@ -140,7 +140,7 @@ static void OnWindowClose(GLFWwindow* glfwWindow)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::WindowCloseRequested;
 
     Enqueue(*userData->eventSink, event);
@@ -151,7 +151,7 @@ static void OnWindowSize(GLFWwindow* glfwWindow, int32_t width, int32_t height)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::WindowResized;
     event.windowResize.value.x = width;
     event.windowResize.value.y = height;
@@ -164,7 +164,7 @@ static void OnWindowMove(GLFWwindow* glfwWindow, int32_t x, int32_t y)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::WindowMoved;
     event.windowMove.value.x = x;
     event.windowMove.value.y = y;
@@ -177,7 +177,7 @@ static void OnWindowFocus(GLFWwindow* glfwWindow, int32_t focusState)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
 
     if (focusState == GLFW_TRUE)
     {
@@ -197,7 +197,7 @@ static void OnKey(GLFWwindow* glfwWindow, int32_t key, int32_t scanCode, int32_t
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -220,7 +220,7 @@ static void OnText(GLFWwindow* glfwWindow, uint32_t codepoint)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::TextInput;
 
     ANSICHAR* buffer = event.text.value.buffer;
@@ -259,7 +259,7 @@ static void OnMouseMove(GLFWwindow* glfwWindow, double mouseX, double mouseY)
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::MouseMove;
     event.axis.position.x = static_cast<int32_t>(mouseX);
     event.axis.position.y = static_cast<int32_t>(mouseY);
@@ -278,7 +278,7 @@ static void OnMouseButton(GLFWwindow* glfwWindow, int32_t button, int32_t action
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
 
     if (action == GLFW_PRESS)
     {
@@ -302,7 +302,7 @@ static void OnMouseScroll(GLFWwindow* glfwWindow, double xOffset, double yOffset
     NativeWindowUserData* userData = GetUserData(glfwWindow);
 
     Event event = {};
-    event.windowHandle = userData->windowHandle;
+    event.WindowHandleID = userData->WindowHandleID;
     event.type = EventType::MouseWheel;
     event.wheel.value.x = static_cast<float>(xOffset);
     event.wheel.value.y = static_cast<float>(yOffset);
@@ -310,7 +310,7 @@ static void OnMouseScroll(GLFWwindow* glfwWindow, double xOffset, double yOffset
     Enqueue(*userData->eventSink, event);
 }
 
-void RegisterPlatformWindow(void* nativeWindow, uint64_t windowHandle, EventSink* eventSink)
+void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSink* eventSink)
 {
     GLFWwindow* window = static_cast<GLFWwindow*>(nativeWindow);
         
@@ -318,7 +318,7 @@ void RegisterPlatformWindow(void* nativeWindow, uint64_t windowHandle, EventSink
     ensure(eventSink);
 
     NativeWindowUserData* userData = new NativeWindowUserData();
-    userData->windowHandle = windowHandle;
+    userData->WindowHandleID = WindowHandleID;
     userData->eventSink = eventSink;
 
     glfwSetWindowUserPointer(window, userData);

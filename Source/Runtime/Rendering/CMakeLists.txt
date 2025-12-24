@@ -39,8 +39,8 @@ target_include_directories(Rendering
 
 target_link_libraries(Rendering
     PUBLIC Rocket::Core
-    PUBLIC Rocket::RHI
-    PUBLIC Rocket::Platform
+    PRIVATE Rocket::Platform
+    PRIVATE Rocket::RHI
     PRIVATE $<BUILD_INTERFACE:glm::glm>
 )
 

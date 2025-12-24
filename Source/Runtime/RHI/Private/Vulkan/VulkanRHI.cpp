@@ -141,7 +141,7 @@ void CVulkanRHI::Init()
         }
     }
 
-    Swapchain = new RVulkanSwapchain(*Device);
+    //Swapchain = new RVulkanSwapchain(*Device);
 
     FrameCounter = 0;
 }
@@ -201,9 +201,9 @@ IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
     return const_cast<CVulkanRHI*>(this);
 }
 
-RRHISwapchain* CVulkanRHI::GetSwapchain() const
+RRHISwapchain* CVulkanRHI::CreateSwapchain(RRHISwapchainDesc& Desc) const
 {
-    return Swapchain;
+    return new RVulkanSwapchain(*Device, Desc);
 }
 
 void CVulkanRHI::RHIWaitUntilIdle() const

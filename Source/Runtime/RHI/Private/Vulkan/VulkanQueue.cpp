@@ -26,6 +26,8 @@ FVulkanQueue::~FVulkanQueue()
     Shutdown();
 }
 
+// TODO:
+// void FVulkanQueue::Submit(RVulkanSwapchain* Swapchain)
 void FVulkanQueue::Submit()
 {
     std::vector<FVulkanCommandBufferPayload*> Payloads;

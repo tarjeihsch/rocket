@@ -1,3 +1,9 @@
+#if defined(_WIN32)
+    #ifndef VK_USE_PLATFORM_WIN32_KHR
+        #define VK_USE_PLATFORM_WIN32_KHR
+    #endif
+#endif
+
 #if defined(__linux__)
     #ifndef VK_USE_PLATFORM_XLIB_KHR
         #define VK_USE_PLATFORM_XLIB_KHR
@@ -28,7 +34,7 @@
     #include <objc/objc.h>
 #endif
 
-RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
+RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& InDesc)
     : Device(InDevice),
     Swapchain(nullptr),
     Surface(nullptr),
@@ -39,31 +45,28 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
 {
     VkResult Result;
 
-    // Placeholder: Pass correct window index during creation
-    Platform::Window* window = Platform::GetWindowFromIndex(0);
-    const WindowInfo& windowInfo = window->GetWindowInfo();
-    switch (windowInfo.serverType)
+    switch (InDesc.Backend)
     {
-        case WindowServerType::Win32:
+        case ENativePlatformBackend::Win32:
         {
 #if defined(_WIN32)
-            auto ptr = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWin32SurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWin32SurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateWin32SurfaceKHR not available. Did you enable VK_KHR_win32_surface?");
 
             VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
             surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.hwnd = static_cast<HWND>(windowInfo.display);
-            surfaceCreateInfo.hinstance = static_cast<HINSTANCE>(windowInfo.instance);
+            surfaceCreateInfo.hwnd = static_cast<HWND>(InDesc.NativeWindowHandle);
+            surfaceCreateInfo.hinstance = static_cast<HINSTANCE>(InDesc.NativeInstanceHandle);
 
             Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
             break;
         }
 
-        case WindowServerType::X11:
+        case ENativePlatformBackend::X11:
         {
 #if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateXlibSurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateXlibSurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateXlibSurfaceKHR not available. Did you enable VK_KHR_xlib_surface?");
 
             VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -75,10 +78,10 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
 #endif
             break;
         }
-        case WindowServerType::Wayland:
+        case ENativePlatformBackend::Wayland:
         {
 #if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWaylandSurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWaylandSurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateWaylandSurfaceKHR not available. Did you enable VK_KHR_wayland_surface?");
 
             VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -90,7 +93,7 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
 #endif
             break;
         }
-        case WindowServerType::Cocoa:
+        case ENativePlatformBackend::Cocoa:
         {
 #if defined(__APPLE__)
             // IMPORTANT:
@@ -142,7 +145,7 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
         }
     }
 
-    CreateSwapchain();
+    CreateSwapchain(InDesc.Size);
     AcquireNextImageIndex();
 }
 
@@ -153,13 +156,13 @@ RVulkanSwapchain::~RVulkanSwapchain()
     VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
-void RVulkanSwapchain::CreateSwapchain()
+void RVulkanSwapchain::CreateSwapchain(Vector2i Size)
 {
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
     VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
-    const uint32_t Width = static_cast<uint32_t>(GWindow->GetFramebufferWidth());
-    const uint32_t Height = static_cast<uint32_t>(GWindow->GetFramebufferHeight());
+    const uint32_t Width = static_cast<uint32_t>(Size.x);
+    const uint32_t Height = static_cast<uint32_t>(Size.y);
 
     Extent = { Width, Height };
     Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
@@ -256,7 +259,7 @@ bool RVulkanSwapchain::AcquireNextImageIndex()
         RK_LOG_INFO("Swapchain is out of date.");
 
         DestroySwapchain();
-        CreateSwapchain();
+        CreateSwapchain(Vector2i(1280, 720));
 		AcquireNextImageIndex();
     }
 

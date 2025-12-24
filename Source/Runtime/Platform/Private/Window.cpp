@@ -21,18 +21,18 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
     return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(glfwWindow));
 }
 
-Platform::Window::Window()
-    : m_NativeWindow(nullptr), 
-    windowHandle(0)
+RWindow::RWindow()
+    : WindowHandle(nullptr), 
+    WindowHandleID(0)
 {
 }
 
-Platform::Window::~Window()
+RWindow::~RWindow()
 {
     Destroy();
 }
 
-bool Platform::Window::Create(const WindowCreateInfo& createInfo)
+bool RWindow::Create(const WindowCreateInfo& createInfo)
 {
     Destroy();
 
@@ -46,30 +46,27 @@ bool Platform::Window::Create(const WindowCreateInfo& createInfo)
         return false;
     }
 
-    m_NativeWindow = glfwWindow;
-    windowHandle = MakeWindowHandle(glfwWindow);
-
-    WindowInfo windowInfo = {};
+    WindowHandle = glfwWindow;
+    WindowHandleID = MakeWindowHandle(glfwWindow);
 
 #if defined(_WIN32)
-    windowInfo.serverType = WindowServerType::Win32;
-    windowInfo.display = (void*)glfwGetWin32Window(m_NativeWindow);
-    windowInfo.instance = (void*)GetModuleHandle(nullptr);
+    NativeBackend = ENativePlatformBackend::Win32;
+    NativeWindowHandle = (void*)glfwGetWin32Window(static_cast<GLFWwindow*>(WindowHandle));
+    NativeWindowSystemHandle = (void*)GetModuleHandle(nullptr);
 #elif defined(__linux__)
     #if defined(GLFW_NATIVE_WAYLAND)
         if (auto* wlDisplay = glfwGetWaylandDisplay(); wlDisplay != nullptr)
         {
-            windowInfo.serverType = WindowServerType::Wayland;
+            NativeBackend = WindowServerType::Wayland;
             windowInfo.display = (void*)wlDisplay;
-            windowInfo.instance = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(m_NativeWindow));
+            windowInfo.instance = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(WindowHandle));
         }
         else
     #endif
-
     #if defined(GLFW_NATIVE_X11)
         {
-            auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(m_NativeWindow));
-            windowInfo.serverType = WindowServerType::X11;
+            auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));
+            NativeBackend = WindowServerType::X11;
             windowInfo.display = (void*)glfwGetX11Display();
             windowInfo.instance = (void*)(uintptr_t)x11Window;
         }
@@ -79,60 +76,60 @@ bool Platform::Window::Create(const WindowCreateInfo& createInfo)
         }
     #endif
 #elif defined(__APPLE__)
-        windowInfo.serverType = WindowServerType::Cocoa;
-        windowInfo.display = (void*)glfwGetCocoaWindow(m_NativeWindow);
+    NativeBackend = WindowServerType::Cocoa;
+        windowInfo.display = (void*)glfwGetCocoaWindow(WindowHandle);
         windowInfo.instance = nullptr;
 #endif
 
     return true;
 }
 
-void Platform::Window::Destroy()
+void RWindow::Destroy()
 {
     if (!IsValid())
     {
         return;
     }
 
-    UnregisterPlatformWindow(m_NativeWindow);
+    UnregisterPlatformWindow(WindowHandle);
 
-    glfwDestroyWindow(static_cast<GLFWwindow*>(m_NativeWindow));
+    glfwDestroyWindow(static_cast<GLFWwindow*>(WindowHandle));
 
-    m_NativeWindow = nullptr;
-    windowHandle = 0;
+    WindowHandle = nullptr;
+    WindowHandleID = 0;
 }
 
-void Platform::Window::Show()
+void RWindow::Show()
 {
     if (!IsValid())
     {
         return;
     }
 
-    glfwShowWindow(static_cast<GLFWwindow*>(m_NativeWindow));
+    glfwShowWindow(static_cast<GLFWwindow*>(WindowHandle));
 }
 
-void Platform::Window::Hide()
+void RWindow::Hide()
 {
     if (!IsValid())
     {
         return;
     }
 
-    glfwHideWindow(static_cast<GLFWwindow*>(m_NativeWindow));
+    glfwHideWindow(static_cast<GLFWwindow*>(WindowHandle));
 }
 
-void Platform::Window::SetTitle(const ANSICHAR* title)
+void RWindow::SetTitle(const ANSICHAR* title)
 {
     if (!IsValid())
     {
         return;
     }
 
-    glfwSetWindowTitle(static_cast<GLFWwindow*>(m_NativeWindow), title);
+    glfwSetWindowTitle(static_cast<GLFWwindow*>(WindowHandle), title);
 }
 
-Vector2i Platform::Window::GetSize() const
+Vector2i RWindow::GetSize() const
 {
     if (!IsValid())
     {
@@ -140,11 +137,11 @@ Vector2i Platform::Window::GetSize() const
     }
 
     Vector2i result;
-    glfwGetWindowSize(static_cast<GLFWwindow*>(m_NativeWindow), &result.data[0], &result.data[1]);
+    glfwGetWindowSize(static_cast<GLFWwindow*>(WindowHandle), &result.data[0], &result.data[1]);
     return result;
 }
 
-Vector2i Platform::Window::GetPosition() const
+Vector2i RWindow::GetPosition() const
 {
     if (!IsValid())
     {
@@ -152,20 +149,31 @@ Vector2i Platform::Window::GetPosition() const
     }
 
     Vector2i result;
-    glfwGetWindowPos(static_cast<GLFWwindow*>(m_NativeWindow), &result.data[0], &result.data[1]);
+    glfwGetWindowPos(static_cast<GLFWwindow*>(WindowHandle), &result.data[0], &result.data[1]);
     return result;
 }
-const WindowInfo& Platform::Window::GetWindowInfo() const
+
+uint64_t RWindow::GetWindowHandleID() const
 {
-    return windowInfo;
+    return WindowHandleID;
 }
 
-uint64_t Platform::Window::GetHandle() const
+ENativePlatformBackend RWindow::GetNativeBackend() const
 {
-    return windowHandle;
+    return NativeBackend;
 }
 
-bool Platform::Window::IsValid() const
+RNativeWindowSystemHandle RWindow::GetNativeWindowSystemHandle() const
 {
-    return m_NativeWindow != nullptr;
+    return NativeWindowSystemHandle;
+}
+
+RNativeWindowHandle RWindow::GetNativeWindowHandle() const
+{
+    return NativeWindowHandle;
+}
+
+bool RWindow::IsValid() const
+{
+    return WindowHandle != nullptr;
 }

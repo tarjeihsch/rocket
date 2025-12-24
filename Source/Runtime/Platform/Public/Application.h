@@ -3,11 +3,7 @@
 #include <memory>
 #include <vector>
 
-namespace Platform
-{
-    class Window;
-}
-
+class RWindow;
 class MessageController;
 
 struct Event;
@@ -40,17 +36,15 @@ public:
     void SetMessageController(MessageController* messageController);
 
     /* Creates a new window with set flags */
-    Platform::Window* CreateWindow(const WindowCreateInfo& windowCreateInfo);
+    RWindow* InitWindow(const WindowCreateInfo& windowCreateInfo);
 
     /* Fetch window object by window handle */
-    Platform::Window* FindWindowByHandle(uint64_t windowHandle);
-
-    Platform::Window* FindWindowByIndex(uint32_t index);
+    RWindow* FindWindowByHandle(uint64_t WindowHandleID);
 
     std::vector<const char*> GetSurfaceExtensions() const;
 
 private:
-    std::vector<std::unique_ptr<Platform::Window>> M_Windows;
+    std::vector<std::unique_ptr<RWindow>> M_Windows;
 
     MessageController* M_MessageController;
 
