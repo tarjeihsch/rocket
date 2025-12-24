@@ -107,6 +107,7 @@ void FVulkanQueue::Submit()
         SubmissionQueue.push(Payload);
     }
 }
+
 void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)> InCallback)
 {
     FVulkanCommandListContext CmdListContext(Device);

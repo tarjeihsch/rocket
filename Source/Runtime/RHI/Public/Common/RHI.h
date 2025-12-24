@@ -80,7 +80,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
 
-    virtual RRHISwapchain* CreateSwapchain(RRHISwapchainDesc& Desc) const = 0;
+    virtual RRHISwapchain* CreateSwapchain(RRHISwapchainDesc& Desc) = 0;
     virtual uint64_t GetFrameCounter() const noexcept = 0;
     virtual void RHIWaitUntilIdle() const = 0;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;

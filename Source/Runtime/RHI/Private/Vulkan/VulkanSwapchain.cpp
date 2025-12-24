@@ -1,18 +1,3 @@
-#if defined(_WIN32)
-    #ifndef VK_USE_PLATFORM_WIN32_KHR
-        #define VK_USE_PLATFORM_WIN32_KHR
-    #endif
-#endif
-
-#if defined(__linux__)
-    #ifndef VK_USE_PLATFORM_XLIB_KHR
-        #define VK_USE_PLATFORM_XLIB_KHR
-    #endif
-    #ifndef VK_USE_PLATFORM_WAYLAND_KHR
-        #define VK_USE_PLATFORM_WAYLAND_KHR
-    #endif
-#endif
-
 #include "VulkanSwapchain.h"
 
 #include "Assertion.h"
@@ -27,9 +12,12 @@
 
 #if defined(_WIN32)
     #include <windows.h>
+    #include <vulkan/vulkan_win32.h>
 #elif defined(__linux__)
     #include <X11/Xlib.h>
+    #include <vulkan/vulkan_xlib.h>
     #include <wayland-client-core.h>
+    #include <vulkan/vulkan_wayland.h>
 #elif defined(__APPLE__)
     #include <objc/objc.h>
 #endif
@@ -71,8 +59,8 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& I
 
             VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
             surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.dpy = static_cast<Display*>(windowInfo.display);
-            surfaceCreateInfo.window = static_cast<::Window>(reinterpret_cast<uintptr_t>(windowInfo.instance));
+            surfaceCreateInfo.dpy = static_cast<Display*>(InDesc.NativeInstanceHandle);
+            surfaceCreateInfo.window = reinterpret_cast<uintptr_t>(InDesc.NativeWindowHandle);
 
             Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
@@ -86,8 +74,8 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& I
 
             VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
             surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.display = static_cast<wl_display*>(windowInfo.display);
-            surfaceCreateInfo.surface = static_cast<wl_surface*>(windowInfo.instance);
+            surfaceCreateInfo.display = static_cast<wl_display*>(InDesc.NativeWindowHandle);
+            surfaceCreateInfo.surface = static_cast<wl_surface*>(InDesc.NativeInstanceHandle);
 
             Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
@@ -108,6 +96,7 @@ RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& I
     }
 
     ensure(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
+    ensure(Surface != VK_NULL_HANDLE, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
     VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);

@@ -35,6 +35,8 @@ public:
 
     void SetMessageController(MessageController* messageController);
 
+    void Upd();
+
     /* Creates a new window with set flags */
     RWindow* InitWindow(const WindowCreateInfo& windowCreateInfo);
 

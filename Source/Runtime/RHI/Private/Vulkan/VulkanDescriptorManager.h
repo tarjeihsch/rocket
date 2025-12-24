@@ -49,7 +49,7 @@ public:
     void RemoveStorageImage(RDescriptorHandle Handle);
     void RemoveStorageBuffer(RDescriptorHandle Handle);
 
-    void Flush();
+    void Update();
 
     inline VkDescriptorSetLayout GetDescriptorSetLayout() const;
     inline VkDescriptorSet GetDescriptorSet() const;

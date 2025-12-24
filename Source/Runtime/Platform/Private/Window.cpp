@@ -54,21 +54,21 @@ bool RWindow::Create(const WindowCreateInfo& createInfo)
     NativeWindowHandle = (void*)glfwGetWin32Window(static_cast<GLFWwindow*>(WindowHandle));
     NativeWindowSystemHandle = (void*)GetModuleHandle(nullptr);
 #elif defined(__linux__)
-    #if defined(GLFW_NATIVE_WAYLAND)
+    #if defined(GLFW_EXPOSE_NATIVE_WAYLAND)
         if (auto* wlDisplay = glfwGetWaylandDisplay(); wlDisplay != nullptr)
         {
-            NativeBackend = WindowServerType::Wayland;
-            windowInfo.display = (void*)wlDisplay;
-            windowInfo.instance = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(WindowHandle));
+            NativeBackend = ENativePlatformBackend::Wayland;
+            NativeWindowHandle = (void*)wlDisplay;
+            NativeWindowSystemHandle = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(WindowHandle));
         }
         else
     #endif
-    #if defined(GLFW_NATIVE_X11)
+    #if defined(GLFW_EXPOSE_NATIVE_X11)
         {
             auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));
-            NativeBackend = WindowServerType::X11;
-            windowInfo.display = (void*)glfwGetX11Display();
-            windowInfo.instance = (void*)(uintptr_t)x11Window;
+            NativeBackend = ENativePlatformBackend::X11;
+            NativeWindowHandle = (void*)glfwGetX11Display();
+            NativeWindowSystemHandle = (void*)(uintptr_t)x11Window;
         }
     #else
         {

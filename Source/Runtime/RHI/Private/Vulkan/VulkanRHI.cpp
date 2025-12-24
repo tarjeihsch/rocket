@@ -166,7 +166,7 @@ void CVulkanRHI::Tick(float DeltaTime)
         return;
     }
 
-    Device->GetDescriptorManager()->Flush();
+    Device->GetDescriptorManager()->Update();
 
     Device->GetPresentQueue()->Submit();
 
@@ -201,9 +201,10 @@ IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
     return const_cast<CVulkanRHI*>(this);
 }
 
-RRHISwapchain* CVulkanRHI::CreateSwapchain(RRHISwapchainDesc& Desc) const
+RRHISwapchain* CVulkanRHI::CreateSwapchain(RRHISwapchainDesc& Desc)
 {
-    return new RVulkanSwapchain(*Device, Desc);
+    Swapchain = new RVulkanSwapchain(*Device, Desc);
+    return Swapchain;;
 }
 
 void CVulkanRHI::RHIWaitUntilIdle() const

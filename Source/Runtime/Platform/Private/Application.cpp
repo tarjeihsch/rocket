@@ -11,6 +11,8 @@
 #include <deque>
 #include <GLFW/glfw3.h>
 
+#include "../../RHI/Public/Common/RHI.h"
+
 void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSink* eventSink);
 
 class EventQueue : public EventSink
@@ -248,6 +250,11 @@ void Application::ProcessDeferredMessage(const Event& event)
 void Application::SetMessageController(MessageController* messageController)
 {
     M_MessageController = messageController;
+}
+
+void Application::Upd()
+{
+    GRHI->Tick(0.1f);
 }
 
 RWindow* Application::InitWindow(const WindowCreateInfo& windowCreateInfo)

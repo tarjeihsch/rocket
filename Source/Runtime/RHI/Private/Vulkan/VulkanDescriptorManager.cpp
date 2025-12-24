@@ -206,7 +206,7 @@ void VulkanDescriptorManager::RemoveStorageBuffer(RDescriptorHandle Handle)
     FreeSlot(StorageBuffers, Handle);
 }
 
-void VulkanDescriptorManager::Flush()
+void VulkanDescriptorManager::Update()
 {
     std::vector<VkWriteDescriptorSet> Writes;
     Writes.reserve(1024);
