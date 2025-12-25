@@ -9,6 +9,7 @@
 #include <format>
 #include <iostream>
 #include <thread>
+#include <cstring>
 
 enum class ELogLevel : uint8_t
 {
@@ -40,9 +41,11 @@ inline uint64_t NowNsMonotonic()
         std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
+// Cheap per-thread id; replace with platform-specific if you prefer.
 inline uint32_t GetThreadIdFast()
 {
-    static thread_local uint32_t Tid = (uint32_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
+    static thread_local uint32_t Tid =
+        (uint32_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
     return Tid;
 }
 
@@ -122,6 +125,14 @@ public:
             Format,
             std::forward<TArgs>(Args)...);
 
+        constexpr char Trunc[] = "...";
+
+        if (Result.size >= MessageCapacity - 1)
+        {
+            constexpr size_t N = sizeof(Trunc) - 1;
+            memcpy(&Record.Message[MessageCapacity - 1 - N], Trunc, N);
+        }
+
         const uint32_t Count =
             (Result.size < (MessageCapacity - 1)) ? (uint32_t)Result.size : (MessageCapacity - 1);
 
@@ -183,37 +194,40 @@ private:
 
 namespace Logger
 {
-    inline TBufferLogger<4096, 64> GBufferLog;
+    inline TBufferLogger<512, 512> GBufferLog;
     inline uint64_t GFlushCursor = 0;
 
     inline void DumpGBufferLogger()
     {
-        const auto DrainResult = GBufferLog.Drain([](const auto& R, uint64_t Seq)
-        {
-            ANSICHAR Line[512];
+        const auto DrainResult = GBufferLog.Drain(
+            [](const auto& R, uint64_t Seq)
+            {
+                ANSICHAR Line[512];
 
-            const auto Result = std::format_to_n(
-                Line,
-                sizeof(Line) - 1,
-                "[{}] Seq={} T={} Th={} {}\n",
-                LexToString(R.Level),
-                Seq,
-                R.TimestampNs,
-                R.ThreadId,
-                R.Message);
+                const auto Result = std::format_to_n(
+                    Line,
+                    sizeof(Line) - 1,
+                    "[{}] Seq={} T={} Th={} {}\n",
+                    LexToString(R.Level),
+                    Seq,
+                    R.TimestampNs,
+                    R.ThreadId,
+                    R.Message);
 
-            const size_t Count = (Result.size < (sizeof(Line) - 1)) ? Result.size : (sizeof(Line) - 1);
-            Line[Count] = '\0';
+                const size_t Count = (Result.size < (sizeof(Line) - 1)) ? Result.size : (sizeof(Line) - 1);
+                Line[Count] = '\0';
 
-            std::fputs(Line, stdout);
-        },
-        GFlushCursor);
+                std::fputs(Line, stdout);
+            },
+            GFlushCursor);
 
         if (DrainResult.bLost)
         {
             std::cout << "Logs were overwritten before flushing. LostCount=" << DrainResult.LostCount << std::endl;
         }
 
+        // Optional diagnostic: indicates contention / partial publishing at drain time.
+        // If this is frequently non-zero, producers are still writing while you drain.
         if (DrainResult.SkippedUnreadyOrOverwritten != 0)
         {
             std::cout << "Drain skipped " << DrainResult.SkippedUnreadyOrOverwritten
