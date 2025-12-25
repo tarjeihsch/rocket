@@ -18,8 +18,6 @@ static EngineMessageController G_MessageController;
 
 int main()
 {
-	FLogger::Init();
-
 	WindowCreateInfo windowCreateInfo = {};
 	windowCreateInfo.title = "Rocket Engine";
 	windowCreateInfo.width = 1280;
@@ -34,8 +32,12 @@ int main()
 
 	RDisplay* Display = new RDisplay();
 
+	Logger::GBufferLog.SetMinLevel(ELogLevel::Trace);
+
 	while (!shouldClose)
 	{
+		Logger::DumpGBufferLogger();
+
 		Application::Get().PumpMessageQueue();
 	}
 

@@ -38,7 +38,6 @@ target_include_directories(Core
 )
 
 target_link_libraries(Core
-    PRIVATE $<BUILD_INTERFACE:spdlog::spdlog>
 )
 
 set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)

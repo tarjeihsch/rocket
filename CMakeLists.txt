@@ -48,7 +48,6 @@ add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
-add_subdirectory(Source/ThirdParty/spdlog EXCLUDE_FROM_ALL)
 
 # Rocket modules
 add_subdirectory(Source/Runtime/Main)
@@ -60,7 +59,6 @@ add_subdirectory(Source/Runtime/Rendering)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
 set_target_properties(glm PROPERTIES FOLDER "ThirdParty/glm")
-set_target_properties(spdlog PROPERTIES FOLDER "ThirdParty/spdlog")
 
 set(ROCKET_EXPORT_LIBS
     Core
