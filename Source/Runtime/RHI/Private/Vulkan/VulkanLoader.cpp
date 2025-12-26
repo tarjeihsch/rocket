@@ -17,6 +17,8 @@
 
 #include <assert.h>
 
+#include "Common/RHISemaphore.h"
+
 #ifdef RK_PLATFORM_WINDOWS
     #include <windows.h>
     #define VK_DLSYM(lib, name) GetProcAddress((HMODULE)(lib), name)
@@ -349,6 +351,20 @@ VkCompareOp VulkanRHI::ToVkCompareOp(ERHICompareOp op)
     case ERHICompareOp::Always:         return VK_COMPARE_OP_ALWAYS;
     }
     return VK_COMPARE_OP_ALWAYS;
+}
+
+VkPipelineStageFlags2 VulkanRHI::ToVkStage2(ERHIQueueSyncStage Stage)
+{
+    switch (Stage)
+    {
+    case ERHIQueueSyncStage::TopOfPipe:
+        return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    case ERHIQueueSyncStage::ColorAttachmentOutput:
+        return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    case ERHIQueueSyncStage::AllCommands:
+    default:
+        return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    }
 }
 
 

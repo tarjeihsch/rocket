@@ -3,6 +3,7 @@
 #include "Window.h"
 #include "Common/RHI.h"
 #include "Common/RHISwapchain.h"
+#include "Common/RHIViewport.h"
 
 RDisplay::RDisplay()
 {
@@ -30,12 +31,12 @@ void RDisplay::Init()
 	Window = new RWindow();
 	Window->Create(windowCreateInfo);
 
-	RRHISwapchainDesc SwapchainDesc = {};
-	SwapchainDesc.Backend = Window->GetNativeBackend();
-	SwapchainDesc.NativeWindowHandle = Window->GetNativeWindowHandle();
-	SwapchainDesc.NativeInstanceHandle = Window->GetNativeWindowSystemHandle();
+	RRHIViewportDesc ViewportDesc = {};
+	ViewportDesc.Backend = Window->GetNativeBackend();
+	ViewportDesc.NativeWindowHandle = Window->GetNativeWindowHandle();
+	ViewportDesc.NativeInstanceHandle = Window->GetNativeWindowSystemHandle();
 
-	Swapchain = GetRHI()->CreateSwapchain(SwapchainDesc);
+	Viewport = GetRHI()->CreateViewport(ViewportDesc);
 }
 
 void RDisplay::Shutdown()

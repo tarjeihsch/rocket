@@ -4,7 +4,7 @@
 
 #include <memory>
 
-class RRHISwapchain;
+class RRHIViewport;
 class RWindow;
 
 struct RViewport
@@ -25,6 +25,6 @@ public:
 	void Present();
 
 private:
-	RRHISwapchain* Swapchain;
+	RRHIViewport* Viewport;
 	RWindow* Window;
 };

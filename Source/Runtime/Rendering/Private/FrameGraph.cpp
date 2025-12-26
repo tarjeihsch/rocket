@@ -6,7 +6,22 @@
 
 #include <cassert>
 
-FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture *InHandle)
+#include "Common/RHISemaphore.h"
+#include "Common/RHIViewport.h"
+
+static void ApplyBarrier(FRHICommandList& CmdList, FRHITexture* Texture, ERHITextureLayout NewLayout, ERHIResourceAccess NewAccess, ERHIPipelineStage NewStage)
+{
+    if (Texture->CurrentLayout != NewLayout || Texture->CurrentAccess != NewAccess || Texture->CurrentPipelineStage != NewStage)
+    {
+        GetRHI()->RHICmdPipelineBarrier(&CmdList, Texture, Texture->CurrentLayout, NewLayout, Texture->CurrentAccess, NewAccess, Texture->CurrentPipelineStage, NewStage);
+
+        Texture->CurrentLayout = NewLayout;
+        Texture->CurrentAccess = NewAccess;
+        Texture->CurrentPipelineStage = NewStage;
+    }
+}
+
+FFGTextureRef::FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture* InHandle)
     : FFGResourceRef(InAccess), Handle(InHandle)
 {
     // TODO: switch
@@ -69,11 +84,6 @@ void FFrameGraphPass::AddTransferDst(FRHITexture* Resource)
     TextureWrites.emplace_back(ERHIResourceAccess::TransferWrite, Resource);
 }
 
-void FFrameGraphPass::AddPresentSrc(FRHITexture* Resource)
-{
-    TextureWrites.emplace_back(ERHIResourceAccess::Presentation, Resource);
-}
-
 FFrameGraphPass& FFrameGraphBuilder::AddPass(const char *DebugName, EFGPassFlags Flags, std::function<void(FRHICommandList &CmdList)> &&Callback)
 {
     FFrameGraphPass Pass;
@@ -86,14 +96,14 @@ FFrameGraphPass& FFrameGraphBuilder::AddPass(const char *DebugName, EFGPassFlags
 
 void FFrameGraphBuilder::Execute()
 {
+    IRHICommandListContext* CmdListContext = GetRHI()->GetCommandListContext();
+    FRHICommandList CmdList(*CmdListContext);
+
     for (FFrameGraphPass& Pass : Passes)
     {
         ERHITextureLayout NewLayout;
         ERHIResourceAccess NewAccess;
         ERHIPipelineStage NewStage;
-
-        IRHICommandListContext* CmdListContext = GetRHI()->GetCommandListContext();
-        FRHICommandList CmdList(*CmdListContext);
 
         for (const FFGTextureRef& Resource : Pass.TextureReads)
         {
@@ -156,11 +166,6 @@ void FFrameGraphBuilder::Execute()
                 NewAccess = ERHIResourceAccess::TransferWrite;
                 NewStage = ERHIPipelineStage::Transfer;
                 break;
-            case ERHIResourceAccess::Presentation:
-                NewLayout = ERHITextureLayout::Present;
-                NewAccess = ERHIResourceAccess::None;
-                NewStage = ERHIPipelineStage::BottomOfPipe;
-                break;
             default:
                 assert(false && "Unhandled EFGAccessType in ReadUsage");
                 break;
@@ -188,7 +193,7 @@ void FFrameGraphBuilder::Execute()
 
         if ((Pass.Flags & EFGPassFlags::Dynamic) == EFGPassFlags::Dynamic)
         {
-            GetRHI()->RHICmdBeginRendering(&CmdList, ColorAttachments, DepthAttachmentView, ((Pass.Flags & EFGPassFlags::ClearColor) == EFGPassFlags::ClearColor));
+            GetRHI()->RHICmdBeginRendering(&CmdList, ColorAttachments, DepthAttachmentView, (Pass.Flags & EFGPassFlags::ClearColor) == EFGPassFlags::ClearColor);
         }
 
         if (Pass.Callback)
@@ -201,6 +206,29 @@ void FFrameGraphBuilder::Execute()
             GetRHI()->RHICmdEndRendering(&CmdList);
         }
 
-        FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
+        /*
+         * GetRHI()->CreateRenderPass([](){
+         *      Blit(Composition, BackBuffer);
+         * });
+         *
+         */
+
+        //for (RRHIViewport* Viewport : Pass.PresentationTargets)
+        //{
+        //    Viewport->Acquire();
+
+        //    FRHITexture* Texture = Viewport->GetBackBufferTexture();
+        //    ApplyBarrier(CmdList, Texture, ERHITextureLayout::Present, ERHIResourceAccess::None, ERHIPipelineStage::BottomOfPipe);
+
+        //    // Wait, Signal and Present are deferred until Flush():
+        //    //  Wait semaphores are injected into the first payload, while signal semaphores are injected into the last.
+        //    CmdListContext->RHIAddPendingSubmitWait(Viewport->GetImageAvailableSemaphore().get(), ERHIQueueSyncStage::ColorAttachmentOutput);
+        //    CmdListContext->RHIAddPendingSubmitSignal(Viewport->GetRenderFinishedSemaphore().get(), ERHIQueueSyncStage::AllCommands);
+        //    CmdListContext->RHIAddPendingSubmitPresent(Viewport->GetBackBufferTexture().get());
+        //}
     }
+
+    // Fetch viewports related to this frame
+
+    FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
 }

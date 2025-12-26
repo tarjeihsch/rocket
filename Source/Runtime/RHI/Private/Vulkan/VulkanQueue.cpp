@@ -26,8 +26,6 @@ FVulkanQueue::~FVulkanQueue()
     Shutdown();
 }
 
-// TODO:
-// void FVulkanQueue::Submit(RVulkanSwapchain* Swapchain)
 void FVulkanQueue::Submit()
 {
     std::vector<FVulkanCommandBufferPayload*> Payloads;
@@ -37,21 +35,6 @@ void FVulkanQueue::Submit()
 
     for (FVulkanCommandBufferPayload *Payload : Payloads)
     {
-        bool bIsFirst = (Payload == Payloads.front());
-        bool bIsLast = (Payload == Payloads.back());
-
-        if (bIsFirst)
-        {
-            Payload->WaitSemaphores.push_back(GetVulkanRHIMinimal()->GetImageAcquiredSemaphore());
-            Payload->WaitStageMasks.push_back(VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR);
-        }
-
-        if (bIsLast)
-        {
-            Payload->SignalSemaphores.push_back(GetVulkanRHIMinimal()->GetRenderFinishedSemaphore());
-            Payload->SignalStageMasks.push_back(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR);
-        }
-
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;
         for (uint32_t Index = 0; Index < Payload->WaitSemaphores.size(); ++Index)
         {
@@ -91,6 +74,11 @@ void FVulkanQueue::Submit()
         TimelineSemaphoreSubmitInfo.value = TimelineValue;
         TimelineSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
         SignalSemaphoreSubmitInfos.push_back(TimelineSemaphoreSubmitInfo);
+
+        if (Payload->PreSubmitCallback.Size())
+        {
+            Payload->PreSubmitCallback.Broadcast();
+        }
 
         VkSubmitInfo2 SubmitInfo = {};
         SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;

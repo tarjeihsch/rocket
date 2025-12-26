@@ -5,6 +5,8 @@
 #include <span>
 #include <vector>
 
+struct FRHISemaphore;
+enum class ERHIQueueSyncStage : uint8_t;
 struct RRHIRect;
 struct FRHIDrawCommand;
 struct FRHIDrawParams;

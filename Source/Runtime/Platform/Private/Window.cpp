@@ -1,5 +1,7 @@
 #include "Window.h"
 
+#include "Logger.h"
+
 #include <GLFW/glfw3.h>
 
 #if defined(_WIN32)
@@ -80,6 +82,10 @@ bool RWindow::Create(const WindowCreateInfo& createInfo)
         windowInfo.display = (void*)glfwGetCocoaWindow(WindowHandle);
         windowInfo.instance = nullptr;
 #endif
+
+    RK_LOG_INFO("[Platform] Spawn window");
+    RK_LOG_INFO("[Platform] \t\tExtent: {}x{}", createInfo.width, createInfo.height);
+    RK_LOG_INFO("[Platform] \t\tBackend: {}", static_cast<uint8_t>(NativeBackend));
 
     return true;
 }

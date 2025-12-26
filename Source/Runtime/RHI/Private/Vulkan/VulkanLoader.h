@@ -1,5 +1,6 @@
 #pragma once
 
+enum class ERHIQueueSyncStage : uint8_t;
 enum class ERHITextureLayout : uint8_t;
 enum class ERHIBorderColor : uint8_t;
 enum class ERHITextureUsage : uint8_t;
@@ -210,6 +211,8 @@ namespace VulkanRHI
 
     VkBlendFactor GetVkBlendFactor(ERHIBlendFactor Factor);
     VkBlendOp GetVkBlendOp(ERHIBlendOp Op);
+
+    VkPipelineStageFlags2 ToVkStage2(ERHIQueueSyncStage Stage);
 }
 
 void LoadVulkanLibrary();

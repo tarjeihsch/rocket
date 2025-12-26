@@ -46,11 +46,9 @@ enum class ERHIResourceAccess : uint16_t
     ColorAttachmentWrite      = 1 << 6,
     DepthStencilAttachmentWrite = 1 << 7,
 
-    // CPU Access (optional)
+    // CPU Access
     HostRead                  = 1 << 8,
     HostWrite                 = 1 << 9,
-
-    Presentation = 1 << 10,
 };
 
 enum class ERHIPipelineStage : uint16_t
@@ -167,6 +165,7 @@ struct FRHITextureView
     virtual ~FRHITextureView() = default;
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
+    virtual FRHITexture* GetTexture() const = 0;
     virtual void* GetHandle() const = 0;
     virtual uint32_t GetBindingIndex() const = 0;
 };

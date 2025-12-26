@@ -14,6 +14,7 @@
 #include "VulkanSampler.h"
 #include "VulkanSwapchain.h"
 #include "VulkanTexture.h"
+#include "VulkanViewport.h"
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -150,10 +151,7 @@ void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
 
-    delete Swapchain;
     delete Device;
-
-    Swapchain = nullptr;
     Device = nullptr;
 
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
@@ -170,13 +168,16 @@ void CVulkanRHI::Tick(float DeltaTime)
 
     Device->GetPresentQueue()->Submit();
 
-    Swapchain->Present();
+    for (auto Viewport : Viewports)
+    {
+        Viewport->Present();
+    }
 
     Device->GetPresentQueue()->Wait();
 
     FrameCounter++;
 
-    Swapchain->AcquireNextImageIndex();
+    //Swapchain->AcquireNextImageIndex();
 
     Device->GC();
 }
@@ -201,10 +202,11 @@ IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
     return const_cast<CVulkanRHI*>(this);
 }
 
-RRHISwapchain* CVulkanRHI::CreateSwapchain(RRHISwapchainDesc& Desc)
+RRHIViewport* CVulkanRHI::CreateViewport(RRHIViewportDesc& Desc)
 {
-    Swapchain = new RVulkanSwapchain(*Device, Desc);
-    return Swapchain;;
+    RVulkanViewport* Viewport = new RVulkanViewport(*Device, Desc);
+    Viewports.push_back(Viewport);
+    return Viewport;
 }
 
 void CVulkanRHI::RHIWaitUntilIdle() const
@@ -272,6 +274,7 @@ IRHICommandListContext *CVulkanRHI::GetCommandListContext() const
 {
     return Device->GetCommandListContext();
 }
+
 void CVulkanRHI::RHICmdBindPipeline(FRHICommandList &RHICmdList, FRHIPipeline *Pipeline)
 {
     RHICmdList.Enqueue<FVulkanCommandBindPipeline>(Pipeline);
@@ -309,12 +312,14 @@ void CVulkanRHI::RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawC
 
 FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
 {
-    return Swapchain->GetBackBufferTexture();
+    return Viewports[0]->GetBackBufferTexture();
 }
 
 std::array<uint32_t, 2> CVulkanRHI::RHIGetViewportExtent() const
 {
-    return std::array<uint32_t, 2>{Swapchain->GetFramebufferExtent().width, Swapchain->GetFramebufferExtent().height};
+    //return std::array<uint32_t, 2>{Swapchain[0]->GetFramebufferExtent().width, Swapchain[0]->GetFramebufferExtent().height};
+    ensure(false, "Not yet implemented.");
+    return { 0, 0 };
 }
 
 void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
@@ -396,41 +401,6 @@ uint32_t CVulkanRHI::RHIGetPresentQueueFamilyIndex() const
     return GetDevice()->GetGraphicsQueue()->GetQueueFamilyIndex();
 }
 
-VkSurfaceKHR CVulkanRHI::RHIGetVkSurface() const
-{
-    return Swapchain->GetVkSurface();
-}
-
-VkSwapchainKHR CVulkanRHI::RHIGetVkSwapchain() const
-{
-    return Swapchain->GetVkSwapchain();
-}
-
-VkExtent2D CVulkanRHI::RHIGetSwapchainExtent() const
-{
-    return Swapchain->GetFramebufferExtent();
-}
-
-VkPresentModeKHR CVulkanRHI::RHIGetSwapchainPresentMode() const
-{
-    return Swapchain->GetPresentMode();
-}
-
-VkSurfaceFormatKHR CVulkanRHI::RHIGetSwapchainSurfaceFormat() const
-{
-    return Swapchain->GetSurfaceFormat();
-}
-
-VkSemaphore CVulkanRHI::GetImageAcquiredSemaphore() const
-{
-    return Swapchain->GetImageAcquiredSemaphore();
-}
-
-VkSemaphore CVulkanRHI::GetRenderFinishedSemaphore() const
-{
-    return Swapchain->GetRenderFinishedSemaphore();
-}
-
 std::span<const char *> CVulkanRHI::GetValidationExtensions()
 {
     return std::span(ValidationLayerExtensions);
@@ -463,14 +433,41 @@ VkDescriptorSetLayout CVulkanRHI::GetBindlessDesciptorSetLayout() const
 
 FVulkanDevice * CVulkanRHI::GetDevice() const
 {
-    assert(Device != nullptr);
+    ensure(Device != nullptr);
 
     return Device;
 }
 
-RVulkanSwapchain* CVulkanRHI::GetViewport() const
+RVulkanViewport* CVulkanRHI::ResolveViewportFromPresentationTarget(FRHITextureView* TextureView) const
 {
-    assert(Swapchain != nullptr);
+    ensure(TextureView);
 
-    return Swapchain;
+    return ResolveViewportFromPresentationTarget(TextureView->GetTexture());
+}
+
+RVulkanViewport* CVulkanRHI::ResolveViewportFromPresentationTarget(FRHITexture* Texture) const
+{
+    ensure(Texture);
+
+    const auto& Desc = Texture->RHIGetTextureDesc();
+    const bool PresentationTarget = (static_cast<uint32_t>(Desc.Usage) & static_cast<uint32_t>(ERHITextureUsage::Present));
+
+    if (!PresentationTarget)
+    {
+        return nullptr;
+    }
+
+    // IMPORTANT: a swapchain can be recreated; the backbuffer pointer can change per-frame.
+    // So we resolve dynamically by comparing against each viewport's current backbuffer.
+    for (RVulkanViewport* VP : Viewports)
+    {
+        // Ensure the viewport has an acquired image before comparing.
+        // If you already guarantee Acquire() is called earlier in the frame, you can omit this.
+        if (VP && VP->GetBackBufferTexture() == Texture)
+        {
+            return VP;
+        }
+    }
+
+    return nullptr;
 }

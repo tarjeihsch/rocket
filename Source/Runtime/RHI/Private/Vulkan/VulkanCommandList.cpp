@@ -8,8 +8,12 @@
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
 #include "VulkanPipeline.h"
+#include "VulkanRHI.h"
+#include "VulkanSemaphore.h"
 #include "Common/RHIDrawCommand.h"
 #include "VulkanTexture.h"
+#include "VulkanViewport.h"
+#include "Math/Vector2.h"
 
 FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
     : FVulkanCommandBufferContext(*InDevice.GetGraphicsQueue()->GetCommandBufferPool())
@@ -125,14 +129,30 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         AttachmentInfos.push_back(AttachmentInfo);
     }
 
+    //CVulkanRHI* VulkanRHI = CastRHI<CVulkanRHI>(GRHI);
+//
+    FRHITexture* Texture = ColorAttachmentsView[0]->GetTexture();
+    Vector2i Extent(Texture->RHIGetTextureDesc().Extent[0], Texture->RHIGetTextureDesc().Extent[1]);
+    //RVulkanViewport* Viewport = VulkanRHI->ResolveViewportFromPresentationTarget(Texture);
+//
+    //// Viewport semaphore injection; only if this pass targets a presentable back-buffer.
+    //if (Viewport)
+    //{
+    //    Viewport->Acquire();
+//
+    //    auto* Ctx = static_cast<FVulkanCommandListContext*>(VulkanRHI->GetCommandListContext());
+    //    Ctx->AddWaitSemaphore(Viewport->GetImageAvailableSemaphore(), VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+    //    Ctx->AddSignalSemaphore(Viewport->GetRenderFinishedSemaphore(), VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
+    //}
+
     VkRenderingInfo RenderingInfo = {};
     RenderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
     RenderingInfo.colorAttachmentCount = AttachmentInfos.size();
     RenderingInfo.pColorAttachments = AttachmentInfos.data();
     RenderingInfo.layerCount = 1;
     RenderingInfo.viewMask = 0;
-    RenderingInfo.renderArea.extent.width = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width;
-    RenderingInfo.renderArea.extent.height = GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height;
+    RenderingInfo.renderArea.extent.width = Extent.x;
+    RenderingInfo.renderArea.extent.height = Extent.y;
 
     if (DepthStencilAttachmentView)
     {
@@ -146,21 +166,21 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         RenderingInfo.pDepthAttachment = &DepthStencilAttachmentInfo;
     }
 
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().width);
-    viewport.height = static_cast<float>(GetVulkanRHIMinimal()->RHIGetSwapchainExtent().height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    VkViewport Viewport = {};
+    Viewport.x = 0.0f;
+    Viewport.y = 0.0f;
+    Viewport.width = static_cast<float>(Extent.x);
+    Viewport.height = static_cast<float>(Extent.y);
+    Viewport.minDepth = 0.0f;
+    Viewport.maxDepth = 1.0f;
 
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = GetVulkanRHIMinimal()->RHIGetSwapchainExtent();
+    VkRect2D Scissor = {};
+    Scissor.offset = { 0, 0 };
+    Scissor.extent = { static_cast<uint32_t>(Extent.x), static_cast<uint32_t>(Extent.y) };
 
     VulkanRHI::vkCmdBeginRendering(GetCurrentCommandBuffer()->GetHandle(), &RenderingInfo);
-    VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &viewport);
-    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &scissor);
+    VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Viewport);
+    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
 }
 
 void FVulkanCommandListContext::RHIEndRendering()

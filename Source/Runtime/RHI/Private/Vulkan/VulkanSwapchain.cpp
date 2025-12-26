@@ -1,7 +1,6 @@
 #include "VulkanSwapchain.h"
 
 #include "Assertion.h"
-#include "Platform.h"
 #include "Window.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanDevice.h"
@@ -10,150 +9,31 @@
 
 #include <algorithm>
 
-#if defined(_WIN32)
-    #include <windows.h>
-    #include <vulkan/vulkan_win32.h>
-#elif defined(__linux__)
-    #include <X11/Xlib.h>
-    #include <vulkan/vulkan_xlib.h>
-    #include <wayland-client-core.h>
-    #include <vulkan/vulkan_wayland.h>
-#elif defined(__APPLE__)
-    #include <objc/objc.h>
-#endif
+#include "VulkanSemaphore.h"
 
-RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice, RRHISwapchainDesc& InDesc)
+RVulkanSwapchain::RVulkanSwapchain(FVulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
-    Surface(nullptr),
     CurrentImageIndex(0),
     SemaphoreIndex(0),
     NumAcquireCalls(0),
     NumPresentCalls(0)
 {
-    VkResult Result;
-
-    switch (InDesc.Backend)
-    {
-        case ENativePlatformBackend::Win32:
-        {
-#if defined(_WIN32)
-            auto ptr = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWin32SurfaceKHR"));
-            ensure(ptr != nullptr, "vkCreateWin32SurfaceKHR not available. Did you enable VK_KHR_win32_surface?");
-
-            VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-            surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.hwnd = static_cast<HWND>(InDesc.NativeWindowHandle);
-            surfaceCreateInfo.hinstance = static_cast<HINSTANCE>(InDesc.NativeInstanceHandle);
-
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
-#endif
-            break;
-        }
-
-        case ENativePlatformBackend::X11:
-        {
-#if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateXlibSurfaceKHR"));
-            ensure(ptr != nullptr, "vkCreateXlibSurfaceKHR not available. Did you enable VK_KHR_xlib_surface?");
-
-            VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
-            surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.dpy = static_cast<Display*>(InDesc.NativeInstanceHandle);
-            surfaceCreateInfo.window = reinterpret_cast<uintptr_t>(InDesc.NativeWindowHandle);
-
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
-#endif
-            break;
-        }
-        case ENativePlatformBackend::Wayland:
-        {
-#if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWaylandSurfaceKHR"));
-            ensure(ptr != nullptr, "vkCreateWaylandSurfaceKHR not available. Did you enable VK_KHR_wayland_surface?");
-
-            VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
-            surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-            surfaceCreateInfo.display = static_cast<wl_display*>(InDesc.NativeWindowHandle);
-            surfaceCreateInfo.surface = static_cast<wl_surface*>(InDesc.NativeInstanceHandle);
-
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
-#endif
-            break;
-        }
-        case ENativePlatformBackend::Cocoa:
-        {
-#if defined(__APPLE__)
-            // IMPORTANT:
-            // Vulkan surface creation on macOS is normally done via VK_EXT_metal_surface using a CAMetalLayer*.
-            // GLFW's "native cocoa window" (NSWindow*) is not directly used by Vulkan WSI.
-            ensure(false, "Cocoa surface creation requires VK_EXT_metal_surface with a CAMetalLayer*. Provide layer handle via WindowInfo.");
-
-            Result = VK_ERROR_EXTENSION_NOT_PRESENT;
-#endif
-            break;
-        }
-    }
-
-    ensure(Result == VK_SUCCESS, "Failed to create Vulkan surface.");
-    ensure(Surface != VK_NULL_HANDLE, "Failed to create Vulkan surface.");
-
-    uint32_t SurfaceFormatCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
-
-    std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
-    if (SurfaceFormatCount)
-    {
-        SurfaceFormats.resize(SurfaceFormatCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
-    }
-
-    for (const auto& Element : SurfaceFormats)
-    {
-        if (Element.format == VK_FORMAT_B8G8R8A8_SRGB && Element.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            SurfaceFormat = Element;
-        }
-    }
-
-    uint32_t PresentModeCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
-
-    std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
-    if (PresentModeCount)
-    {
-        PresentModes.resize(PresentModeCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
-    }
-
-    for (const auto& Element : PresentModes)
-    {
-        if (Element == VK_PRESENT_MODE_FIFO_KHR)
-        {
-            PresentMode = Element;
-        }
-    }
-
-    CreateSwapchain(InDesc.Size);
-    AcquireNextImageIndex();
 }
 
 RVulkanSwapchain::~RVulkanSwapchain()
 {
     DestroySwapchain();
-
-    VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
-void RVulkanSwapchain::CreateSwapchain(Vector2i Size)
+void RVulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR SurfaceFormat, VkExtent2D InExtent)
 {
+    // Cache the current extent
+    Extent = InExtent;
+
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
     VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
-    const uint32_t Width = static_cast<uint32_t>(Size.x);
-    const uint32_t Height = static_cast<uint32_t>(Size.y);
-
-    Extent = { Width, Height };
     Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
     Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
 
@@ -216,8 +96,8 @@ void RVulkanSwapchain::CreateSwapchain(Vector2i Size)
     {
         FRHITextureDesc Desc = FRHITextureDesc::Create2D(Extent.width, Extent.height, ERHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, ERHITextureLayout::Undefined, 0, 0, 1);
         FRHITextureViewDesc ViewDesc = FRHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, ERHIResourceLifetime::Persistent);
-        Backbuffer.push_back(std::make_unique<FVulkanTexture>(Device, Desc, Images[Index]));
-        BackbufferView.push_back(std::make_unique<FVulkanTextureView>(Device, ViewDesc, Backbuffer.back().get()));
+        BackBuffer.push_back(std::make_unique<FVulkanTexture>(Device, Desc, Images[Index]));
+        BackBufferView.push_back(std::make_unique<FVulkanTextureView>(Device, ViewDesc, BackBuffer.back().get()));
     }
 
     VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
@@ -228,28 +108,66 @@ void RVulkanSwapchain::CreateSwapchain(Vector2i Size)
 
     for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
     {
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &ImageAcquiredSemaphores[Index]);
+        VkSemaphore Semaphore;
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
+
+        ImageAcquiredSemaphores[Index] = std::make_shared<FVulkanSemaphore>(Semaphore);
     }
 
     for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
     {
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphores[Index]);
+        VkSemaphore Semaphore;
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
+
+        RenderFinishedSemaphores[Index] = std::make_shared<FVulkanSemaphore>(Semaphore);
     }
+
+    ensure(ImageAcquiredSemaphores.size() > 0, "Swapchain has no acquire semaphores (image count too low?)");
+}
+
+void RVulkanSwapchain::DestroySwapchain()
+{
+    Device.WaitUntilIdle();
+
+    if (Swapchain != VK_NULL_HANDLE)
+    {
+        VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
+        Swapchain = VK_NULL_HANDLE;
+    }
+
+    // TODO: Use DTOR to release/destroy
+    for (auto& Semaphore : ImageAcquiredSemaphores)
+    {
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
+    }
+
+    // TODO: Use DTOR to release/destroy
+    for (auto& Semaphore : RenderFinishedSemaphores)
+    {
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
+    }
+
+    BackBuffer.clear();
+    BackBufferView.clear();
+    ImageAcquiredSemaphores.clear();
+    RenderFinishedSemaphores.clear();
+
+    CurrentImageIndex = UINT32_MAX;
+    SemaphoreIndex = 0;
+    NumAcquireCalls = 0;
+    NumPresentCalls = 0;
 }
 
 bool RVulkanSwapchain::AcquireNextImageIndex()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
-    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex], VK_NULL_HANDLE, &CurrentImageIndex);
+    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex]->Handle, VK_NULL_HANDLE, &CurrentImageIndex);
 
     if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
     {
         RK_LOG_INFO("Swapchain is out of date.");
-
-        DestroySwapchain();
-        CreateSwapchain(Vector2i(1280, 720));
-		AcquireNextImageIndex();
+        return false;
     }
 
     ++NumAcquireCalls;
@@ -263,7 +181,7 @@ void RVulkanSwapchain::Present()
     PresentInfo.pNext = VK_NULL_HANDLE;
     PresentInfo.pSwapchains = &Swapchain;
     PresentInfo.swapchainCount = 1;
-    PresentInfo.pWaitSemaphores = &RenderFinishedSemaphores[CurrentImageIndex];
+    PresentInfo.pWaitSemaphores = &RenderFinishedSemaphores[CurrentImageIndex]->Handle;
     PresentInfo.waitSemaphoreCount = 1;
     PresentInfo.pImageIndices = &CurrentImageIndex;
 
@@ -272,45 +190,18 @@ void RVulkanSwapchain::Present()
     ++NumPresentCalls;
 }
 
-void RVulkanSwapchain::DestroySwapchain()
-{
-    Device.WaitUntilIdle();
-
-    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
-
-    for (auto& Semaphore : ImageAcquiredSemaphores)
-    {
-        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
-    }
-
-    for (auto& Semaphore : RenderFinishedSemaphores)
-    {
-        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore, nullptr);
-    }
-
-    Backbuffer.clear();
-    BackbufferView.clear();
-    ImageAcquiredSemaphores.clear();
-    RenderFinishedSemaphores.clear();
-
-    CurrentImageIndex = UINT32_MAX;
-    SemaphoreIndex = 0;
-    NumAcquireCalls = 0;
-    NumPresentCalls = 0;
-}
-
 FRHITexture* RVulkanSwapchain::GetBackBufferTexture() const
 {
-    ensure(Backbuffer.size() != 0)
+    ensure(BackBuffer.size() != 0)
 
-    return Backbuffer[CurrentImageIndex].get();
+    return BackBuffer[CurrentImageIndex].get();
 }
 
 FRHITextureView* RVulkanSwapchain::GetBackBufferTextureView() const
 {
-    ensure(BackbufferView.size() != 0)
+    ensure(BackBufferView.size() != 0)
 
-    return BackbufferView[CurrentImageIndex].get();
+    return BackBufferView[CurrentImageIndex].get();
 }
 
 VkImage RVulkanSwapchain::GetImage() const

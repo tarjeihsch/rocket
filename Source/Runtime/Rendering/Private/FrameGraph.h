@@ -3,7 +3,11 @@
 #include <cstdint>
 #include <functional>
 #include <vector>
+#include <unordered_set>
 
+class RRHIViewport;
+class RRHISwapchain;
+class RVulkanViewport;
 struct FRHIPipeline;
 struct FRHITexture;
 struct FRHITextureDesc;
@@ -94,7 +98,6 @@ struct FFrameGraphPass
     std::vector<FFGBufferRef> BufferReads;
     std::vector<FFGBufferRef> BufferWrites;
 
-    // todo: remove
     void AddColorAttachment(FRHITexture* Resource);
     void AddInputAttachment(FRHITexture* Resource);
     void AddSampledTexture(FRHITexture* Resource);
@@ -102,7 +105,6 @@ struct FFrameGraphPass
     void AddStorageImage(FRHITexture* Resource);
     void AddTransferDst(FRHITexture* Resource);
     void AddTransferSrc(FRHITexture* Resource);
-    void AddPresentSrc(FRHITexture* Resource);
 };
 
 struct FFrameGraphBuilder

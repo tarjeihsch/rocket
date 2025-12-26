@@ -5,6 +5,7 @@
 #include "Common/RHITexture.h"
 #include "VulkanDescriptorManager.h"
 
+class RVulkanViewport;
 class FVulkanDevice;
 struct RDescriptorHandle;
 
@@ -45,6 +46,7 @@ struct FVulkanTextureView : FRHITextureView
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const override;
     virtual void* GetHandle() const override;
     virtual uint32_t GetBindingIndex() const override;
+    virtual FRHITexture* GetTexture() const override;
 
     FRHITexture* Texture;
     VkImageView ImageView;

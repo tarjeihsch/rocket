@@ -107,6 +107,11 @@ uint32_t FVulkanTextureView::GetBindingIndex() const
     return DescriptorHandle.Index;
 }
 
+FRHITexture* FVulkanTextureView::GetTexture() const
+{
+    return Texture;
+}
+
 void FVulkanTextureView::Alloc()
 {
     VkImageViewCreateInfo CreateInfo = VulkanRHI::GetVkImageViewCreateInfo(static_cast<VkImage>(Texture->GetHandle()), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVkAspect(Desc.Aspect));

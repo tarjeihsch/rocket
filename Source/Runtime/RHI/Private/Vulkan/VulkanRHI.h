@@ -4,6 +4,7 @@
 
 #include <vector>
 
+class RVulkanViewport;
 struct FRHITextureView;
 struct FRHITextureAttachment;
 class FVulkanDevice;
@@ -23,7 +24,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType GetInterfaceType() const noexcept override;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept override;
 
-    virtual RRHISwapchain* CreateSwapchain(RRHISwapchainDesc& Desc) override;
+    virtual RRHIViewport* CreateViewport(RRHIViewportDesc& Desc) override;
     virtual void RHIWaitUntilIdle() const override;
     virtual uint64_t GetFrameCounter() const noexcept override;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const override;
@@ -61,13 +62,6 @@ public:
     virtual uint32_t RHIGetComputeQueueFamilyIndex() const override;
     virtual uint32_t RHIGetTransferQueueFamilyIndex() const override;
     virtual uint32_t RHIGetPresentQueueFamilyIndex() const override;
-    virtual VkSurfaceKHR RHIGetVkSurface() const override;
-    virtual VkSwapchainKHR RHIGetVkSwapchain() const override;
-    virtual VkExtent2D RHIGetSwapchainExtent() const override;
-    virtual VkPresentModeKHR RHIGetSwapchainPresentMode() const override;
-    virtual VkSurfaceFormatKHR RHIGetSwapchainSurfaceFormat() const override;
-    virtual VkSemaphore GetImageAcquiredSemaphore() const override;
-    virtual VkSemaphore GetRenderFinishedSemaphore() const override;
     virtual std::span<const char*> GetValidationExtensions() override;
     virtual std::span<const char*> GetInstanceExtensions() override;
     virtual std::span<const char*> GetPhysicalDeviceExtensions() override;
@@ -78,14 +72,15 @@ public:
 
     // CVulkanRHI interface
     inline FVulkanDevice* GetDevice() const;
-    inline RVulkanSwapchain* GetViewport() const;
+    RVulkanViewport* ResolveViewportFromPresentationTarget(FRHITextureView* TextureView) const;
+    RVulkanViewport* ResolveViewportFromPresentationTarget(FRHITexture* Texture) const;
     // ~CVulkanRHI interface
 
 private:
     VkInstance Instance;
 
     FVulkanDevice* Device;
-    RVulkanSwapchain* Swapchain;
+    std::vector<RVulkanViewport*> Viewports;
 
     std::vector<const char*> InstanceExtensions;
     std::vector<const char*> ValidationLayerExtensions;

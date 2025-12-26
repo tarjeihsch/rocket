@@ -6,6 +6,7 @@
 
 #include "Events/Delegate.h"
 
+struct FRHISemaphore;
 class FVulkanDevice;
 struct FVulkanCommandBuffer;
 struct FVulkanCommandBufferPool;
@@ -37,9 +38,7 @@ inline bool operator<(EVulkanCommandBufferContextState a, EVulkanCommandBufferCo
     return static_cast<int>(a) < static_cast<int>(b);   
 }
 
-struct FVulkanCommandBufferPayload;
-
-class FVulkanCommandBufferContext 
+class FVulkanCommandBufferContext
 {
 private:
     FVulkanCommandBufferPool& Pool;
@@ -52,7 +51,7 @@ public:
 
     void NewPayload();
     void EndPayload();
-    
+
     bool ShouldFlush() const;
     void Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
 

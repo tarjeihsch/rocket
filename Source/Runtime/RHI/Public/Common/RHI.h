@@ -6,6 +6,8 @@
 #include <array>
 #include <assert.h>
 
+class RRHIViewport;
+struct RRHIViewportDesc;
 class RRHISwapchain;
 struct RRHISwapchainDesc;
 struct RRHISamplerDesc;
@@ -80,7 +82,7 @@ public:
     [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
     [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
 
-    virtual RRHISwapchain* CreateSwapchain(RRHISwapchainDesc& Desc) = 0;
+    virtual RRHIViewport* CreateViewport(RRHIViewportDesc& Desc) = 0;
     virtual uint64_t GetFrameCounter() const noexcept = 0;
     virtual void RHIWaitUntilIdle() const = 0;
     virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
@@ -100,6 +102,7 @@ public:
     virtual void RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawCall& DrawCall) = 0;
     virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
     virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
+
     virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
     virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
     virtual std::array<uint32_t, 2> RHIGetViewportExtent() const = 0;
