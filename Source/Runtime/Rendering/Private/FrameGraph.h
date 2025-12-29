@@ -1,118 +1,264 @@
 #pragma once
 
+#include "Assertion.h"
+#include "Common/RHI.h"
+#include "Common/RHITexture.h"
+#include "Common/RHIBuffer.h"
+
 #include <cstdint>
 #include <functional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
-#include <unordered_set>
 
-class RRHIViewport;
-class RRHISwapchain;
-class RVulkanViewport;
-struct FRHIPipeline;
-struct FRHITexture;
-struct FRHITextureDesc;
-struct FRHITextureView;
-struct FRHITextureViewDesc;
-struct FRHIBuffer;
-struct FRHIBufferDesc;
-class FRHICommandList;
-enum class ERHIResourceAccess : uint16_t;
+struct RHISemaphore;
+class RHISurface;
+class VulkanCommandListContext;
 
-enum class EFGPassFlags : uint8_t
+enum class ERGTextureUsage : uint8_t
 {
-    None = 0,
+    Undefined = 0,
 
-    // Executes rasterizer pass on graphics queue
-    Graphics = 1 << 0,
+    ColorAttachment,
+    DepthStencilAttachment,
 
-    // Executes compute pass on graphics queue
-    Compute = 1 << 1,
+    ShaderRead,
+    ShaderWrite,
 
-    // Executes transfer pass on graphics queue
-    Copy = 1 << 2,
+    CopySrc,
+    CopyDst,
 
-    // Executes compute pass on compute queue
-    AsyncCompute = 1 << 3,
-
-    // Executes transfer pass on compute queue
-    AsyncCopy = 1 << 4,
-
-    // Use dynamic rendering
-    Dynamic = 1 << 5,
-
-    // Clear color on attachments
-    ClearColor = 1 << 6
+    Present,
 };
 
-inline EFGPassFlags operator|(EFGPassFlags Lhs, EFGPassFlags Rhs) { return static_cast<EFGPassFlags>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline EFGPassFlags operator&(EFGPassFlags Lhs, EFGPassFlags Rhs) { return static_cast<EFGPassFlags>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
-
-struct FFGResourceRef
+enum class ERGAccess : uint8_t
 {
-    explicit FFGResourceRef(ERHIResourceAccess InAccess)
-        : TargetAccess(InAccess)
+    Read,
+    Write,
+};
+
+struct FGTextureHandle
+{
+    uint32_t Id = UINT32_MAX;
+
+    inline bool IsValid() const { return Id != UINT32_MAX; }
+    inline bool operator==(const FGTextureHandle& Other) const { return Id == Other.Id; }
+};
+
+struct FGTextureViewHandle
+{
+    uint32_t Id = UINT32_MAX;
+
+    inline bool IsValid() const { return Id != UINT32_MAX; }
+    inline bool operator==(const FGTextureViewHandle& Other) const { return Id == Other.Id; }
+};
+
+struct FGTextureState
+{
+    ERHITextureLayout Layout = ERHITextureLayout::Undefined;
+    ERHIResourceAccess Access = ERHIResourceAccess::None;
+    ERHIPipelineStage Stage = ERHIPipelineStage::TopOfPipe;
+};
+
+struct FRGExternalTexture
+{
+    RHITexture* Texture = nullptr;
+    FRHITextureView* DefaultView = nullptr;
+    FGTextureState InitialState;
+    FGTextureState FinalState;
+};
+
+struct FRGTexture
+{
+    std::string Name;
+    FRHITextureDesc Desc;
+    RHITexture* Physical = nullptr;
+    FGTextureState State;
+    bool bExternal = false;
+};
+
+struct FRGTextureView
+{
+    std::string Name;
+    FRHITextureViewDesc Desc;
+    FGTextureHandle Texture;
+    FRHITextureView* Physical = nullptr;
+    bool bExternal = false;
+};
+
+struct FRGTextureUse
+{
+    FGTextureHandle Texture;
+    ERGTextureUsage Usage = ERGTextureUsage::Undefined;
+    ERGAccess Access = ERGAccess::Read;
+};
+
+enum class ERGBufferUsage : uint8_t
+{
+    Undefined = 0,
+
+    Vertex,
+    Index,
+    Uniform,
+
+    StorageRead,
+    StorageWrite,
+
+    Indirect,
+
+    CopySrc,
+    CopyDst,
+};
+
+struct FRGBufferHandle
+{
+    uint32_t Id = UINT32_MAX;
+    inline bool IsValid() const { return Id != UINT32_MAX; }
+};
+
+struct FRGBufferState
+{
+    ERHIResourceAccess Access = ERHIResourceAccess::None;
+    ERHIPipelineStage Stage = ERHIPipelineStage::None;
+    uint32_t QueueFamilyIndex = ~(0U);
+};
+
+struct FRGBuffer
+{
+    std::string Name;
+    FRHIBufferDesc Desc = {};
+    FRHIBuffer* Physical = nullptr;
+    bool bExternal = false;
+};
+
+struct FRGExternalBuffer
+{
+    FRHIBuffer* Buffer = nullptr;
+    FRGBufferState InitialState;
+    FRGBufferState FinalState;
+};
+
+struct FRGBufferUse
+{
+    FRGBufferHandle Buffer;
+    ERGBufferUsage Usage = ERGBufferUsage::Undefined;
+    ERGAccess Access = ERGAccess::Read;
+
+    uint64_t Offset = 0;
+    uint64_t Size = ~0ULL;
+};
+
+struct FGPass
+{
+    std::string Name;
+
+    std::vector<FRGTextureUse> Textures;
+    std::vector<FRGBufferUse> Buffers;
+
+    std::function<void(IRHICommandListContext& CmdListCtx)> Execute;
+
+    std::vector<uint32_t> OutEdges;
+    uint32_t InDegree = 0;
+};
+
+enum class ERGResourceKind : uint8_t { Texture, Buffer };
+
+struct FDGEdgeReason
+{
+    enum class EType : uint8_t
     {
-    }
+        ReadAfterWrite,
+        WriteAfterWrite,
+    };
 
-    ERHIResourceAccess TargetAccess;
+    uint32_t FromPass;
+    uint32_t ToPass;
+
+    ERGResourceKind Kind;
+    uint32_t ResourceId;
+
+    EType Type;
 };
 
-struct FFGTextureRef : FFGResourceRef
+struct FrameDependencyGraph
 {
-    FFGTextureRef(ERHIResourceAccess InAccess, FRHITexture* InHandle);
-    ~FFGTextureRef();
-
-    FRHITexture* Handle;
-
-    // Output color buffer (color attachment)
-    FRHITextureView* RTVHandle;
-
-    // Input for shaders (sampled textures)
-    FRHITextureView* SRVHandle;
-
-    // Read/write in shaders (compute)
-    FRHITextureView* UAVHandle;
-
-    // Output depth buffer (depth stencil attachment)
-    FRHITextureView* DSVHandle;
+    std::vector<std::string> Nodes;
+    std::vector<std::pair<uint32_t, uint32_t>> Edges;
+    std::vector<uint32_t> TopologicalOrder;
+    std::vector<FDGEdgeReason> EdgeReasons;
 };
 
-struct FFGBufferRef : FFGResourceRef
+class FrameGraph;
+
+class FrameGraphBuilder
 {
-    FRHIBuffer* Handle;
-};
+public:
+    explicit FrameGraphBuilder(FrameGraph& InGraph);
 
-struct FFGPipelineRef : FFGResourceRef
-{
-    FRHIPipeline* Handle;
-};
+    FGTextureHandle CreateTexture(std::string_view Name, const FRHITextureDesc& Desc);
+    FGTextureViewHandle CreateTextureView(std::string_view Name, const FRHITextureViewDesc& Desc, FGTextureHandle Texture);
+    FRGBufferHandle CreateBuffer(std::string_view Name, const FRHIBufferDesc& Desc);
 
-struct FFrameGraphPass
-{
-    const char* DebugName;
-    EFGPassFlags Flags;
-    std::function<void(FRHICommandList&)> Callback;
+    FGTextureHandle RegisterExternalTexture(std::string_view Name, RHITexture* Texture, FRHITextureView* DefaultView, const FGTextureState& InitialState, const FGTextureState& FinalState);
+    FRGBufferHandle RegisterExternalBuffer(std::string_view Name, FRHIBuffer* Buffer, const FRGBufferState& InitialState, const FRGBufferState& FinalState);
 
-    std::vector<FFGTextureRef> TextureReads;
-    std::vector<FFGTextureRef> TextureWrites;
-    std::vector<FFGBufferRef> BufferReads;
-    std::vector<FFGBufferRef> BufferWrites;
+    uint32_t AddPass(std::string_view Name, const std::function<void(FrameGraphBuilder& Builder, FGPass& Pass)>& Setup, const std::function<void(IRHICommandListContext& CmdListCtx)>& Execute);
 
-    void AddColorAttachment(FRHITexture* Resource);
-    void AddInputAttachment(FRHITexture* Resource);
-    void AddSampledTexture(FRHITexture* Resource);
-    void AddDepthAttachment(FRHITexture* Resource);
-    void AddStorageImage(FRHITexture* Resource);
-    void AddTransferDst(FRHITexture* Resource);
-    void AddTransferSrc(FRHITexture* Resource);
-};
+    void ReadTexture(FGPass& Pass, FGTextureHandle Texture, ERGTextureUsage Usage);
+    void WriteTexture(FGPass& Pass, FGTextureHandle Texture, ERGTextureUsage Usage);
 
-struct FFrameGraphBuilder
-{
-    FFrameGraphPass& AddPass(const char* DebugName, EFGPassFlags Flags, std::function<void(FRHICommandList& CmdList)>&& Callback);
+    void ReadBuffer(FGPass& Pass, FRGBufferHandle Buffer, ERGBufferUsage Usage, uint64_t Offset = 0, uint64_t Size = ~0ULL);
+    void WriteBuffer(FGPass& Pass, FRGBufferHandle Buffer, ERGBufferUsage Usage, uint64_t Offset = 0, uint64_t Size = ~0ULL);
 
-    void Execute();
+    RHITexture* ResolveTexture(FGTextureHandle Texture) const;
+    FRHITextureView* ResolveTextureView(FGTextureViewHandle View) const;
+    FRHIBuffer* ResolveBuffer(FRGBufferHandle Buffer) const;
 
 private:
-    std::vector<FFrameGraphPass> Passes;
+    FrameGraph& Graph;
+};
+
+class FrameGraph
+{
+public:
+    FrameGraph() = default;
+
+    FrameGraphBuilder Builder();
+
+    void compile();
+    void execute(IRHICommandListContext& ctx);
+    void Reset();
+
+    FGTextureHandle AllocTexture(std::string_view Name, const FRHITextureDesc& Desc);
+    FGTextureViewHandle AllocTextureView(std::string_view Name, const FRHITextureViewDesc& Desc, FGTextureHandle Texture);
+    FGTextureHandle AllocExternalTexture(std::string_view Name, RHITexture* Texture, FRHITextureView* DefaultView, const FGTextureState& InitialState, const FGTextureState& FinalState);
+    FRGBufferHandle AllocBuffer(std::string_view Name, const FRHIBufferDesc& Desc);
+    FRGBufferHandle AllocExternalBuffer(std::string_view Name, FRHIBuffer* Buffer, const FRGBufferState& InitialState, const FRGBufferState& FinalState);
+
+    uint32_t AllocPass(std::string_view Name, const std::function<void(IRHICommandListContext&)>& Execute);
+
+    [[nodiscard]] RHITexture* ResolveTexture(FGTextureHandle Texture) const;
+    [[nodiscard]] FRHITextureView* ResolveTextureView(FGTextureViewHandle View) const;
+    [[nodiscard]] FRHIBuffer* ResolveBuffer(FRGBufferHandle Buffer) const;
+
+private:
+    void Barrier(IRHICommandListContext& CmdListCtx, const FGPass& Pass);
+
+    static FGTextureState GetTextureState(ERGTextureUsage Usage, ERGAccess Access);
+    static FRGBufferState GetBufferState(ERGBufferUsage Usage, ERGAccess Access);
+
+private:
+    std::vector<FRGTexture> Textures;
+    std::vector<FRGTextureView> Views;
+    std::vector<FRGBuffer> Buffers;
+    std::vector<FRGExternalTexture> ExternalTextures;
+    std::vector<FRGExternalBuffer> ExternalBuffers;
+
+    std::vector<FGPass> Passes;
+    std::vector<uint32_t> CompiledPasses;
+
+    friend class FrameGraphBuilder;
 };

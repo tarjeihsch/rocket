@@ -28,35 +28,35 @@ FVulkanQueue::~FVulkanQueue()
 
 void FVulkanQueue::Submit()
 {
-    std::vector<FVulkanCommandBufferPayload*> Payloads;
+    std::vector<VulkanCommandBufferPayload*> Payloads;
     
-    FVulkanCommandListContext* CmdListContext = static_cast<FVulkanCommandListContext*>(GetRHI()->GetCommandListContext());
-    CmdListContext->Flush(Payloads);
+    VulkanCommandListContext* CmdListContext = static_cast<VulkanCommandListContext*>(GetRHI()->GetCommandListContext());
+    CmdListContext->submit(Payloads);
 
-    for (FVulkanCommandBufferPayload *Payload : Payloads)
+    for (VulkanCommandBufferPayload* payload : Payloads)
     {
         std::vector<VkSemaphoreSubmitInfo> WaitSemaphoreSubmitInfos;
-        for (uint32_t Index = 0; Index < Payload->WaitSemaphores.size(); ++Index)
+        for (uint32_t Index = 0; Index < payload->WaitSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo WaitSemaphoreSubmitInfo = {};
             WaitSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            WaitSemaphoreSubmitInfo.semaphore = Payload->WaitSemaphores[Index];
-            WaitSemaphoreSubmitInfo.stageMask = Payload->WaitStageMasks[Index];
+            WaitSemaphoreSubmitInfo.semaphore = payload->WaitSemaphores[Index];
+            WaitSemaphoreSubmitInfo.stageMask = payload->WaitStageMasks[Index];
             WaitSemaphoreSubmitInfos.push_back(WaitSemaphoreSubmitInfo);
         }
 
         std::vector<VkSemaphoreSubmitInfo> SignalSemaphoreSubmitInfos;
-        for (uint32_t Index = 0; Index < Payload->SignalSemaphores.size(); ++Index)
+        for (uint32_t Index = 0; Index < payload->SignalSemaphores.size(); ++Index)
         {
             VkSemaphoreSubmitInfo ReadySemaphoreSubmitInfo = {};
             ReadySemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-            ReadySemaphoreSubmitInfo.semaphore = Payload->SignalSemaphores[Index];
-            ReadySemaphoreSubmitInfo.stageMask = Payload->SignalStageMasks[Index];
+            ReadySemaphoreSubmitInfo.semaphore = payload->SignalSemaphores[Index];
+            ReadySemaphoreSubmitInfo.stageMask = payload->SignalStageMasks[Index];
             SignalSemaphoreSubmitInfos.push_back(ReadySemaphoreSubmitInfo);
         }
 
         std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
-        for (FVulkanCommandBuffer *CommandBuffer : Payload->CommandBuffers)
+        for (FVulkanCommandBuffer *CommandBuffer : payload->CommandBuffers)
         {
             VkCommandBufferSubmitInfo CommandBufferSubmitInfo = {};
             CommandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -66,7 +66,7 @@ void FVulkanQueue::Submit()
         }
 
         uint64_t TimelineValue = NextTimelineSemaphoreValue++;
-        Payload->TimelineSemaphoreValue = TimelineValue;
+        payload->TimelineSemaphoreValue = TimelineValue;
 
         VkSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
         TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -75,9 +75,9 @@ void FVulkanQueue::Submit()
         TimelineSemaphoreSubmitInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
         SignalSemaphoreSubmitInfos.push_back(TimelineSemaphoreSubmitInfo);
 
-        if (Payload->PreSubmitCallback.Size())
+        if (payload->PreSubmitCallback.Size())
         {
-            Payload->PreSubmitCallback.Broadcast();
+            payload->PreSubmitCallback.Broadcast();
         }
 
         VkSubmitInfo2 SubmitInfo = {};
@@ -92,23 +92,28 @@ void FVulkanQueue::Submit()
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
         ensure(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
 
-        SubmissionQueue.push(Payload);
+        if (payload->PostSubmitCallback.Size())
+        {
+            payload->PostSubmitCallback.Broadcast();
+        }
+
+        SubmissionQueue.push(payload);
     }
 }
 
-void FVulkanQueue::ImmediateSubmit(std::function<void(FRHICommandList &CmdList)> InCallback)
+void FVulkanQueue::ImmediateSubmit(std::function<void(RHICommandList &CmdList)> InCallback)
 {
-    FVulkanCommandListContext CmdListContext(Device);
-    FRHICommandList CmdList(CmdListContext);
+    VulkanCommandListContext CmdListContext(Device);
+    RHICommandList CmdList(CmdListContext);
 
     InCallback(CmdList);
 
-    FRHICommandListExecutor::Execute(CmdList.GetContext(), CmdList.Flush());
+    RHICommandListExecutor::execute(CmdList.GetContext(), CmdList.Flush());
 
-    std::vector<FVulkanCommandBufferPayload*> Payloads;
-    CmdListContext.Flush(Payloads);
+    std::vector<VulkanCommandBufferPayload*> Payloads;
+    CmdListContext.submit(Payloads);
 
-    for (FVulkanCommandBufferPayload* Payload : Payloads)
+    for (VulkanCommandBufferPayload* Payload : Payloads)
     {
         std::vector<VkCommandBufferSubmitInfo> CommandBufferSubmitInfos;
         for (FVulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
@@ -146,7 +151,7 @@ void FVulkanQueue::Wait()
         return;
     }
 
-    FVulkanCommandBufferPayload* Payload = SubmissionQueue.front();
+    VulkanCommandBufferPayload* Payload = SubmissionQueue.front();
     SubmissionQueue.pop();
 
     VkSemaphoreWaitInfo SemaphoreWaitInfo = {};
@@ -192,7 +197,7 @@ void FVulkanQueue::Shutdown()
 {
     while (!SubmissionQueue.empty())
     {
-        FVulkanCommandBufferPayload* Payload = SubmissionQueue.front();
+        VulkanCommandBufferPayload* Payload = SubmissionQueue.front();
         SubmissionQueue.pop();
         delete Payload;
     }

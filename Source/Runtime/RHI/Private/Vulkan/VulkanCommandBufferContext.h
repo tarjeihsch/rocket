@@ -6,12 +6,14 @@
 
 #include "Events/Delegate.h"
 
-struct FRHISemaphore;
+class RHISwapchain;
+class VulkanSwapchain;
+struct RHISemaphore;
 class FVulkanDevice;
 struct FVulkanCommandBuffer;
 struct FVulkanCommandBufferPool;
 
-struct FVulkanCommandBufferPayload
+struct VulkanCommandBufferPayload
 {
     std::vector<VkSemaphore> WaitSemaphores;
     std::vector<VkSemaphore> SignalSemaphores;
@@ -21,47 +23,50 @@ struct FVulkanCommandBufferPayload
     uint64_t TimelineSemaphoreValue;
 
     TDelegate<> PreSubmitCallback;
-    TDelegate<> PostExecuteCallback;
+    TDelegate<> PostSubmitCallback;
 };
 
 // Wait -> Execute -> Signal is the allowed forward transition.
 // Attempting to regress state (Execute -> Wait) triggers payload completion and starts new payload.
-enum class EVulkanCommandBufferContextState 
+enum class VulkanCommandBufferContextState
 { 
     Wait, 
     Execute, 
     Signal 
 };
 
-inline bool operator<(EVulkanCommandBufferContextState a, EVulkanCommandBufferContextState b)
+inline bool operator<(VulkanCommandBufferContextState a, VulkanCommandBufferContextState b)
 {
     return static_cast<int>(a) < static_cast<int>(b);   
 }
 
-class FVulkanCommandBufferContext
+class VulkanCommandBufferContext
 {
 private:
-    FVulkanCommandBufferPool& Pool;
+    FVulkanCommandBufferPool& pool;
 
 public:
-    explicit FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
+    explicit VulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
 
-    FVulkanCommandBuffer* GetCurrentCommandBuffer();
-    FVulkanCommandBufferPayload& GetPayload(EVulkanCommandBufferContextState State); 
+    FVulkanCommandBuffer* get_current_command_buffer();
+    VulkanCommandBufferPayload& get_payload(VulkanCommandBufferContextState State);
 
-    void NewPayload();
-    void EndPayload();
+    void new_payload();
+    void end_payload();
 
-    bool ShouldFlush() const;
-    void Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads);
+    void add_pre_submit_event(std::function<void()>&& callback);
+    void add_post_submit_event(std::function<void()>&& callback);
 
-    void AddWaitSemaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
-    void AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);
-    void AddSignalSemaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask);
-    void AddSignalSemaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMasks);
+    void submit(std::vector<VulkanCommandBufferPayload*>& OutPayloads);
+
+    void add_wait_semaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
+    void add_wait_semaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);
+    void add_signal_semaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask);
+    void add_signal_semaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMasks);
 
 private:
-    std::vector<FVulkanCommandBufferPayload*> Payloads; // todo: std_shared_ptr for memory leak
-    EVulkanCommandBufferContextState CurrentState;
-    FVulkanCommandBufferPayload* CurrentPayload;
+    std::vector<VulkanCommandBufferPayload*> m_payloads;
+
+    VulkanCommandBufferPayload* m_current_payload;
+    VulkanCommandBufferContextState m_current_state;
 };

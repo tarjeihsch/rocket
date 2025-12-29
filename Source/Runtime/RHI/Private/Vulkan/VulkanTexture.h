@@ -5,12 +5,12 @@
 #include "Common/RHITexture.h"
 #include "VulkanDescriptorManager.h"
 
-class RVulkanViewport;
+class VulkanSurface;
 class FVulkanDevice;
 struct RDescriptorHandle;
 
 // Both persistent and transient textures will only ever live within the duration of this wrapper.
-struct FVulkanTexture : FRHITexture
+struct FVulkanTexture : RHITexture
 {
     FVulkanTexture(FVulkanDevice& InDevice);
     FVulkanTexture(FVulkanDevice& InDevice, FRHITextureDesc& InDesc);
@@ -19,7 +19,8 @@ struct FVulkanTexture : FRHITexture
 
     virtual const FRHITextureDesc& RHIGetTextureDesc() const override;
     virtual void* GetHandle() const override;
-
+    virtual void gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage) override;
+    
     VkImage Image;
     VmaAllocation Allocation;
     uint64_t Offset;
@@ -39,16 +40,16 @@ private:
 
 struct FVulkanTextureView : FRHITextureView
 {
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, FRHITexture* Texture);
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, FRHITexture* Texture, VkImageView InImageView);
+    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, RHITexture* Texture);
+    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, RHITexture* Texture, VkImageView InImageView);
     ~FVulkanTextureView();
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const override;
     virtual void* GetHandle() const override;
     virtual uint32_t GetBindingIndex() const override;
-    virtual FRHITexture* GetTexture() const override;
+    virtual RHITexture* GetTexture() const override;
 
-    FRHITexture* Texture;
+    RHITexture* Texture;
     VkImageView ImageView;
 
 private:

@@ -9,7 +9,9 @@ enum class ERHIQueueSyncStage : uint8_t
     AllCommands
 };
 
-struct FRHISemaphore
+struct RHISemaphore
 {
-    virtual ~FRHISemaphore() = default;
+    virtual ~RHISemaphore() = default;
+    
+    virtual void* GetHandle() = 0;
 };

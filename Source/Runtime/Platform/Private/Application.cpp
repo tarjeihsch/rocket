@@ -56,13 +56,13 @@ Application::Application()
     M_IsValid = false;
 }
 
-Application& Application::Get()
+Application& Application::get()
 {
     static Application platform;
     return platform;
 }
 
-bool Application::Initialize()
+bool Application::initialize()
 {
     if (M_IsValid)
     {
@@ -78,7 +78,7 @@ bool Application::Initialize()
     return true;
 }
 
-void Application::Shutdown()
+void Application::shutdown()
 {
     if (!M_IsValid)
     {
@@ -93,20 +93,20 @@ void Application::Shutdown()
     glfwTerminate();
 }
 
-void Application::PumpMessageQueue()
+void Application::pump_message_queue()
 {
     glfwPollEvents();
 
     Event event = {};
     while (eventQueue.Dequeue(event))
     {
-        ProcessDeferredMessage(event);
+        process_deferred_message(event);
     }
 }
 
-void Application::ProcessDeferredMessage(const Event& event)
+void Application::process_deferred_message(const Event& event)
 {
-    RWindow* window = FindWindowByHandle(event.WindowHandleID);
+    Window* window = FindWindowByHandle(event.WindowHandleID);
     
     switch (event.type)
     {
@@ -247,19 +247,14 @@ void Application::ProcessDeferredMessage(const Event& event)
     }
 }
 
-void Application::SetMessageController(MessageController* messageController)
+void Application::set_message_controller(MessageController* messageController)
 {
     M_MessageController = messageController;
 }
 
-void Application::Upd()
+Window* Application::init_window(WindowCreateInfo windowCreateInfo)
 {
-    GRHI->Tick(0.1f);
-}
-
-RWindow* Application::InitWindow(const WindowCreateInfo& windowCreateInfo)
-{
-    std::unique_ptr<RWindow> window = std::make_unique<RWindow>();
+    std::unique_ptr<Window> window = std::make_unique<Window>();
     if (!window->Create(windowCreateInfo))
     {
         return nullptr;
@@ -272,9 +267,9 @@ RWindow* Application::InitWindow(const WindowCreateInfo& windowCreateInfo)
     return M_Windows.back().get();
 }
 
-RWindow* Application::FindWindowByHandle(uint64_t WindowHandleID)
+Window* Application::FindWindowByHandle(uint64_t WindowHandleID)
 {
-    for (const std::unique_ptr<RWindow>& window : M_Windows)
+    for (const std::unique_ptr<Window>& window : M_Windows)
     {
         if (window && window->GetWindowHandleID() == WindowHandleID)
         {

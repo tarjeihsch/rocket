@@ -6,6 +6,6 @@ namespace Platform
 {
     std::vector<const char*> GetSurfaceExtensions()
     {
-        return Application::Get().GetSurfaceExtensions();        
+        return Application::get().GetSurfaceExtensions();        
     }
 }

@@ -5,6 +5,7 @@
 #include "VulkanLoader.h"
 #include "VulkanResourceManager.h"
 #include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanCommandList.h"
 
 FVulkanTexture::FVulkanTexture(FVulkanDevice& InDevice)
     : Device(InDevice)
@@ -38,6 +39,18 @@ void* FVulkanTexture::GetHandle() const
     return Image;
 }
 
+void FVulkanTexture::gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage)
+{
+    if (current_layout != new_layout || current_access != new_access || current_pipeline_stage != new_pipeline_stage)
+    {
+        //cmd_list.Enqueue<FVulkanCommandPipelineBarrier>(new_layout, new_access, new_pipeline_stage);
+
+        current_layout = new_layout;
+        current_access = new_access;
+        current_pipeline_stage = new_pipeline_stage;
+    }
+}
+
 void FVulkanTexture::Alloc()
 {
     VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Extent[0], Desc.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
@@ -59,7 +72,7 @@ void FVulkanTexture::Alloc()
         ensure(Result == VK_SUCCESS);
     }
 
-    CurrentLayout = Desc.InitialLayout;
+    current_layout = Desc.InitialLayout;
 }
 
 void FVulkanTexture::Free()
@@ -76,13 +89,13 @@ void FVulkanTexture::Free()
     }
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, FRHITexture* InTexture)
+FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, RHITexture* InTexture)
     : Device(InDevice), Desc(InDesc), Texture(InTexture)
 {
     Alloc();
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, FRHITexture* InTexture, VkImageView InImageView)
+FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, RHITexture* InTexture, VkImageView InImageView)
     : Device(InDevice), Desc(InDesc), Texture(InTexture), ImageView(InImageView)
 {
 }
@@ -107,7 +120,7 @@ uint32_t FVulkanTextureView::GetBindingIndex() const
     return DescriptorHandle.Index;
 }
 
-FRHITexture* FVulkanTextureView::GetTexture() const
+RHITexture* FVulkanTextureView::GetTexture() const
 {
     return Texture;
 }

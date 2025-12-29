@@ -7,47 +7,40 @@
 #include <vulkan/vulkan_core.h>
 #include <memory>
 
+class VulkanCommandListContext;
 struct FVulkanSemaphore;
 class FVulkanDevice;
 struct FVulkanTexture;
 struct FVulkanTextureView;
 
-class RVulkanSwapchain : public RRHISwapchain
+class VulkanSwapchain : public RHISwapchain
 {
 private:
     FVulkanDevice& Device;
 
 public:
-    explicit RVulkanSwapchain(FVulkanDevice& InDevice);
-    virtual ~RVulkanSwapchain() override;
+    explicit VulkanSwapchain(FVulkanDevice& InDevice);
+    virtual ~VulkanSwapchain() override;
 
-    virtual FRHITexture* GetBackBufferTexture() const override;
-    virtual FRHITextureView* GetBackBufferTextureView() const override;
+    RHITexture* GetBackBufferTexture() const;
 
     inline VkSwapchainKHR GetVkSwapchain() const;
     inline VkExtent2D GetFramebufferExtent() const;
-    inline const std::shared_ptr<FVulkanSemaphore>& GetImageAcquiredSemaphore() const;
-    inline const std::shared_ptr<FVulkanSemaphore>& GetRenderFinishedSemaphore() const;
+    inline std::shared_ptr<FVulkanSemaphore> get_image_acquired_semaphore() const;
+    inline std::shared_ptr<FVulkanSemaphore> get_render_finished_semaphore() const;
     
-    VkImage GetImage() const;
-    VkImageView GetImageView() const;
-
 private:
     void CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR SurfaceFormat, VkExtent2D Extent);
     void DestroySwapchain();
-    bool AcquireNextImageIndex();
-    void Present();
+
+    bool acquire_back_buffer_image(VulkanCommandListContext& ctx);
+    void present_back_buffer_image(VulkanCommandListContext& ctx);
 
 private:
     VkSwapchainKHR Swapchain;
     VkExtent2D Extent;
 
-    std::vector<std::unique_ptr<FVulkanTexture>> BackBuffer;
-    std::vector<std::unique_ptr<FVulkanTextureView>> BackBufferView;
-
-    //std::vector<VkSemaphore> ImageAcquiredSemaphores;
-    //std::vector<VkSemaphore> RenderFinishedSemaphores;
-
+    std::vector<std::unique_ptr<FVulkanTexture>> BackBuffers;
     std::vector<std::shared_ptr<FVulkanSemaphore>> ImageAcquiredSemaphores;
     std::vector<std::shared_ptr<FVulkanSemaphore>> RenderFinishedSemaphores;
 
@@ -56,25 +49,25 @@ private:
     uint32_t NumAcquireCalls;
     uint32_t NumPresentCalls;
 
-    friend class RVulkanViewport;
+    friend class VulkanSurface;
 };
 
-inline VkSwapchainKHR RVulkanSwapchain::GetVkSwapchain() const
+inline VkSwapchainKHR VulkanSwapchain::GetVkSwapchain() const
 {
     return Swapchain;
 }
 
-inline VkExtent2D RVulkanSwapchain::GetFramebufferExtent() const
+inline VkExtent2D VulkanSwapchain::GetFramebufferExtent() const
 {
     return Extent;
 }
 
-inline const std::shared_ptr<FVulkanSemaphore>& RVulkanSwapchain::GetImageAcquiredSemaphore() const
+inline std::shared_ptr<FVulkanSemaphore> VulkanSwapchain::get_image_acquired_semaphore() const
 {
     return ImageAcquiredSemaphores[SemaphoreIndex];
 }
 
-inline const std::shared_ptr<FVulkanSemaphore>& RVulkanSwapchain::GetRenderFinishedSemaphore() const
+inline std::shared_ptr<FVulkanSemaphore> VulkanSwapchain::get_render_finished_semaphore() const
 {
     return RenderFinishedSemaphores[CurrentImageIndex];
 }

@@ -12,39 +12,39 @@
 #include "VulkanSemaphore.h"
 #include "Common/RHIDrawCommand.h"
 #include "VulkanTexture.h"
-#include "VulkanViewport.h"
+#include "VulkanSurface.h"
 #include "Math/Vector2.h"
 
-FVulkanCommandListContext::FVulkanCommandListContext(FVulkanDevice &InDevice)
-    : FVulkanCommandBufferContext(*InDevice.GetGraphicsQueue()->GetCommandBufferPool())
+VulkanCommandListContext::VulkanCommandListContext(FVulkanDevice &InDevice)
+    : VulkanCommandBufferContext(*InDevice.GetGraphicsQueue()->GetCommandBufferPool())
 {
 }
 
-void FVulkanCommandListContext::RHIBindPipeline(FRHIPipeline *Pipeline)
+void VulkanCommandListContext::RHIBindPipeline(FRHIPipeline *Pipeline)
 {
     VkDescriptorSet DescriptorSet = GetVulkanRHIMinimal()->GetBindlessDescriptorSet();
 
-    VulkanRHI::vkCmdBindPipeline(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(Pipeline->GetHandle()));
-    VulkanRHI::vkCmdBindDescriptorSets(GetCurrentCommandBuffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
+    VulkanRHI::vkCmdBindPipeline(get_current_command_buffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(Pipeline->GetHandle()));
+    VulkanRHI::vkCmdBindDescriptorSets(get_current_command_buffer()->GetHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), 0, 1, &DescriptorSet, 0, nullptr);
 }
 
-void FVulkanCommandListContext::RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
+void VulkanCommandListContext::RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
 {
     VkRect2D Scissor = { X, Y, Width, Height };
-    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
+    VulkanRHI::vkCmdSetScissor(get_current_command_buffer()->GetHandle(), 0, 1, &Scissor);
 }
 
-void FVulkanCommandListContext::RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+void VulkanCommandListContext::RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
 {
     VkBuffer VertexBufferPtr = reinterpret_cast<VkBuffer>(DrawCommand.VertexBuffer->GetHandle());
 
     VkDeviceSize Offset = { 0 };
-    VulkanRHI::vkCmdBindVertexBuffers(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Offset);
-    VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &Params);
-    VulkanRHI::vkCmdDraw(GetCurrentCommandBuffer()->GetHandle(), DrawCommand.IndexCount, 1, 0, 0);
+    VulkanRHI::vkCmdBindVertexBuffers(get_current_command_buffer()->GetHandle(), 0, 1, &VertexBufferPtr, &Offset);
+    VulkanRHI::vkCmdPushConstants(get_current_command_buffer()->GetHandle(), GetVulkanRHIMinimal()->GetBindlessPipelineLayout(), VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(FRHIDrawParams), &Params);
+    VulkanRHI::vkCmdDraw(get_current_command_buffer()->GetHandle(), DrawCommand.IndexCount, 1, 0, 0);
 }
 
-void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams)
+void VulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams)
 {
     // VkBuffer VertexBufferPtr = static_cast<VkBuffer>(DrawCommand.VertexBuffer->GetHandle());
     // VkBuffer IndexBufferPtr = static_cast<VkBuffer>(DrawCommand.IndexBuffer->GetHandle());
@@ -56,7 +56,7 @@ void FVulkanCommandListContext::RHIDrawIndexed(const FRHIDrawCommand& DrawComman
     // VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCommand.IndexCount, 1, DrawCommand.IndexBufferOffset, static_cast<int32_t>(DrawCommand.VertexBufferOffset), 0);
 }
 
-void FVulkanCommandListContext::RHIDrawIndexed2(const FRHIDrawCall& DrawCall)
+void VulkanCommandListContext::RHIDrawIndexed2(const FRHIDrawCall& DrawCall)
 {
     //VkBuffer VertexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetVB()->GetHandle());
     //VkBuffer IndexBufferPtr = static_cast<VkBuffer>(DrawCall.Primitive->GetIB()->GetHandle());
@@ -71,7 +71,7 @@ void FVulkanCommandListContext::RHIDrawIndexed2(const FRHIDrawCall& DrawCall)
     //VulkanRHI::vkCmdDrawIndexed(GetCurrentCommandBuffer()->GetHandle(), DrawCall.Primitive->GetIndexCount(), 1, 0, 0, 0);
 }
 
-void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex)
+void VulkanCommandListContext::RHIPipelineBarrier(RHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex)
 {
     VkImageMemoryBarrier2 ImageBarrier = {};
     ImageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -110,10 +110,59 @@ void FVulkanCommandListContext::RHIPipelineBarrier(FRHITexture *InTexture, ERHIT
     DependencyInfo.imageMemoryBarrierCount = 1;
     DependencyInfo.pImageMemoryBarriers = &ImageBarrier;
 
-    VulkanRHI::vkCmdPipelineBarrier2(GetCurrentCommandBuffer()->GetHandle(), &DependencyInfo);
+    VulkanRHI::vkCmdPipelineBarrier2(get_current_command_buffer()->GetHandle(), &DependencyInfo);
+
+    InTexture->current_layout = InNewLayout;
+    InTexture->current_access = InDstAccess;
+    InTexture->current_pipeline_stage = InDstStage;
+    InTexture->CurrentQueueFamilyIndex = InDstQueueFamilyIndex;
 }
 
-void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor)
+void VulkanCommandListContext::RHIPipelineBarrier(FRHIBuffer* InBuffer, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex, uint64_t InOffset, uint64_t InSize)
+{
+    ensure(InBuffer != nullptr, "Buffer is null");
+
+    VkBufferMemoryBarrier2 BufferBarrier = {};
+    BufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+    BufferBarrier.pNext = nullptr;
+
+    // NOTE: your VulkanRHI::GetVulkanPipelineStage returns VkPipelineStageFlags (1.x).
+    // VkPipelineStageFlags2 is compatible for these core bits; keep as-is unless you migrate to StageFlags2 mapping.
+    BufferBarrier.srcStageMask = VulkanRHI::GetVulkanPipelineStage(InSrcStage);
+    BufferBarrier.dstStageMask = VulkanRHI::GetVulkanPipelineStage(InDstStage);
+    BufferBarrier.srcAccessMask = VulkanRHI::GetVulkanAccess(InSrcAccess);
+    BufferBarrier.dstAccessMask = VulkanRHI::GetVulkanAccess(InDstAccess);
+
+    BufferBarrier.srcQueueFamilyIndex = InSrcQueueFamilyIndex;
+    BufferBarrier.dstQueueFamilyIndex = InDstQueueFamilyIndex;
+
+    BufferBarrier.buffer = static_cast<VkBuffer>(InBuffer->GetHandle());
+    BufferBarrier.offset = InOffset;
+    BufferBarrier.size = InSize;
+
+    VkDependencyInfo DependencyInfo = {};
+    DependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    DependencyInfo.pNext = nullptr;
+    DependencyInfo.dependencyFlags = 0;
+
+    DependencyInfo.memoryBarrierCount = 0;
+    DependencyInfo.pMemoryBarriers = nullptr;
+
+    DependencyInfo.bufferMemoryBarrierCount = 1;
+    DependencyInfo.pBufferMemoryBarriers = &BufferBarrier;
+
+    DependencyInfo.imageMemoryBarrierCount = 0;
+    DependencyInfo.pImageMemoryBarriers = nullptr;
+
+    VulkanRHI::vkCmdPipelineBarrier2(get_current_command_buffer()->GetHandle(), &DependencyInfo);
+
+    // Critical: keep FRHIBuffer state coherent across frames
+    InBuffer->CurrentAccess = InDstAccess;
+    InBuffer->CurrentPipelineStage = InDstStage;
+    InBuffer->CurrentQueueFamilyIndex = InDstQueueFamilyIndex;
+}
+
+void VulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor)
 {
     std::vector<VkRenderingAttachmentInfoKHR> AttachmentInfos = {};
 
@@ -125,13 +174,13 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
         AttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         AttachmentInfo.loadOp = bClearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         AttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        AttachmentInfo.clearValue.color = {{ 0, 0, 0, 1 }};
+        AttachmentInfo.clearValue.color = {{ 0, 1, 0, 1 }};
         AttachmentInfos.push_back(AttachmentInfo);
     }
 
     //CVulkanRHI* VulkanRHI = CastRHI<CVulkanRHI>(GRHI);
 //
-    FRHITexture* Texture = ColorAttachmentsView[0]->GetTexture();
+    RHITexture* Texture = ColorAttachmentsView[0]->GetTexture();
     Vector2i Extent(Texture->RHIGetTextureDesc().Extent[0], Texture->RHIGetTextureDesc().Extent[1]);
     //RVulkanViewport* Viewport = VulkanRHI->ResolveViewportFromPresentationTarget(Texture);
 //
@@ -178,27 +227,27 @@ void FVulkanCommandListContext::RHIBeginRendering(std::span<FRHITextureView*> Co
     Scissor.offset = { 0, 0 };
     Scissor.extent = { static_cast<uint32_t>(Extent.x), static_cast<uint32_t>(Extent.y) };
 
-    VulkanRHI::vkCmdBeginRendering(GetCurrentCommandBuffer()->GetHandle(), &RenderingInfo);
-    VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Viewport);
-    VulkanRHI::vkCmdSetScissor(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Scissor);
+    VulkanRHI::vkCmdBeginRendering(get_current_command_buffer()->GetHandle(), &RenderingInfo);
+    VulkanRHI::vkCmdSetViewport(get_current_command_buffer()->GetHandle(), 0, 1, &Viewport);
+    VulkanRHI::vkCmdSetScissor(get_current_command_buffer()->GetHandle(), 0, 1, &Scissor);
 }
 
-void FVulkanCommandListContext::RHIEndRendering()
+void VulkanCommandListContext::RHIEndRendering()
 {
-    VulkanRHI::vkCmdEndRendering(GetCurrentCommandBuffer()->GetHandle());
+    VulkanRHI::vkCmdEndRendering(get_current_command_buffer()->GetHandle());
 }
 
-void FVulkanCommandListContext::RHICopyBuffer(FRHIBuffer *Src, FRHIBuffer *Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize)
+void VulkanCommandListContext::RHICopyBuffer(FRHIBuffer *Src, FRHIBuffer *Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize)
 {
     VkBufferCopy BufferCopy = {};
     BufferCopy.srcOffset = 0;
     BufferCopy.dstOffset = 0;
     BufferCopy.size = Src->GetBufferDesc().Size;
 
-    VulkanRHI::vkCmdCopyBuffer(GetCurrentCommandBuffer()->GetHandle(), static_cast<VkBuffer>(Src->GetHandle()), static_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
+    VulkanRHI::vkCmdCopyBuffer(get_current_command_buffer()->GetHandle(), static_cast<VkBuffer>(Src->GetHandle()), static_cast<VkBuffer>(Dst->GetHandle()), 1, &BufferCopy);
 }
 
-void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *Dst)
+void VulkanCommandListContext::RHICmdBlitImage(RHITexture *Src, RHITexture *Dst)
 {
     VkImageBlit BlitRegion = {};
     BlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -215,10 +264,10 @@ void FVulkanCommandListContext::RHICmdBlitImage(FRHITexture *Src, FRHITexture *D
     BlitRegion.dstOffsets[0] = { 0, 0, 0 };
     BlitRegion.dstOffsets[1] = { (int32_t)Dst->RHIGetTextureDesc().Extent[0], (int32_t)Dst->RHIGetTextureDesc().Extent[1], 1 };
 
-    VulkanRHI::vkCmdBlitImage(GetCurrentCommandBuffer()->GetHandle(), reinterpret_cast<VkImage>(Src->GetHandle()), VulkanRHI::GetVulkanLayout(Src->CurrentLayout), reinterpret_cast<VkImage>(Dst->GetHandle()), VulkanRHI::GetVulkanLayout(Dst->CurrentLayout), 1, &BlitRegion, VK_FILTER_NEAREST);
+    VulkanRHI::vkCmdBlitImage(get_current_command_buffer()->GetHandle(), reinterpret_cast<VkImage>(Src->GetHandle()), VulkanRHI::GetVulkanLayout(Src->current_layout), reinterpret_cast<VkImage>(Dst->GetHandle()), VulkanRHI::GetVulkanLayout(Dst->current_layout), 1, &BlitRegion, VK_FILTER_NEAREST);
 }
 
-void FVulkanCommandListContext::RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset)
+void VulkanCommandListContext::RHICopyBufferToImage(FRHIBuffer *SrcBuffer, RHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset)
 {
     VkBuffer SrcBufferPtr = static_cast<VkBuffer>(SrcBuffer->GetHandle());
     VkImage DstImagePtr = static_cast<VkImage>(DstTexture->GetHandle());
@@ -234,10 +283,10 @@ void FVulkanCommandListContext::RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHI
     Buffer.imageOffset = { 0, 0, 0 };
     Buffer.imageExtent = { Width, Height, 1 };
 
-    VulkanRHI::vkCmdCopyBufferToImage(GetCurrentCommandBuffer()->GetHandle(), SrcBufferPtr, DstImagePtr, DstImageLayout, 1, &Buffer);
+    VulkanRHI::vkCmdCopyBufferToImage(get_current_command_buffer()->GetHandle(), SrcBufferPtr, DstImagePtr, DstImageLayout, 1, &Buffer);
 }
 
-void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
+void VulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex)
 {
     VkImageMemoryBarrier2 ImageMemoryBarrier = {};
     ImageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -268,10 +317,10 @@ void FVulkanCommandListContext::RHISetMemoryBarrier(VkImage Image, VkImageLayout
     dependencyInfo.imageMemoryBarrierCount = 1;
     dependencyInfo.pImageMemoryBarriers = &ImageMemoryBarrier;
 
-    VulkanRHI::vkCmdPipelineBarrier2(GetCurrentCommandBuffer()->GetHandle(), &dependencyInfo);
+    VulkanRHI::vkCmdPipelineBarrier2(get_current_command_buffer()->GetHandle(), &dependencyInfo);
 }
 
-void FVulkanCommandListContext::RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth)
+void VulkanCommandListContext::RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth)
 {
     VkViewport Viewport;
     Viewport.x = p_X;
@@ -280,5 +329,5 @@ void FVulkanCommandListContext::RHISetViewport(float p_X, float p_Y, float p_Wid
     Viewport.height = p_Height;
     Viewport.minDepth = p_MinDepth;
     Viewport.maxDepth = p_MaxDepth;
-    VulkanRHI::vkCmdSetViewport(GetCurrentCommandBuffer()->GetHandle(), 0, 1, &Viewport);
+    VulkanRHI::vkCmdSetViewport(get_current_command_buffer()->GetHandle(), 0, 1, &Viewport);
 }

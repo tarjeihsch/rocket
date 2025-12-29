@@ -3,6 +3,7 @@
 #include "RHI.h"
 
 #include <glm/glm.hpp>
+#include "RHITexture.h"
 
 enum class ERHIResourceAccess : uint16_t;
 enum class ERHIPipelineStage : uint16_t;
@@ -99,9 +100,9 @@ struct FRHIBuffer
     virtual uint32_t GetBindingIndex() const = 0;
     virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
 
-    ERHIResourceAccess CurrentAccess;
-    ERHIPipelineStage CurrentPipelineStage;
-    uint32_t CurrentQueueFamilyIndex;
+    ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
+    ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
+    uint32_t CurrentQueueFamilyIndex = ~(0U);
 };
 
 enum class ERHIBufferMemoryPackerAlignmentLayout

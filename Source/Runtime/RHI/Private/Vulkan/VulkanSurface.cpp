@@ -1,6 +1,7 @@
-#include "VulkanViewport.h"
+#include "VulkanSurface.h"
 
 #include "Assertion.h"
+#include "VulkanCommandList.h"
 #include "VulkanLoader.h"
 #include "VulkanSemaphore.h"
 #include "VulkanSwapchain.h"
@@ -18,7 +19,7 @@
     #include <objc/objc.h>
 #endif
 
-RVulkanViewport::RVulkanViewport(FVulkanDevice& InDevice, RRHIViewportDesc& InDesc)
+VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
     : Device(InDevice)
 {
     VkResult Result;
@@ -124,48 +125,43 @@ RVulkanViewport::RVulkanViewport(FVulkanDevice& InDevice, RRHIViewportDesc& InDe
         }
     }
 
-    Swapchain = new RVulkanSwapchain(Device);
+    Swapchain = new VulkanSwapchain(Device);
     Swapchain->CreateSwapchain(Surface, SurfaceFormat, {1280, 720});
 }
 
-RVulkanViewport::~RVulkanViewport()
+VulkanSurface::~VulkanSurface()
 {
     delete Swapchain;
 
     VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
-FRHITexture* RVulkanViewport::GetBackBufferTexture()
+RHITexture* VulkanSurface::get_back_buffer_texture()
 {
     return Swapchain->GetBackBufferTexture();
 }
 
-Vector2i RVulkanViewport::GetExtent() const
+void VulkanSurface::acquire(IRHICommandListContext& ctx)
 {
-    return { (int32_t)Swapchain->GetFramebufferExtent().width, (int32_t)Swapchain->GetFramebufferExtent().height };
-}
-
-void RVulkanViewport::Acquire()
-{
-    if (!Swapchain->AcquireNextImageIndex())
+    if (!Swapchain->acquire_back_buffer_image((VulkanCommandListContext&)ctx))
     {
         Swapchain->DestroySwapchain();
         Swapchain->CreateSwapchain(Surface, SurfaceFormat, {1280, 720});
-        Swapchain->AcquireNextImageIndex();
+        Swapchain->acquire_back_buffer_image((VulkanCommandListContext&)ctx);
     }
 }
 
-void RVulkanViewport::Present()
+void VulkanSurface::present(IRHICommandListContext& ctx)
 {
-    Swapchain->Present();
+    Swapchain->present_back_buffer_image((VulkanCommandListContext&)ctx);
 }
 
-const std::shared_ptr<FRHISemaphore>& RVulkanViewport::GetImageAvailableSemaphore() const
+std::shared_ptr<RHISemaphore> VulkanSurface::GetImageAvailableSemaphore() const
 {
-    return Swapchain->GetImageAcquiredSemaphore();
+    return Swapchain->get_image_acquired_semaphore();
 }
 
-const std::shared_ptr<FRHISemaphore>& RVulkanViewport::GetRenderFinishedSemaphore() const
+std::shared_ptr<RHISemaphore> VulkanSurface::GetRenderFinishedSemaphore() const
 {
-    return Swapchain->GetRenderFinishedSemaphore();
+    return Swapchain->get_render_finished_semaphore();
 }

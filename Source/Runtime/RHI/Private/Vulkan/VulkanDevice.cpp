@@ -8,7 +8,8 @@
 #include "VulkanQueue.h"
 #include "VulkanTexture.h"
 #include "VulkanCommandBuffer.h"
-#include "VulkanCommandList.h"
+
+#define MB(x) x / 1024 / 1024
 
 void FTransientResourceAllocator::Init()
 {
@@ -50,6 +51,8 @@ void FTransientResourceAllocator::Init()
 
     Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
     ensure(Result == VK_SUCCESS, "Failed to create virtual block.");
+
+    RK_LOG_INFO("Reserved virtual block for transient resources: {} MB", MB(Size));
 }
 
 void FTransientResourceAllocator::Shutdown()
@@ -83,6 +86,7 @@ void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
 
     CurrentAllocations++;
     TotalAllocations++;
+    Offset += MemoryRequirements.size;
 }
 
 void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset)
@@ -103,6 +107,7 @@ void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffs
 
     CurrentAllocations++;
     TotalAllocations++;
+    Offset += MemoryRequirements.size;
 }
 
 void *FTransientResourceAllocator::GetMappedBasePtr() const
@@ -185,7 +190,7 @@ void FVulkanDevice::WaitUntilIdle() const
     VulkanRHI::vkDeviceWaitIdle(Device);
 }
 
-FVulkanCommandListContext *FVulkanDevice::GetImmediateCommandListContext() const
+VulkanCommandListContext *FVulkanDevice::GetImmediateCommandListContext() const
 {
     return ImmediateCommandListContext;
 }
@@ -283,14 +288,10 @@ void FVulkanDevice::Initialize()
     }
 
     PipelineManager = new FVulkanPipelineManager(*this);
-
     DescriptorManager = new VulkanDescriptorManager(*this);
-
     DeferredDeletionQueue = new FDeferredDeletionQueue(*this);
-
-    CommandListContext = new FVulkanCommandListContext(*this);
-
-    TransientResourceAllocator = new FTransientResourceAllocator(*this, 256ull * 1024 * 1024);
+    CommandListContext = new VulkanCommandListContext(*this);
+    TransientResourceAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024);
 }
 
 void FVulkanDevice::Shutdown()

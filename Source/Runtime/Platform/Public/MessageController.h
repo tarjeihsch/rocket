@@ -1,12 +1,9 @@
 #pragma once
 
-#include <memory>
-
 #include "Event.h"
 
-class Window;
+#include <memory>
 
-/*  */
 class MessageController
 {
 public:
@@ -49,7 +46,7 @@ public:
         return false; 
     }
 
-    virtual bool OnMouseDown(RWindow* Window, Button Button)
+    virtual bool OnMouseDown(Window* Window, Button Button)
     { 
         return false; 
     }
@@ -64,20 +61,20 @@ public:
         return false; 
     }
 
-    virtual bool OnWindowSizeChanged(RWindow* Window, int32_t Width, int32_t Height, bool bWasMinimized)
+    virtual bool OnWindowSizeChanged(Window* Window, int32_t Width, int32_t Height, bool bWasMinimized)
     { 
         return false; 
     }
     
-    virtual void OnResizingWindow(RWindow* Window)
+    virtual void OnResizingWindow(Window* Window)
     {
     }
     
-    virtual void OnWindowClose(RWindow* Window)
+    virtual void OnWindowClose(Window* Window)
     {
     }
     
-    virtual void OnWindowMoved(RWindow* Window, int32_t X, int32_t Y)
+    virtual void OnWindowMoved(Window* Window, int32_t X, int32_t Y)
     {
     }
 };

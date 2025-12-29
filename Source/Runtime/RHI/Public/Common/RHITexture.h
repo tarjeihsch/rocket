@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common/RHI.h"
+
 enum class ERHIResourceLifetime : uint8_t;
 
 enum class ERHITextureUsage : uint8_t
@@ -15,6 +17,9 @@ enum class ERHITextureUsage : uint8_t
     UAV = 1 << 7  // VK_IMAGE_USAGE_STORAGE_BIT
 };
 
+inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
+inline ERHITextureUsage operator&(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+
 enum class ERHITextureLayout : uint8_t
 {
     Undefined, // Initial undefined state
@@ -26,42 +31,6 @@ enum class ERHITextureLayout : uint8_t
     TransferSrc, // Copy from
     TransferDst, // Copy to
     Present // Swapchain presentation
-};
-
-enum class ERHIResourceAccess : uint16_t
-{
-    None = 0,
-
-    // GPU Shader Access
-    ShaderSampledRead         = 1 << 0,  // SRV: sampled image
-    ShaderStorageRead         = 1 << 1,  // UAV read
-    ShaderStorageWrite        = 1 << 2,  // UAV write
-    InputAttachmentRead       = 1 << 3,  // Vulkan subpass input
-
-    // Transfer Operations
-    TransferRead              = 1 << 4,
-    TransferWrite             = 1 << 5,
-
-    // Attachment Writes
-    ColorAttachmentWrite      = 1 << 6,
-    DepthStencilAttachmentWrite = 1 << 7,
-
-    // CPU Access
-    HostRead                  = 1 << 8,
-    HostWrite                 = 1 << 9,
-};
-
-enum class ERHIPipelineStage : uint16_t
-{
-    None              = 0,
-    TopOfPipe         = 1 << 0,
-    VertexShader      = 1 << 1,
-    FragmentShader    = 1 << 2,
-    ComputeShader     = 1 << 3,
-    Transfer          = 1 << 4,
-    ColorAttachment   = 1 << 5,
-    DepthStencil      = 1 << 6,
-    BottomOfPipe      = 1 << 7,
 };
 
 enum class ERHITextureFormat
@@ -82,9 +51,6 @@ enum class ERHITextureAspect
     Stencil = 1 << 2,
     DepthStencil = Depth | Stencil
 };
-
-inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline ERHITextureUsage operator&(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
 
 inline uint32_t GetTextureFormatPixelByteSize(ERHITextureFormat Format)
 {
@@ -131,17 +97,21 @@ struct FRHITextureDesc
     }
 };
 
-struct FRHITexture
+struct RHITexture
 {
-    virtual ~FRHITexture() = default;
+    virtual ~RHITexture() = default;
 
     virtual const FRHITextureDesc& RHIGetTextureDesc() const = 0;
     virtual void* GetHandle() const = 0;
+    
+    virtual void gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage) = 0;
 
-    ERHITextureLayout CurrentLayout = ERHITextureLayout::Undefined;
-    ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
-    ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
+    ERHITextureLayout current_layout = ERHITextureLayout::Undefined;
+    ERHIResourceAccess current_access = ERHIResourceAccess::None;
+    ERHIPipelineStage current_pipeline_stage = ERHIPipelineStage::None;
     uint32_t CurrentQueueFamilyIndex = ~(0U);
+
+    uint8_t m_is_back_buffer : 1;
 };
 
 struct FRHITextureViewDesc
@@ -165,7 +135,7 @@ struct FRHITextureView
     virtual ~FRHITextureView() = default;
 
     virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
-    virtual FRHITexture* GetTexture() const = 0;
+    virtual RHITexture* GetTexture() const = 0;
     virtual void* GetHandle() const = 0;
     virtual uint32_t GetBindingIndex() const = 0;
 };

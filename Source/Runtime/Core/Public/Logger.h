@@ -238,9 +238,20 @@ namespace Logger
     }
 }
 
+#if defined(__linux__)
 #define RK_LOG_TRACE(Format, ...)    Logger::GBufferLog.Log(ELogLevel::Trace,    Format __VA_OPT__(,) __VA_ARGS__)
 #define RK_LOG_DEBUG(Format, ...)    Logger::GBufferLog.Log(ELogLevel::Debug,    Format __VA_OPT__(,) __VA_ARGS__)
 #define RK_LOG_INFO(Format, ...)     Logger::GBufferLog.Log(ELogLevel::Info,     Format __VA_OPT__(,) __VA_ARGS__)
 #define RK_LOG_WARN(Format, ...)     Logger::GBufferLog.Log(ELogLevel::Warn,     Format __VA_OPT__(,) __VA_ARGS__)
 #define RK_LOG_ERROR(Format, ...)    Logger::GBufferLog.Log(ELogLevel::Error,    Format __VA_OPT__(,) __VA_ARGS__)
 #define RK_LOG_CRITICAL(Format, ...) Logger::GBufferLog.Log(ELogLevel::Critical, Format __VA_OPT__(,) __VA_ARGS__)
+#endif
+
+#if defined(_WIN32)
+    #define RK_LOG_TRACE(...)    Logger::GBufferLog.Log(ELogLevel::Trace,    __VA_ARGS__)
+    #define RK_LOG_DEBUG(...)    Logger::GBufferLog.Log(ELogLevel::Debug,    __VA_ARGS__)
+    #define RK_LOG_INFO(...)     Logger::GBufferLog.Log(ELogLevel::Info,     __VA_ARGS__)
+    #define RK_LOG_WARN(...)     Logger::GBufferLog.Log(ELogLevel::Warn,     __VA_ARGS__)
+    #define RK_LOG_ERROR(...)    Logger::GBufferLog.Log(ELogLevel::Error,    __VA_ARGS__)
+    #define RK_LOG_CRITICAL(...) Logger::GBufferLog.Log(ELogLevel::Critical, __VA_ARGS__)
+#endif

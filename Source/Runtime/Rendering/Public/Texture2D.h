@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-struct FRHITexture;
+struct RHITexture;
 
 enum class ETextureType
 {
@@ -18,12 +18,12 @@ struct RTexture2D
     explicit RTexture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight);
     ~RTexture2D();
 
-    inline FRHITexture* GetHandle() const;
+    inline RHITexture* GetHandle() const;
 
     void LoadRawTextureData(const uint8_t* Data);
 
 protected:
-    FRHITexture* Handle;
+    RHITexture* Handle;
 
 private:
     ETextureType Type;
@@ -31,7 +31,7 @@ private:
     uint32_t Height;
 };
 
-inline FRHITexture* RTexture2D::GetHandle() const
+inline RHITexture* RTexture2D::GetHandle() const
 {
     return Handle;
 }

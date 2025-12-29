@@ -3,19 +3,17 @@
 #include "Math/Vector2.h"
 #include "PlatformTypes.h"
 
+struct RHISemaphore;
 struct FRHITextureView;
-struct FRHITexture;
+struct RHITexture;
 
 struct RRHISwapchainDesc
 {
     Vector2i Size;
 };
 
-class RRHISwapchain
+class RHISwapchain
 {
 public:
-    virtual ~RRHISwapchain() = default;
-
-    virtual FRHITexture* GetBackBufferTexture() const = 0;
-    virtual FRHITextureView* GetBackBufferTextureView() const = 0;
+    virtual ~RHISwapchain() = default;
 };

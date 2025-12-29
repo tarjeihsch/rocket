@@ -5,7 +5,8 @@
 #include <span>
 #include <vector>
 
-struct FRHISemaphore;
+class RHISwapchain;
+struct RHISemaphore;
 enum class ERHIQueueSyncStage : uint8_t;
 struct RRHIRect;
 struct FRHIDrawCommand;
@@ -13,7 +14,7 @@ struct FRHIDrawParams;
 struct FRHIDrawCall;
 struct FRHIBuffer;
 struct FRHIPipeline;
-struct FRHITexture;
+struct RHITexture;
 struct FRHITextureView;
 struct FMeshDrawCommand;
 enum class ERHITextureLayout : uint8_t;
@@ -32,11 +33,12 @@ public:
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) = 0;
     virtual void RHIDrawIndexed2(const FRHIDrawCall& DrawCall) = 0;
-    virtual void RHIPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) = 0;
+    virtual void RHIPipelineBarrier(RHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) = 0;
+    virtual void RHIPipelineBarrier(FRHIBuffer* InBuffer, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex, uint64_t InOffset, uint64_t InSize) = 0;
     virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachment, bool bClearColor) = 0;
     virtual void RHIEndRendering() = 0;
     virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) = 0;
-    virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) = 0;
+    virtual void RHICmdBlitImage(RHITexture* Src, RHITexture* Dst) = 0;
 };
 
 struct FRHICommandBase
@@ -67,10 +69,10 @@ struct TRHICommand : FRHICommandBase
     }
 };
 
-class FRHICommandList
+class RHICommandList
 {
 public:
-    explicit FRHICommandList(IRHICommandListContext& InContext)
+    explicit RHICommandList(IRHICommandListContext& InContext)
         : Context(&InContext)
     {
     }
@@ -100,11 +102,11 @@ private:
     std::vector<uint8_t> Buffer;
 };
 
-class FRHICommandListImmediate : public FRHICommandList
+class FRHICommandListImmediate : public RHICommandList
 {
 public:
     explicit FRHICommandListImmediate(IRHICommandListContext& Ctx)
-        : FRHICommandList(Ctx), Context(Ctx)
+        : RHICommandList(Ctx), Context(Ctx)
     {
     }
 
@@ -119,10 +121,10 @@ private:
     IRHICommandListContext& Context;
 };
 
-class FRHICommandListExecutor
+class RHICommandListExecutor
 {
 public:
-    static void Execute(IRHICommandListContext& Context, std::vector<uint8_t>&& Buffer)
+    static void execute(IRHICommandListContext& Context, std::vector<uint8_t>&& Buffer)
     {
         uint8_t* Pointer = Buffer.data();
         uint8_t* EndPointer = Pointer + Buffer.size();

@@ -7,7 +7,7 @@
 struct FRHIPipeline;
 struct RBuffer;
 struct RTexture2D;
-class FRHICommandList;
+class RHICommandList;
 
 enum class EMaterialBlendMode
 {
@@ -45,7 +45,7 @@ public:
     void SetTextureParameter(const std::string& Name, RTexture2D* Texture);
 
     // Called to bind pipeline and write all material parameters to descriptors
-    void Bind(FRHICommandList& CmdList);
+    void Bind(RHICommandList& CmdList);
 
 private:
 	std::unordered_map<std::string, RBuffer*> Textures;

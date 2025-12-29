@@ -14,14 +14,14 @@ struct WindowCreateInfo
     bool hdpi;
 };
 
-class RWindow
+class Window
 {
 public:
-    RWindow();
-    ~RWindow();
+    Window();
+    ~Window();
 
-    RWindow(const RWindow&) = delete;
-    RWindow& operator=(const RWindow&) = delete;
+    Window(const Window&) = delete;
+    Window& operator=(const Window&) = delete;
 
     bool Create(const WindowCreateInfo& createInfo);
     void Destroy();

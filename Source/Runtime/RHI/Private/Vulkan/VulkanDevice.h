@@ -5,7 +5,7 @@
 #include <vector>
 #include <vma/vk_mem_alloc.h>
 
-class FVulkanCommandListContext;
+class VulkanCommandListContext;
 class FVulkanDevice;
 struct FVulkanTexture;
 class FVulkanQueue;
@@ -33,6 +33,9 @@ struct FTransientResourceAllocator
 
     void* GetMappedBasePtr() const;
 
+    inline size_t GetSize() const;
+    inline size_t GetOffset() const;
+
 private:
     void Init();
     void Shutdown();
@@ -49,6 +52,16 @@ private:
 
     FVulkanDevice& Device;
 };
+
+inline size_t FTransientResourceAllocator::GetSize() const
+{
+    return Size;
+}
+
+inline size_t FTransientResourceAllocator::GetOffset() const
+{
+    return Offset;
+}
 
 class FDeferredDeletionQueue
 {
@@ -125,8 +138,8 @@ public:
     inline VulkanDescriptorManager* GetDescriptorManager() const;
 
     inline FTransientResourceAllocator* GetTransientResourceAllocator() const;
-    inline FVulkanCommandListContext* GetCommandListContext() const;
-    inline FVulkanCommandListContext* GetImmediateCommandListContext() const;
+    inline VulkanCommandListContext* GetCommandListContext() const;
+    inline VulkanCommandListContext* GetImmediateCommandListContext() const;
     inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
 
     void GC();
@@ -145,8 +158,8 @@ private:
     FVulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
     FDeferredDeletionQueue* DeferredDeletionQueue;
-    FVulkanCommandListContext* CommandListContext;
-    FVulkanCommandListContext* ImmediateCommandListContext;
+    VulkanCommandListContext* CommandListContext;
+    VulkanCommandListContext* ImmediateCommandListContext;
     FTransientResourceAllocator* TransientResourceAllocator;
 
 private:
@@ -188,7 +201,7 @@ inline FTransientResourceAllocator *FVulkanDevice::GetTransientResourceAllocator
     return TransientResourceAllocator;
 }
 
-inline FVulkanCommandListContext *FVulkanDevice::GetCommandListContext() const
+inline VulkanCommandListContext *FVulkanDevice::GetCommandListContext() const
 {
     return CommandListContext;
 }

@@ -100,7 +100,7 @@ void RMaterial::SetTextureParameter(const std::string &Name, RTexture2D* Texture
 {
 }
 
-void RMaterial::Bind(FRHICommandList& CmdList)
+void RMaterial::Bind(RHICommandList& CmdList)
 {
     GetRHI()->RHICmdBindPipeline(CmdList, Pipeline);
 }

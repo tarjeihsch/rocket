@@ -3,20 +3,20 @@
 #include <cstdint>
 #include <array>
 
-struct FRHITexture;
+struct RHITexture;
 
 struct FRenderTarget
 {
     FRenderTarget(uint32_t Width, uint32_t Height);
     ~FRenderTarget();
 
-    inline FRHITexture* GetHandle() const;
+    inline RHITexture* GetHandle() const;
 
 private:
-    FRHITexture* Handle;
+    RHITexture* Handle;
 };
 
-inline FRHITexture* FRenderTarget::GetHandle() const
+inline RHITexture* FRenderTarget::GetHandle() const
 {
     return Handle;
 }

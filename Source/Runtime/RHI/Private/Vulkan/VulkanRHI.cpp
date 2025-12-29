@@ -14,7 +14,7 @@
 #include "VulkanSampler.h"
 #include "VulkanSwapchain.h"
 #include "VulkanTexture.h"
-#include "VulkanViewport.h"
+#include "VulkanSurface.h"
 
 #if RK_PLATFORM_WINDOWS
 #include <libloaderapi.h>
@@ -142,8 +142,6 @@ void CVulkanRHI::Init()
         }
     }
 
-    //Swapchain = new RVulkanSwapchain(*Device);
-
     FrameCounter = 0;
 }
 
@@ -151,33 +149,222 @@ void CVulkanRHI::Shutdown()
 {
     RHIWaitUntilIdle();
 
+    //for (auto Viewport : Viewports)
+    //{
+    //    delete Viewport;
+    //}
+
     delete Device;
     Device = nullptr;
 
     VulkanRHI::vkDestroyInstance(Instance, nullptr);
 }
 
-void CVulkanRHI::Tick(float DeltaTime)
-{
-    if (!Device->GetCommandListContext()->ShouldFlush())
-    {
-        return;
-    }
+//void CVulkanRHI::BeginFrame()
+//{
+////    FFrameGraph Graph;
+////
+////    auto Builder = Graph.Builder();
+////
+////    RRHIViewport* Viewport = Viewports[0];
+////    Viewport->Acquire();
+////    Graph.AddViewportSync(Viewport);
+////
+////    FRHITexture* BackBuffer = Viewport->GetBackBufferTexture();
+////
+////    FRGTextureState BackBufferInitial = { BackBuffer->CurrentLayout, BackBuffer->CurrentAccess, BackBuffer->CurrentPipelineStage };
+////    FRGTextureState BackBufferFinal = { ERHITextureLayout::Present, ERHIResourceAccess::None, ERHIPipelineStage::BottomOfPipe };
+////
+////    FRGTextureHandle RGBackBuffer = Builder.RegisterExternalTexture("BackBuffers", BackBuffer, nullptr, BackBufferInitial, BackBufferFinal);
+////
+////    FRHITextureViewDesc BackBufferViewDesc = FRHITextureViewDesc::Create2D(BackBuffer->RHIGetTextureDesc().Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient);
+////    FRGTextureViewHandle RGBackBufferView = Builder.CreateTextureView("BackBufferView", BackBufferViewDesc, RGBackBuffer);
+////
+////    const uint32_t W = BackBuffer->RHIGetTextureDesc().Extent[0];
+////    const uint32_t H = BackBuffer->RHIGetTextureDesc().Extent[1];
+////
+////    FRHITextureDesc AlbedoDesc = FRHITextureDesc::Create2D(W, H, ERHIResourceLifetime::Transient, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::Color | ERHITextureUsage::SRV, ERHITextureLayout::Undefined, 1, 1, 1);
+////    FRHITextureDesc NormalDesc = FRHITextureDesc::Create2D(W, H, ERHIResourceLifetime::Transient, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::Color | ERHITextureUsage::SRV, ERHITextureLayout::Undefined, 1, 1, 1);
+////    FRHITextureDesc DepthDesc = FRHITextureDesc::Create2D(W, H, ERHIResourceLifetime::Transient, ERHITextureFormat::D32_SFLOAT, ERHITextureUsage::Depth | ERHITextureUsage::SRV, ERHITextureLayout::Undefined, 1, 1, 1);
+////
+////    FRGTextureHandle RGAlbedo = Builder.CreateTexture("GBuffer.Albedo", AlbedoDesc);
+////    FRGTextureHandle RGNormal = Builder.CreateTexture("GBuffer.Normal", NormalDesc);
+////    FRGTextureHandle RGDepth = Builder.CreateTexture("GBuffer.Depth", DepthDesc);
+////
+////    FRGTextureViewHandle RGAlbedoRTV = Builder.CreateTextureView("GBuffer.Albedo.RTV", FRHITextureViewDesc::Create2D(AlbedoDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGAlbedo);
+////    FRGTextureViewHandle RGNormalRTV = Builder.CreateTextureView("GBuffer.Normal.RTV", FRHITextureViewDesc::Create2D(NormalDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGNormal);
+////    FRGTextureViewHandle RGDepthDSV = Builder.CreateTextureView("GBuffer.Depth.DSV", FRHITextureViewDesc::Create2D(DepthDesc.Format, ERHITextureAspect::Depth, ERHIResourceLifetime::Transient), RGDepth);
+////
+////    FRGTextureViewHandle RGAlbedoSRV = Builder.CreateTextureView("GBuffer.Albedo.SRV", FRHITextureViewDesc::Create2D(AlbedoDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGAlbedo);
+////    FRGTextureViewHandle RGNormalSRV = Builder.CreateTextureView("GBuffer.Normal.SRV", FRHITextureViewDesc::Create2D(NormalDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGNormal);
+////    FRGTextureViewHandle RGDepthSRV = Builder.CreateTextureView("GBuffer.Depth.SRV", FRHITextureViewDesc::Create2D(DepthDesc.Format, ERHITextureAspect::Depth, ERHIResourceLifetime::Transient), RGDepth);
+////
+////    FRHITextureDesc HDRDesc = FRHITextureDesc::Create2D(W, H, ERHIResourceLifetime::Transient, ERHITextureFormat::R8G8B8A8_UNORM, ERHITextureUsage::Color | ERHITextureUsage::SRV, ERHITextureLayout::Undefined, 1, 1, 1);
+////    FRGTextureHandle RGHDR = Builder.CreateTexture("Lighting.HDR", HDRDesc);
+////
+////    FRGTextureViewHandle RGHDRRTV = Builder.CreateTextureView("Lighting.HDR.RTV", FRHITextureViewDesc::Create2D(HDRDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGHDR);
+////    FRGTextureViewHandle RGHDRSRV = Builder.CreateTextureView("Lighting.HDR.SRV", FRHITextureViewDesc::Create2D(HDRDesc.Format, ERHITextureAspect::Color, ERHIResourceLifetime::Transient), RGHDR);
+////
+////    FRHIBufferDesc FrameCBDesc = {};
+////    FrameCBDesc.Size = 256;
+////    FrameCBDesc.Lifetime = ERHIResourceLifetime::Transient;
+////    FrameCBDesc.Memory = ERHIResourceMemory::HostVisible;
+////    FrameCBDesc.Usage = ERHIBufferUsage::Storage | ERHIBufferUsage::TransferDst;
+////
+////    FRGBufferHandle RGFrameCB = Builder.CreateBuffer("FrameCB", FrameCBDesc);
+////
+////    FRHIBufferDesc IndirectDesc = {};
+////    IndirectDesc.Size = 1024;
+////    IndirectDesc.Lifetime = ERHIResourceLifetime::Transient;
+////    IndirectDesc.Memory = ERHIResourceMemory::HostVisible;
+////    IndirectDesc.Usage = ERHIBufferUsage::Storage | ERHIBufferUsage::Indirect;
+////
+////    FRGBufferHandle RGIndirectArgs = Builder.CreateBuffer("IndirectArgs", IndirectDesc);
+////
+////    Builder.AddPass("UploadFrameConstants",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.WriteBuffer(Pass, RGFrameCB, ERGBufferUsage::CopyDst);
+////        },
+////        [&](IRHICommandListContext& CmdListCtx)
+////        {
+////            FRHIBuffer* FrameCB = Builder.ResolveBuffer(RGFrameCB);
+////
+////            struct FFrameConstants { /* viewProj, cameraPos, etc */ uint8_t Data[256]; } Constants = {};
+////
+////            FrameCB->Map(&Constants, sizeof(Constants), 0);
+////        });
+////
+////    Builder.AddPass("CullCompute",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.ReadBuffer(Pass, RGFrameCB, ERGBufferUsage::StorageRead);     // for compute visibility/cull
+////            B.WriteBuffer(Pass, RGIndirectArgs, ERGBufferUsage::StorageWrite);
+////        },
+////        [&](IRHICommandListContext& CmdListCtx)
+////        {
+////            // Bind compute pipeline, bind FrameCB + IndirectArgs (as storage), dispatch...
+////            // CmdListCtx.RHISetPipeline(CullPipeline);
+////            // CmdListCtx.RHIBindStorageBuffer(0, Builder.ResolveBuffer(RGFrameCB));
+////            // CmdListCtx.RHIBindStorageBuffer(1, Builder.ResolveBuffer(RGIndirectArgs));
+////            // CmdListCtx.RHIDispatch(...);
+////        });
+////
+////    Builder.AddPass("GBuffer",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.WriteTexture(Pass, RGAlbedo, ERGTextureUsage::ColorAttachment);
+////            B.WriteTexture(Pass, RGNormal, ERGTextureUsage::ColorAttachment);
+////            B.WriteTexture(Pass, RGDepth, ERGTextureUsage::DepthStencilAttachment);
+////
+////            B.ReadBuffer(Pass, RGFrameCB, ERGBufferUsage::Uniform);
+////            B.ReadBuffer(Pass, RGIndirectArgs, ERGBufferUsage::Indirect);
+////        },
+////        [&](IRHICommandListContext& CmdListCtx)
+////        {
+////            FRHITextureView* AlbedoRTV = Builder.ResolveTextureView(RGAlbedoRTV);
+////            FRHITextureView* NormalRTV = Builder.ResolveTextureView(RGNormalRTV);
+////            FRHITextureView* DepthDSV = Builder.ResolveTextureView(RGDepthDSV);
+////
+////            std::array<FRHITextureView*, 2> Colors = { AlbedoRTV, NormalRTV };
+////            CmdListCtx.RHIBeginRendering(Colors, DepthDSV, /*bClear*/true);
+////
+////            // Bind graphics pipeline, bind FrameCB, then draw using indirect args...
+////            // CmdListCtx.RHISetPipeline(GBufferPipeline);
+////            // CmdListCtx.RHIBindUniformBuffer(0, Builder.ResolveBuffer(RGFrameCB));
+////            // CmdListCtx.RHIDrawIndexedIndirect(Builder.ResolveBuffer(RGIndirectArgs), ...);
+////
+////            CmdListCtx.RHIEndRendering();
+////        });
+////
+////    Builder.AddPass("Lighting",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.ReadTexture(Pass, RGAlbedo, ERGTextureUsage::ShaderRead);
+////            B.ReadTexture(Pass, RGNormal, ERGTextureUsage::ShaderRead);
+////            B.ReadTexture(Pass, RGDepth, ERGTextureUsage::ShaderRead);
+////
+////            B.ReadBuffer(Pass, RGFrameCB, ERGBufferUsage::Uniform);
+////
+////            B.WriteTexture(Pass, RGHDR, ERGTextureUsage::ColorAttachment);
+////        },
+////        [&](IRHICommandListContext& CmdListCtx)
+////        {
+////            FRHITextureView* HDRRTV = Builder.ResolveTextureView(RGHDRRTV);
+////            std::array<FRHITextureView*, 1> Colors = { HDRRTV };
+////
+////            CmdListCtx.RHIBeginRendering(Colors, nullptr, /*bClear*/true);
+////
+////            // Bind lighting pipeline, bind SRVs for Albedo/Normal/Depth, draw fullscreen triangle...
+////            // CmdListCtx.RHISetPipeline(LightingPipeline);
+////            // CmdListCtx.RHIBindSampledTexture(0, Builder.ResolveTextureView(RGAlbedoSRV));
+////            // CmdListCtx.RHIBindSampledTexture(1, Builder.ResolveTextureView(RGNormalSRV));
+////            // CmdListCtx.RHIBindSampledTexture(2, Builder.ResolveTextureView(RGDepthSRV));
+////            // CmdListCtx.RHIDraw(3, 1, 0, 0);
+////
+////            CmdListCtx.RHIEndRendering();
+////        });
+////
+////    Builder.AddPass("Tonemap",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.ReadTexture(Pass, RGHDR, ERGTextureUsage::ShaderRead);
+////            B.WriteTexture(Pass, RGBackBuffer, ERGTextureUsage::ColorAttachment);
+////        },
+////        [&](IRHICommandListContext& CmdListCtx)
+////        {
+////            FRHITextureView* BackBufferView = Builder.ResolveTextureView(RGBackBufferView);
+////
+////            std::array<FRHITextureView*, 1> Colors = { BackBufferView };
+////            CmdListCtx.RHIBeginRendering(Colors, nullptr, /*bClear*/false);
+////
+////            // Bind tonemap pipeline, bind HDR SRV, draw fullscreen triangle...
+////            // CmdListCtx.RHISetPipeline(TonemapPipeline);
+////            // CmdListCtx.RHIBindSampledTexture(0, Builder.ResolveTextureView(RGHDRSRV));
+////            // CmdListCtx.RHIDraw(3, 1, 0, 0);
+////
+////            CmdListCtx.RHIEndRendering();
+////        });
+////
+////    Builder.AddPass("BackBufferToPresent",
+////        [&](FFrameGraphBuilder& B, FRGPass& Pass)
+////        {
+////            B.ReadTexture(Pass, RGBackBuffer, ERGTextureUsage::Present);
+////        },
+////        [&](IRHICommandListContext&)
+////        {
+////        });
+////
+////    FFrameDependencyGraph FDG = Graph.Compile();
+////
+////#if 1
+////    Graph.Dump(FDG);
+////#endif
+////
+////    Graph.Execute(*Device->GetCommandListContext());
+//
+//    if (!Device->GetCommandListContext()->ShouldFlush())
+//        return;
+//
+//    Device->GetDescriptorManager()->Update();
+//    Device->GetPresentQueue()->Submit();
+//
+//    //Graph.Reset();
+//    //Viewports[0]->Present();
+//}
 
+void CVulkanRHI::submit()
+{
     Device->GetDescriptorManager()->Update();
 
     Device->GetPresentQueue()->Submit();
+}
 
-    for (auto Viewport : Viewports)
-    {
-        Viewport->Present();
-    }
-
+void CVulkanRHI::reset()
+{
     Device->GetPresentQueue()->Wait();
 
     FrameCounter++;
-
-    //Swapchain->AcquireNextImageIndex();
 
     Device->GC();
 }
@@ -202,11 +389,9 @@ IRHI* CVulkanRHI::GetNonValidationRHI() const noexcept
     return const_cast<CVulkanRHI*>(this);
 }
 
-RRHIViewport* CVulkanRHI::CreateViewport(RRHIViewportDesc& Desc)
+RHISurface* CVulkanRHI::create_surface(RHISurfaceDesc& desc)
 {
-    RVulkanViewport* Viewport = new RVulkanViewport(*Device, Desc);
-    Viewports.push_back(Viewport);
-    return Viewport;
+    return new VulkanSurface(*Device, desc);
 }
 
 void CVulkanRHI::RHIWaitUntilIdle() const
@@ -219,12 +404,12 @@ uint64_t CVulkanRHI::GetFrameCounter() const noexcept
     return FrameCounter;
 }
 
-FRHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
+RHITexture *CVulkanRHI::RHICreateTexture(FRHITextureDesc Desc) const
 {
     return new FVulkanTexture(*Device, Desc);
 }
 
-FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture *Texture) const
+FRHITextureView *CVulkanRHI::RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, RHITexture *Texture) const
 {
     return new FVulkanTextureView(*Device, TextureViewDesc, Texture);
 }
@@ -245,19 +430,19 @@ void CVulkanRHI::RHIUploadDataBlocking(FRHIBuffer *Buffer, void *Data, uint64_t 
 
     StagingBuffer->Map(Data, Size);
 
-    Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
+    Device->GetGraphicsQueue()->ImmediateSubmit([&](RHICommandList& CmdList)
     {
         CmdList.Enqueue<FVulkanCommandCopyBuffer>(StagingBuffer.get(), Buffer, 0, 0, Size);
     });
 }
 
-void CVulkanRHI::RHIUploadTextureBlocking(FRHITexture *Texture2D, const uint8_t *Data, uint32_t Width, uint32_t Height)
+void CVulkanRHI::RHIUploadTextureBlocking(RHITexture *Texture2D, const uint8_t *Data, uint32_t Width, uint32_t Height)
 {
     std::unique_ptr<FRHIBuffer> StagingBuffer(RHICreateBuffer(FRHIBufferDesc::CreateStagingBuffer(Width * Height * GetTextureFormatPixelByteSize(Texture2D->RHIGetTextureDesc().Format))));
 
     StagingBuffer->Map(Data, Width * Height * GetTextureFormatPixelByteSize(Texture2D->RHIGetTextureDesc().Format));
 
-    Device->GetGraphicsQueue()->ImmediateSubmit([&](FRHICommandList& CmdList)
+    Device->GetGraphicsQueue()->ImmediateSubmit([&](RHICommandList& CmdList)
     {
         CmdList.Enqueue<FVulkanCommandPipelineBarrier>(Texture2D, ERHITextureLayout::Undefined, ERHITextureLayout::TransferDst, ERHIResourceAccess::None, ERHIResourceAccess::TransferWrite, ERHIPipelineStage::TopOfPipe, ERHIPipelineStage::Transfer);
         CmdList.Enqueue<FVulkanCommandCopyBufferToImage>(StagingBuffer.get(), Texture2D, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Width, Height);
@@ -275,59 +460,52 @@ IRHICommandListContext *CVulkanRHI::GetCommandListContext() const
     return Device->GetCommandListContext();
 }
 
-void CVulkanRHI::RHICmdBindPipeline(FRHICommandList &RHICmdList, FRHIPipeline *Pipeline)
+void CVulkanRHI::RHICmdBindPipeline(RHICommandList &RHICmdList, FRHIPipeline *Pipeline)
 {
     RHICmdList.Enqueue<FVulkanCommandBindPipeline>(Pipeline);
 }
 
-void CVulkanRHI::RHICmdBeginRendering(FRHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments, FRHITextureView* DepthAttachmentView, bool bClearColor)
+void CVulkanRHI::RHICmdBeginRendering(RHICommandList *RHICmdList, std::span<FRHITextureView*> ColorAttachments, FRHITextureView* DepthAttachmentView, bool bClearColor)
 {
     RHICmdList->Enqueue<FVulkanCommandBeginRendering>(ColorAttachments, DepthAttachmentView, bClearColor);
 }
 
-void CVulkanRHI::RHICmdEndRendering(FRHICommandList *RHICmdList)
+void CVulkanRHI::RHICmdEndRendering(RHICommandList *RHICmdList)
 {
     RHICmdList->Enqueue<FVulkanCommandEndRendering>();
 }
 
-void CVulkanRHI::RHICmdPipelineBarrier(FRHICommandList *RHICmdList, FRHITexture *Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex, uint32_t DstQueueFamilyIndex)
+void CVulkanRHI::RHICmdPipelineBarrier(RHICommandList *RHICmdList, RHITexture *Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex, uint32_t DstQueueFamilyIndex)
 {
     RHICmdList->Enqueue<FVulkanCommandPipelineBarrier>(Texture, SrcLayout, DstLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
 }
 
-void CVulkanRHI::RHICmdDraw(FRHICommandList &RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+void CVulkanRHI::RHICmdDraw(RHICommandList &RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
 {
     RHICmdList.Enqueue<FVulkanCommandDraw>(DrawCommand, Params);
 }
 
-void CVulkanRHI::RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
+void CVulkanRHI::RHICmdDrawIndexed(RHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params)
 {
-    // RHICmdList.Enqueue<FVulkanCommandDrawIndexed>(DrawCommand, Params);
 }
 
-void CVulkanRHI::RHICmdDrawIndexed2(FRHICommandList& RHICmdList, const FRHIDrawCall& DrawCall)
+void CVulkanRHI::RHICmdDrawIndexed2(RHICommandList& RHICmdList, const FRHIDrawCall& DrawCall)
 {
     RHICmdList.Enqueue<FVulkanCommandDrawIndexed2>(DrawCall);
 }
 
-FRHITexture *CVulkanRHI::RHIGetBackBufferRenderTarget() const
-{
-    return Viewports[0]->GetBackBufferTexture();
-}
-
 std::array<uint32_t, 2> CVulkanRHI::RHIGetViewportExtent() const
 {
-    //return std::array<uint32_t, 2>{Swapchain[0]->GetFramebufferExtent().width, Swapchain[0]->GetFramebufferExtent().height};
     ensure(false, "Not yet implemented.");
     return { 0, 0 };
 }
 
-void CVulkanRHI::RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst)
+void CVulkanRHI::RHICmdBlitImage(RHICommandList &RHICmdList, RHITexture *Src, RHITexture *Dst)
 {
     RHICmdList.Enqueue<FVulkanCommandBlitImage>(Src, Dst);
 }
 
-void CVulkanRHI::RHICmdSetScissor(FRHICommandList &RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
+void CVulkanRHI::RHICmdSetScissor(RHICommandList &RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height)
 {
     RHICmdList.Enqueue<FVulkanCommandSetScissor>(X, Y, Width, Height);
 }
@@ -436,38 +614,4 @@ FVulkanDevice * CVulkanRHI::GetDevice() const
     ensure(Device != nullptr);
 
     return Device;
-}
-
-RVulkanViewport* CVulkanRHI::ResolveViewportFromPresentationTarget(FRHITextureView* TextureView) const
-{
-    ensure(TextureView);
-
-    return ResolveViewportFromPresentationTarget(TextureView->GetTexture());
-}
-
-RVulkanViewport* CVulkanRHI::ResolveViewportFromPresentationTarget(FRHITexture* Texture) const
-{
-    ensure(Texture);
-
-    const auto& Desc = Texture->RHIGetTextureDesc();
-    const bool PresentationTarget = (static_cast<uint32_t>(Desc.Usage) & static_cast<uint32_t>(ERHITextureUsage::Present));
-
-    if (!PresentationTarget)
-    {
-        return nullptr;
-    }
-
-    // IMPORTANT: a swapchain can be recreated; the backbuffer pointer can change per-frame.
-    // So we resolve dynamically by comparing against each viewport's current backbuffer.
-    for (RVulkanViewport* VP : Viewports)
-    {
-        // Ensure the viewport has an acquired image before comparing.
-        // If you already guarantee Acquire() is called earlier in the frame, you can omit this.
-        if (VP && VP->GetBackBufferTexture() == Texture)
-        {
-            return VP;
-        }
-    }
-
-    return nullptr;
 }

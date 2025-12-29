@@ -3,103 +3,104 @@
 #include "VulkanCommandBuffer.h"
 #include <Assertion.h>
 
-FVulkanCommandBufferContext::FVulkanCommandBufferContext(FVulkanCommandBufferPool& InPool)
-    : Pool(InPool),
-    CurrentState(EVulkanCommandBufferContextState::Wait),
-    CurrentPayload(nullptr)
+VulkanCommandBufferContext::VulkanCommandBufferContext(FVulkanCommandBufferPool& InPool)
+    : pool(InPool),
+    m_current_state(VulkanCommandBufferContextState::Wait),
+    m_current_payload(nullptr)
 {
-    NewPayload();
+    new_payload();
 }
 
-FVulkanCommandBufferPayload& FVulkanCommandBufferContext::GetPayload(EVulkanCommandBufferContextState State)
+VulkanCommandBufferPayload& VulkanCommandBufferContext::get_payload(VulkanCommandBufferContextState State)
 {
-    if (Payloads.empty() || State < CurrentState)
+    if (m_payloads.empty() || State < m_current_state)
     {
-        NewPayload();
+        new_payload();
     }
 
-    CurrentState = State;
-    return *CurrentPayload;
+    m_current_state = State;
+    return *m_current_payload;
 }
 
-void FVulkanCommandBufferContext::NewPayload()
+void VulkanCommandBufferContext::new_payload()
 {
-    EndPayload();
+    end_payload();
 
-    Payloads.push_back(new FVulkanCommandBufferPayload());
-    CurrentPayload = Payloads.back();
-    CurrentState = EVulkanCommandBufferContextState::Wait;
+    m_payloads.push_back(new VulkanCommandBufferPayload());
+    m_current_payload = m_payloads.back();
+    m_current_state = VulkanCommandBufferContextState::Wait;
 }
 
-FVulkanCommandBuffer* FVulkanCommandBufferContext::GetCurrentCommandBuffer()
+FVulkanCommandBuffer* VulkanCommandBufferContext::get_current_command_buffer()
 {
-    FVulkanCommandBufferPayload& Payload = GetPayload(EVulkanCommandBufferContextState::Wait);
+    VulkanCommandBufferPayload& Payload = get_payload(VulkanCommandBufferContextState::Wait);
 
-    if (CurrentPayload->CommandBuffers.empty())
+    if (m_current_payload->CommandBuffers.empty())
     {
-        FVulkanCommandBuffer* CommandBuffer = Pool.Acquire();
-
+        FVulkanCommandBuffer* CommandBuffer = pool.Acquire();
         Payload.CommandBuffers.push_back(CommandBuffer);
-
         CommandBuffer->Begin();
     }
 
-    return CurrentPayload->CommandBuffers.back();
+    return m_current_payload->CommandBuffers.back();
 }
 
-void FVulkanCommandBufferContext::EndPayload()
+void VulkanCommandBufferContext::end_payload()
 {
-    if (CurrentPayload && !CurrentPayload->CommandBuffers.empty())
+    if (m_current_payload && !m_current_payload->CommandBuffers.empty())
     {
-        CurrentPayload->CommandBuffers.back()->End();   
+        m_current_payload->CommandBuffers.back()->End();
     }
 }
 
-bool FVulkanCommandBufferContext::ShouldFlush() const
+void VulkanCommandBufferContext::add_pre_submit_event(std::function<void()>&& callback)
 {
-    FVulkanCommandBufferPayload* Payload = Payloads.front();
-
-    if (Payload->CommandBuffers.empty())
+    if (m_current_payload)
     {
-        // Permit flushing when we have something to write.
-        return false;
+        m_current_payload->PreSubmitCallback.Bind(std::move(callback));
     }
-
-    return true;
 }
 
-void FVulkanCommandBufferContext::Flush(std::vector<FVulkanCommandBufferPayload*>& OutPayloads)
+void VulkanCommandBufferContext::add_post_submit_event(std::function<void()>&& callback)
 {
-    EndPayload();
-
-    OutPayloads = std::move(Payloads);
-
-    Payloads.clear();
-    CurrentPayload = nullptr;
-
-    NewPayload();
+    if (m_current_payload)
+    {
+        m_current_payload->PostSubmitCallback.Bind(std::move(callback));
+    }
 }
 
-void FVulkanCommandBufferContext::AddWaitSemaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask)
+void VulkanCommandBufferContext::submit(std::vector<VulkanCommandBufferPayload*>& OutPayloads)
 {
-    AddWaitSemaphore(std::span(&WaitSemaphore, 1), std::span(&WaitStageMask, 1));
+    end_payload();
+
+    OutPayloads = std::move(m_payloads);
+
+    m_payloads.clear();
+    m_current_payload = nullptr;
+
+    new_payload();
 }
 
-void FVulkanCommandBufferContext::AddWaitSemaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks)
+void VulkanCommandBufferContext::add_wait_semaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask)
 {
-    FVulkanCommandBufferPayload& Payload = GetPayload(EVulkanCommandBufferContextState::Wait);
+    add_wait_semaphore(std::span(&WaitSemaphore, 1), std::span(&WaitStageMask, 1));
+}
+
+void VulkanCommandBufferContext::add_wait_semaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks)
+{
+    VulkanCommandBufferPayload& Payload = get_payload(VulkanCommandBufferContextState::Wait);
     Payload.WaitSemaphores.insert(Payload.WaitSemaphores.end(), WaitSemaphores.begin(), WaitSemaphores.end());
     Payload.WaitStageMasks.insert(Payload.WaitStageMasks.end(), WaitStageMasks.begin(), WaitStageMasks.end());
 }
 
-void FVulkanCommandBufferContext::AddSignalSemaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask)
+void VulkanCommandBufferContext::add_signal_semaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask)
 {
-    AddSignalSemaphore(std::span(&ReadySemaphore, 1), std::span(&SignalStageMask, 1));
+    add_signal_semaphore(std::span(&ReadySemaphore, 1), std::span(&SignalStageMask, 1));
 }
 
-void FVulkanCommandBufferContext::AddSignalSemaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMask)
+void VulkanCommandBufferContext::add_signal_semaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMask)
 {
-    FVulkanCommandBufferPayload& Payload = GetPayload(EVulkanCommandBufferContextState::Signal);
+    VulkanCommandBufferPayload& Payload = get_payload(VulkanCommandBufferContextState::Signal);
     Payload.SignalSemaphores.insert(Payload.SignalSemaphores.end(), ReadySemaphores.begin(), ReadySemaphores.end());
     Payload.SignalStageMasks.insert(Payload.SignalStageMasks.end(), SignalStageMask.begin(), SignalStageMask.end());
 }

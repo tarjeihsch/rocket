@@ -10,30 +10,31 @@
 struct FRHIPipeline;
 struct FMeshDrawCommand;
 
-class FVulkanCommandListContext final : public FVulkanCommandBufferContext, public IRHICommandListContext
+class VulkanCommandListContext final : public VulkanCommandBufferContext, public IRHICommandListContext
 {
 public:
-    FVulkanCommandListContext(FVulkanDevice& InDevice);
+    VulkanCommandListContext(FVulkanDevice& InDevice);
 
     virtual void RHIBindPipeline(FRHIPipeline* Pipeline) override;
     virtual void RHISetScissorRect(int32_t X, int32_t Y, uint32_t Width, uint32_t Height) override;
     virtual void RHIDraw(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) override;
     virtual void RHIDrawIndexed(const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& InDrawParams) override;
     virtual void RHIDrawIndexed2(const FRHIDrawCall& DrawCall) override;
-    virtual void RHIPipelineBarrier(FRHITexture *InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) override;
+    virtual void RHIPipelineBarrier(RHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex) override;
+    virtual void RHIPipelineBarrier(FRHIBuffer* InBuffer, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess, ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex, uint32_t InDstQueueFamilyIndex, uint64_t InOffset, uint64_t InSize) override;
     virtual void RHIBeginRendering(std::span<FRHITextureView*> ColorAttachmentsView, FRHITextureView* DepthStencilAttachmentView, bool bClearColor) override;
     virtual void RHIEndRendering() override;
     virtual void RHICopyBuffer(FRHIBuffer* Src, FRHIBuffer* Dst, uint32_t InSrcOffset, uint32_t InDstOffset, uint32_t InSize) override;
-    virtual void RHICmdBlitImage(FRHITexture* Src, FRHITexture* Dst) override;
+    virtual void RHICmdBlitImage(RHITexture* Src, RHITexture* Dst) override;
 
-    void RHICopyBufferToImage(FRHIBuffer *SrcBuffer, FRHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset);
+    void RHICopyBufferToImage(FRHIBuffer *SrcBuffer, RHITexture *DstTexture, VkImageLayout DstImageLayout, uint32_t Width, uint32_t Height, uint32_t MipLevel, uint32_t BaseArrayLayer, uint32_t LayerCount, uint64_t BufferOffset);
     void RHISetMemoryBarrier(VkImage Image, VkImageLayout OldLayout, VkImageLayout NewLayout, VkAccessFlags p_SrcAccess, VkAccessFlags p_DstAccess,  VkPipelineStageFlags2 SrcStage, VkPipelineStageFlags2 DstStage, uint32_t p_SrcQueueFamilyIndex, uint32_t p_DstQueueFamilyIndex);
     void RHISetViewport(float p_X, float p_Y, float p_Width, float p_Height, float p_MinDepth, float p_MaxDepth);
 };
 
 struct FVulkanCommandPipelineBarrier : TRHICommand<FVulkanCommandPipelineBarrier>
 {
-    FRHITexture* Texture;
+    RHITexture* Texture;
     ERHITextureLayout OldLayout;
     ERHITextureLayout NewLayout;
     ERHIResourceAccess SrcAccess;
@@ -43,7 +44,7 @@ struct FVulkanCommandPipelineBarrier : TRHICommand<FVulkanCommandPipelineBarrier
     uint32_t SrcQueueFamilyIndex;
     uint32_t DstQueueFamilyIndex;
 
-    FVulkanCommandPipelineBarrier(FRHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess,ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U))
+    FVulkanCommandPipelineBarrier(RHITexture* InTexture, ERHITextureLayout InOldLayout, ERHITextureLayout InNewLayout, ERHIResourceAccess InSrcAccess, ERHIResourceAccess InDstAccess,ERHIPipelineStage InSrcStage, ERHIPipelineStage InDstStage, uint32_t InSrcQueueFamilyIndex = ~(0U), uint32_t InDstQueueFamilyIndex= ~(0U))
         : Texture(InTexture),
         OldLayout(InOldLayout),
         NewLayout(InNewLayout),
@@ -58,7 +59,7 @@ struct FVulkanCommandPipelineBarrier : TRHICommand<FVulkanCommandPipelineBarrier
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIPipelineBarrier(Texture, OldLayout, NewLayout, SrcAccess, DstAccess, SrcStage, DstStage, SrcQueueFamilyIndex, DstQueueFamilyIndex);
     }
 };
@@ -76,7 +77,7 @@ struct FVulkanCommandBeginRendering : TRHICommand<FVulkanCommandBeginRendering>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIBeginRendering(ColorAttachmentsView, DepthAttachmentView, bClearColor);
     }
 };
@@ -85,7 +86,7 @@ struct FVulkanCommandEndRendering : TRHICommand<FVulkanCommandEndRendering>
 {
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIEndRendering();
     }
 };
@@ -104,7 +105,7 @@ struct VulkanCommandSetViewport : TRHICommand<VulkanCommandSetViewport>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHISetViewport(0, 0, m_Width, m_Height, m_MinDepth, m_MaxDepth);
     }
 };
@@ -120,7 +121,7 @@ struct FVulkanCommandBindPipeline : TRHICommand<FVulkanCommandBindPipeline>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIBindPipeline(Pipeline);
     }
 };
@@ -137,7 +138,7 @@ struct FVulkanCommandDraw : TRHICommand<FVulkanCommandDraw>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIDraw(DrawCommand, DrawParams);
     }
 };
@@ -154,7 +155,7 @@ struct FVulkanCommandDrawIndexed : TRHICommand<FVulkanCommandDrawIndexed>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIDrawIndexed(DrawCommand, DrawParams);
     }
 };
@@ -170,7 +171,7 @@ struct FVulkanCommandDrawIndexed2 : TRHICommand<FVulkanCommandDrawIndexed2>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHIDrawIndexed2(DrawCall);
     }
 };
@@ -191,7 +192,7 @@ struct FVulkanCommandCopyBuffer : TRHICommand<FVulkanCommandCopyBuffer>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHICopyBuffer(SrcBuffer, DstBuffer, SrcOffset, DstOffset, Size);
     }
 };
@@ -199,7 +200,7 @@ struct FVulkanCommandCopyBuffer : TRHICommand<FVulkanCommandCopyBuffer>
 struct FVulkanCommandCopyBufferToImage : TRHICommand<FVulkanCommandCopyBufferToImage>
 {
     FRHIBuffer* SrcBuffer;
-    FRHITexture* DstTexture;
+    RHITexture* DstTexture;
     VkImageLayout DstImageLayout;
     uint32_t Width;
     uint32_t Height;
@@ -208,14 +209,14 @@ struct FVulkanCommandCopyBufferToImage : TRHICommand<FVulkanCommandCopyBufferToI
     uint32_t LayerCount;
     uint64_t BufferOffset;
 
-    FVulkanCommandCopyBufferToImage(FRHIBuffer* InSrcBuffer, FRHITexture* InDstBuffer, VkImageLayout InDstImageLayout, uint32_t InWidth, uint32_t InHeight, uint32_t InMipLevel = 0, uint32_t InBaseArrayLayer = 0, uint32_t InLayerCount = 1, uint64_t InBufferOffset = 0)
+    FVulkanCommandCopyBufferToImage(FRHIBuffer* InSrcBuffer, RHITexture* InDstBuffer, VkImageLayout InDstImageLayout, uint32_t InWidth, uint32_t InHeight, uint32_t InMipLevel = 0, uint32_t InBaseArrayLayer = 0, uint32_t InLayerCount = 1, uint64_t InBufferOffset = 0)
         : SrcBuffer(InSrcBuffer), DstTexture(InDstBuffer), DstImageLayout(InDstImageLayout), Width(InWidth), Height(InHeight), MipLevel(InMipLevel), BaseArrayLayer(InBaseArrayLayer), LayerCount(InLayerCount), BufferOffset(InBufferOffset)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHICopyBufferToImage(SrcBuffer, DstTexture, DstImageLayout, Width, Height, MipLevel, BaseArrayLayer, LayerCount, BufferOffset);
     }
 };
@@ -223,17 +224,17 @@ struct FVulkanCommandCopyBufferToImage : TRHICommand<FVulkanCommandCopyBufferToI
 
 struct FVulkanCommandBlitImage : TRHICommand<FVulkanCommandBlitImage>
 {
-    FRHITexture *Src;
-    FRHITexture *Dst;
+    RHITexture *Src;
+    RHITexture *Dst;
 
-    FVulkanCommandBlitImage(FRHITexture* InSrc, FRHITexture* InDst)
+    FVulkanCommandBlitImage(RHITexture* InSrc, RHITexture* InDst)
         : Src(InSrc), Dst(InDst)
     {
     }
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHICmdBlitImage(Src, Dst);
     }
 };
@@ -252,7 +253,7 @@ struct FVulkanCommandSetScissor : TRHICommand<FVulkanCommandSetScissor>
 
     void Execute_Internal(IRHICommandListContext& CmdListCtx)
     {
-        auto& Ctx = static_cast<FVulkanCommandListContext&>(CmdListCtx);
+        auto& Ctx = static_cast<VulkanCommandListContext&>(CmdListCtx);
         Ctx.RHISetScissorRect(X, Y, Width, Height);
     }
 };

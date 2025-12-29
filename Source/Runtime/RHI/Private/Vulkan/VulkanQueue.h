@@ -5,12 +5,12 @@
 #include <vulkan/vulkan_core.h>
 
 class IRHICommandListContext;
-class FRHICommandList;
+class RHICommandList;
 class FVulkanDevice;
 class FVulkanCommandBufferPool;
-class FVulkanCommandBufferContext;
+class VulkanCommandBufferContext;
 class FVulkanCommandBuffer;
-struct FVulkanCommandBufferPayload;
+struct VulkanCommandBufferPayload;
 
 class FVulkanQueue
 {
@@ -24,7 +24,7 @@ public:
 
     void Wait();
     void Submit();
-    void ImmediateSubmit(std::function<void(FRHICommandList& CmdList)> InCallback);
+    void ImmediateSubmit(std::function<void(RHICommandList& CmdList)> InCallback);
 
     inline VkQueue GetHandle() const;
     inline VkQueueFlags GetQueueFlags() const;
@@ -51,7 +51,7 @@ private:
     uint64_t NextTimelineSemaphoreValue;
 
     FVulkanCommandBufferPool* CommandBufferPool;
-    std::queue<FVulkanCommandBufferPayload*> SubmissionQueue;
+    std::queue<VulkanCommandBufferPayload*> SubmissionQueue;
 };
 
 inline VkQueue FVulkanQueue::GetHandle() const

@@ -14,41 +14,56 @@ static VkDescriptorSetLayoutBinding MakeBinding(uint32_t pBinding, VkDescriptorT
     return Binding;
 }
 
-VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_t pMaxSampledImages, uint32_t pMaxSamplers, uint32_t pMaxStorageImages, uint32_t pMaxStorageBuffers)
+VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_t MaxSampledImages, uint32_t MaxSamplers, uint32_t MaxStorageImages, uint32_t MaxStorageBuffers)
     : Device(pDevice), DescriptorSetLayout(VK_NULL_HANDLE), DescriptorSet(VK_NULL_HANDLE), DescriptorPool(VK_NULL_HANDLE)
 {
-    SampledImages.Infos.resize(pMaxSampledImages);
-    SampledImages.Generation.resize(pMaxSampledImages, 1);
-    SampledImages.Dirty.resize(pMaxSampledImages);
+    SampledImages.Infos.resize(MaxSampledImages);
+    SampledImages.Generation.resize(MaxSampledImages, 1);
+    SampledImages.Dirty.resize(MaxSampledImages);
 
-    Samplers.Infos.resize(pMaxSamplers);
-    Samplers.Generation.resize(pMaxSamplers, 1);
-    Samplers.Dirty.resize(pMaxSamplers);
+    Samplers.Infos.resize(MaxSamplers);
+    Samplers.Generation.resize(MaxSamplers, 1);
+    Samplers.Dirty.resize(MaxSamplers);
 
-    StorageImages.Infos.resize(pMaxStorageImages);
-    StorageImages.Generation.resize(pMaxStorageImages, 1);
-    StorageImages.Dirty.resize(pMaxStorageImages);
+    StorageImages.Infos.resize(MaxStorageImages);
+    StorageImages.Generation.resize(MaxStorageImages, 1);
+    StorageImages.Dirty.resize(MaxStorageImages);
 
-    StorageBuffers.Infos.resize(pMaxStorageBuffers);
-    StorageBuffers.Generation.resize(pMaxStorageBuffers, 1);
-    StorageBuffers.Dirty.resize(pMaxStorageBuffers);
+    StorageBuffers.Infos.resize(MaxStorageBuffers);
+    StorageBuffers.Generation.resize(MaxStorageBuffers, 1);
+    StorageBuffers.Dirty.resize(MaxStorageBuffers);
 
-    for (uint32_t Index = 0; Index < pMaxSampledImages; ++Index) SampledImages.FreeList.push_back(pMaxSampledImages - 1 - Index);
-    for (uint32_t Index = 0; Index < pMaxSamplers; ++Index) Samplers.FreeList.push_back(pMaxSamplers - 1 - Index);
-    for (uint32_t Index = 0; Index < pMaxStorageImages; ++Index) StorageImages.FreeList.push_back(pMaxStorageImages - 1 - Index);
-    for (uint32_t Index = 0; Index < pMaxStorageBuffers; ++Index) StorageBuffers.FreeList.push_back(pMaxStorageBuffers - 1 - Index);
+    for (uint32_t Index = 0; Index < MaxSampledImages; ++Index) 
+    {
+        SampledImages.FreeList.push_back(MaxSampledImages - 1 - Index);
+    }
+
+    for (uint32_t Index = 0; Index < MaxSamplers; ++Index) 
+    {
+        Samplers.FreeList.push_back(MaxSamplers - 1 - Index);
+    }
+
+    for (uint32_t Index = 0; Index < MaxStorageImages; ++Index) 
+    {
+        StorageImages.FreeList.push_back(MaxStorageImages - 1 - Index);
+    }
+
+    for (uint32_t Index = 0; Index < MaxStorageBuffers; ++Index) 
+    {
+        StorageBuffers.FreeList.push_back(MaxStorageBuffers - 1 - Index);
+    }
 
     VkDescriptorSetLayoutBinding Bindings[static_cast<uint32_t>(DescriptorBinding::Count)] = {};
-    Bindings[static_cast<uint32_t>(DescriptorBinding::SampledImage)] = MakeBinding(0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_ALL, pMaxSampledImages);
-    Bindings[static_cast<uint32_t>(DescriptorBinding::Sampler)] = MakeBinding(1, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_ALL, pMaxSamplers);
-    Bindings[static_cast<uint32_t>(DescriptorBinding::StorageImage)] = MakeBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_ALL, pMaxStorageImages);
-    Bindings[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)] = MakeBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL, pMaxStorageBuffers);
+    Bindings[static_cast<uint32_t>(DescriptorBinding::SampledImage)]    = MakeBinding(0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_ALL, MaxSampledImages);
+    Bindings[static_cast<uint32_t>(DescriptorBinding::Sampler)]         = MakeBinding(1, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_ALL, MaxSamplers);
+    Bindings[static_cast<uint32_t>(DescriptorBinding::StorageImage)]    = MakeBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_ALL, MaxStorageImages);
+    Bindings[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)]   = MakeBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_ALL, MaxStorageBuffers);
 
     std::vector<VkDescriptorBindingFlags> Flags(static_cast<uint32_t>(DescriptorBinding::Count));
-    Flags[static_cast<uint32_t>(DescriptorBinding::SampledImage)] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT_EXT;
-    Flags[static_cast<uint32_t>(DescriptorBinding::Sampler)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-    Flags[static_cast<uint32_t>(DescriptorBinding::StorageImage)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-    Flags[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::SampledImage)]       = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::Sampler)]            = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::StorageImage)]       = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+    Flags[static_cast<uint32_t>(DescriptorBinding::StorageBuffer)]      = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo Extension = {};
     Extension.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -66,10 +81,10 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     ensure(Result == VK_SUCCESS);
 
     VkDescriptorPoolSize PoolSizes[] = {
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  pMaxSampledImages },
-            { VK_DESCRIPTOR_TYPE_SAMPLER,        pMaxSamplers },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  pMaxStorageImages },
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, pMaxStorageBuffers },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,  MaxSampledImages },
+        { VK_DESCRIPTOR_TYPE_SAMPLER,        MaxSamplers },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,  MaxStorageImages },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MaxStorageBuffers },
     };
 
     VkDescriptorPoolCreateInfo PoolCreateInfo = {};

@@ -28,6 +28,7 @@
     #include <dlfcn.h>
     #define VK_DLSYM(lib, name) dlsym(lib, name)
 #endif
+#include <Assertion.h>
 
 namespace VulkanRHI
 {
@@ -357,13 +358,10 @@ VkPipelineStageFlags2 VulkanRHI::ToVkStage2(ERHIQueueSyncStage Stage)
 {
     switch (Stage)
     {
-    case ERHIQueueSyncStage::TopOfPipe:
-        return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    case ERHIQueueSyncStage::ColorAttachmentOutput:
-        return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    case ERHIQueueSyncStage::AllCommands:
-    default:
-        return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        case ERHIQueueSyncStage::TopOfPipe:                 return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+        case ERHIQueueSyncStage::ColorAttachmentOutput:     return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        case ERHIQueueSyncStage::AllCommands:               return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        default:                                            return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     }
 }
 
@@ -372,6 +370,7 @@ void LoadVulkanLibrary()
 {
 #if RK_PLATFORM_WINDOWS
     VulkanRHI::Library = LoadLibraryA("vulkan-1.dll");
+    ensure(VulkanRHI::Library != nullptr, "Failed to load Vulkan library.");
     VulkanRHI::vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(static_cast<HMODULE>(VulkanRHI::Library), "vkGetInstanceProcAddr"));
 #endif
 

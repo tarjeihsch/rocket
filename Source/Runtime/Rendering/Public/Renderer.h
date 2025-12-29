@@ -1,36 +1,56 @@
 ﻿#pragma once
 
-#include "Common/RHIDrawCommand.h"
+#include <string>
+#include <vector>
+#include <cstdint>
 
-#include <span>
-#include <memory>
+class Viewport;
+struct FRHIBuffer;
+struct RHITexture;
+class ViewportDesc;
+class FrameGraph;
 
-class FRenderTarget;
-class FFrameGraphBuilder;
+struct PendingBufferUpload
+{
+	std::string DebugName;
+	FRHIBuffer* Dst = nullptr;
+	FRHIBuffer* Staging = nullptr;
+};
 
-//using TOnFrameBegin = TMulticastDelegate<FFrameGraphBuilder&>;
-//using TOnFrameEnd = TMulticastDelegate<FFrameGraphBuilder&>;
+struct PendingTextureUpload
+{
+	std::string DebugName;
+	RHITexture* Dst = nullptr;
+	FRHIBuffer* Staging = nullptr;
+};
 
-// Renderer acts as a high-level wrapper over the RHI render graph
-class RRenderer final
+struct ClearColor
+{
+	float r, g, b, a;
+};
+
+class Renderer
 {
 public:
-//    TOnFrameBegin OnFrameBegin;
-//    TOnFrameEnd OnFrameEnd;
+	Renderer();
+	~Renderer();
 
-    RRenderer();
-    ~RRenderer();
+	void shutdown();
 
-    //void DrawIndexed(RViewport* Viewport, const FRHIDrawCall& Commands);
-    //void DrawIndexed(RViewport* Viewport, std::span<FRHIDrawCall> Commands);
-    void DrawIndexed(const std::shared_ptr<FRenderTarget>& RenderTarget, std::span<FRHIDrawCall> Commands);
+	static Renderer& get();
 
-    //void Present(RViewport* Viewport);
-    void Present(const std::shared_ptr<FRenderTarget>& RenderTarget);
+	void begin_frame();
+	void end_frame();
 
-    void BeginFrame();
-    void EndFrame();
+	void clear_color(ClearColor clear_color);
 
 private:
-    std::unique_ptr<FFrameGraphBuilder> FrameGraph;
+	std::vector<PendingBufferUpload> m_pending_buffer_uploads;
+	std::vector<PendingTextureUpload> m_pending_texture_uploads;
+
+	Viewport* m_viewport;
+	FrameGraph* m_frame_graph;
+	
+	uint8_t m_viewport_flag : 1;
+	uint8_t m_clear_color_flag : 1;
 };
