@@ -2,12 +2,12 @@
 
 #include "VulkanRHI.h"
 
-IRHI* FVulkanRHIModule::CreateRHI()
+RHI* FVulkanRHIModule::CreateRHI()
 {
     return new CVulkanRHI();
 }
 
-IRHIModule* CreateVulkanRHIModule()
+RHIModule* create_vulkan_rhi_module()
 {
     return new FVulkanRHIModule();
 }

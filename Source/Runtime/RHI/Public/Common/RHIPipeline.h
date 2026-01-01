@@ -142,7 +142,7 @@ struct FRHIVertex
     alignas(16) glm::vec2 m_TexCoord;
 };
 
-struct FRHIPipelineDesc
+struct RHIPipelineDesc
 {
     std::vector<ERHIFormat> ColorAttachmentFormats;
     std::vector<FRHIVertexBinding> VertexBindings;
@@ -163,7 +163,7 @@ struct FRHIPipelineDesc
     uint8_t bDepthWriteEnable : 1;
 };
 
-struct FRHIPipeline
+struct RHIPipeline
 {
     virtual void* GetHandle() const = 0;
 };

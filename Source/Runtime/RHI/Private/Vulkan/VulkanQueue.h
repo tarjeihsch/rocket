@@ -4,9 +4,9 @@
 #include <queue>
 #include <vulkan/vulkan_core.h>
 
-class IRHICommandListContext;
+class RHICommandListContext;
 class RHICommandList;
-class FVulkanDevice;
+class VulkanDevice;
 class FVulkanCommandBufferPool;
 class VulkanCommandBufferContext;
 class FVulkanCommandBuffer;
@@ -15,15 +15,15 @@ struct VulkanCommandBufferPayload;
 class FVulkanQueue
 {
 private:
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
     VkQueueFlags QueueFlags;
 
 public:
-    FVulkanQueue(FVulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
+    FVulkanQueue(VulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
      ~FVulkanQueue();
 
     void Wait();
-    void Submit();
+    void Submit(const RHICommandList& CmdList);
     void ImmediateSubmit(std::function<void(RHICommandList& CmdList)> InCallback);
 
     inline VkQueue GetHandle() const;

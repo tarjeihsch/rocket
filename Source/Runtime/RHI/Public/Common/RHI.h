@@ -1,36 +1,39 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
-#include <span>
-#include <array>
-#include <assert.h>
+
+#include "Assertion.h"
 
 class RHISurface;
 struct RHISurfaceDesc;
 class RHISwapchain;
 struct RRHISwapchainDesc;
-struct RRHISamplerDesc;
-class RRHISampler;
+struct RHISamplerDesc;
+class RHISampler;
 struct FRHIDrawCommand;
-struct FRHIBufferDesc;
-struct FRHIBuffer;
+struct RHIBufferDesc;
+struct RHIBuffer;
 struct FMeshDrawCommand;
-enum class ERHIPipelineStage : uint16_t;
-enum class ERHIResourceAccess : uint16_t;
-enum class ERHITextureLayout : uint8_t;
-struct FRHITextureView;
-struct FRHITextureDesc;
-struct FRHITextureViewDesc;
+enum class RHIPipelineStage : uint16_t;
+enum class RHIResourceAccess : uint16_t;
+enum class RHITextureLayout : uint8_t;
+struct RHITextureView;
+struct RHITextureDesc;
+struct RHITextureViewDesc;
 struct RHITexture;
 struct FRHIDrawParams;
-class IRHICommandListContext;
+class RHICommandListContext;
 class RHICommandList;
 struct FRHIDrawCall;
-struct FRHIPipeline;
-struct FRHIPipelineDesc;
+struct RHIPipeline;
+struct RHIPipelineDesc;
 
-enum class ERHIResourceAccess : uint16_t
+class IBindable
+{
+    virtual uint32_t GetBindingIndex() const = 0;
+};
+
+enum class RHIResourceAccess : uint16_t
 {
     None = 0,
 
@@ -53,7 +56,7 @@ enum class ERHIResourceAccess : uint16_t
     HostWrite = 1 << 9,
 };
 
-enum class ERHIPipelineStage : uint16_t
+enum class RHIPipelineStage : uint16_t
 {
     None = 0,
     TopOfPipe = 1 << 0,
@@ -66,10 +69,13 @@ enum class ERHIPipelineStage : uint16_t
     BottomOfPipe = 1 << 7,
 };
 
-inline ERHIPipelineStage operator|(ERHIPipelineStage Lhs, ERHIPipelineStage Rhs) { return static_cast<ERHIPipelineStage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline ERHIPipelineStage operator&(ERHIPipelineStage Lhs, ERHIPipelineStage Rhs) { return static_cast<ERHIPipelineStage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+inline RHIResourceAccess operator|(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
+inline RHIResourceAccess operator&(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
 
-enum class ERHIResourceLifetime : uint8_t
+inline RHIPipelineStage operator|(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
+inline RHIPipelineStage operator&(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+
+enum class RHIResourceLifetime : uint8_t
 {
     Unknown = 0,
 
@@ -83,7 +89,7 @@ enum class ERHIResourceLifetime : uint8_t
     Unmanaged,
 };
 
-enum class ERHIResourceMemory
+enum class RHIResourceMemory
 {
     Unknown = 0,
 
@@ -94,7 +100,7 @@ enum class ERHIResourceMemory
     HostVisible
 };
 
-enum class ERHIInterfaceType : uint8_t
+enum class RHIInterfaceType : uint8_t
 {
     None = 0,
 
@@ -107,79 +113,62 @@ enum class ERHIInterfaceType : uint8_t
     WebGL
 };
 
-class IRHI
+class RHI
 {
 public:
-    virtual ~IRHI() = default;
+    virtual ~RHI() = default;
 
-    virtual void Init() = 0;
-    virtual void Shutdown() = 0;
-    virtual void submit() = 0;
+    virtual void init() = 0;
+    virtual void shutdown() = 0;
+    virtual void submit(const RHICommandList&) = 0;
     virtual void reset() = 0;
 
-    [[nodiscard]] virtual const char* GetName() const  = 0;
-    [[nodiscard]] virtual const char* GetVersion() const  = 0;
-    [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
-    [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
+    [[nodiscard]] virtual const char* get_name() const  = 0;
+    [[nodiscard]] virtual const char* get_version() const  = 0;
+    [[nodiscard]] virtual RHIInterfaceType  get_interface_type() const noexcept = 0;
+    [[nodiscard]] virtual RHI* get_non_validation_rhi() const noexcept { return const_cast<RHI*>(this); }
 
-    virtual RHISurface* create_surface(RHISurfaceDesc& desc) = 0;
-    virtual uint64_t GetFrameCounter() const noexcept = 0;
-    virtual void RHIWaitUntilIdle() const = 0;
-    virtual RHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
-    virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, RHITexture* Texture) const = 0;
-    virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
-    virtual RRHISampler* RHICreateSampler(RRHISamplerDesc Desc) const = 0;
-    virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
-    virtual void RHIUploadTextureBlocking(RHITexture* Texture2D, const uint8_t* Data, uint32_t Width, uint32_t Height) = 0;
-    virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
-    virtual IRHICommandListContext* GetCommandListContext() const = 0;
-    virtual void RHICmdBindPipeline(RHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;
-    virtual void RHICmdBeginRendering(RHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments, FRHITextureView* DepthAttachmentView, bool bClearColor) = 0;
-    virtual void RHICmdPipelineBarrier(RHICommandList* RHICmdList, RHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) = 0;
-    virtual void RHICmdEndRendering(RHICommandList* RHICmdList) = 0;
-    virtual void RHICmdDraw(RHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-    virtual void RHICmdDrawIndexed(RHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-    virtual void RHICmdDrawIndexed2(RHICommandList& RHICmdList, const FRHIDrawCall& DrawCall) = 0;
-    virtual void RHICmdBlitImage(RHICommandList &RHICmdList, RHITexture *Src, RHITexture *Dst) = 0;
-    virtual void RHICmdSetScissor(RHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
-
-    virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
-    virtual std::array<uint32_t, 2> RHIGetViewportExtent() const = 0;
-
-    // virtual void RHIUploadTextureData()
+    virtual void rhi_wait_until_idle() const = 0;
+    virtual uint64_t rhi_get_frame_counter() const noexcept = 0;
+    virtual RHISurface* create_surface(RHISurfaceDesc desc) = 0;
+    virtual RHITexture* rhi_create_texture(RHITextureDesc Desc) const = 0;
+    virtual RHITextureView* rhi_create_texture_view(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const = 0;
+    virtual RHIBuffer* rhi_create_buffer(RHIBufferDesc Desc) const = 0;
+    virtual RHISampler* rhi_create_sampler(RHISamplerDesc Desc) const = 0;
+    virtual RHIPipeline* rhi_create_pipeline(RHIPipelineDesc Desc) = 0;
 };
 
-class IRHIModule
+class RHIModule
 {
 public:
-    virtual ~IRHIModule() = default;
+    virtual ~RHIModule() = default;
 
-    virtual IRHI* CreateRHI() = 0;
+    virtual RHI* CreateRHI() = 0;
 };
 
-extern IRHI* GRHI;
-extern IRHIModule* GRHIModule;
+extern RHI* g_rhi;
+extern RHIModule* g_rhi_module;
 
-void SetRHIModule(ERHIInterfaceType InInterfaceType);
+void set_rhi_module(RHIInterfaceType InInterfaceType);
 
-IRHIModule* CreateVulkanRHIModule();
+RHIModule* create_vulkan_rhi_module();
 
 template<typename TRHI>
-inline TRHI* CastRHI(IRHI* InRHI)
+inline TRHI* CastRHI(RHI* InRHI)
 {
-#ifdef _DEBUG
-    assert(InRHI && InRHI->GetInterfaceType() == TRHI::StaticType);
+#ifdef RK_DEBUG
+    ensure(InRHI && InRHI->get_interface_type() == TRHI::StaticType);
 #endif
-    return static_cast<TRHI*>(InRHI->GetNonValidationRHI());
+    return static_cast<TRHI*>(InRHI->get_non_validation_rhi());
 }
 
 template<typename TRHI>
 inline TRHI* GetRHI()
 {
-    return CastRHI<TRHI>(GRHI);
+    return CastRHI<TRHI>(g_rhi);
 }
 
-inline IRHI* GetRHI()
+inline RHI* GetRHI()
 {
-    return GRHI;
+    return g_rhi;
 }

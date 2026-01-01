@@ -2,35 +2,35 @@
 
 #include "Assertion.h"
 
-IRHI* GRHI = nullptr;
-IRHIModule* GRHIModule = nullptr;
+RHI* g_rhi = nullptr;
+RHIModule* g_rhi_module = nullptr;
 
-void SetRHIModule(ERHIInterfaceType InInterfaceType)
+void set_rhi_module(RHIInterfaceType InInterfaceType)
 {
-    if (GRHI)
+    if (g_rhi)
     {
-        GRHI->Shutdown();
-        delete GRHI;
-        GRHI = nullptr;
+        g_rhi->shutdown();
+        delete g_rhi;
+        g_rhi = nullptr;
     }
 
-    if (GRHIModule)
+    if (g_rhi_module)
     {
-        delete GRHIModule;
-        GRHIModule = nullptr;
+        delete g_rhi_module;
+        g_rhi_module = nullptr;
     }
 
     switch (InInterfaceType)
     {
-        case ERHIInterfaceType::None: ensure(false && "Missing API backend"); break;
-        case ERHIInterfaceType::Vulkan: GRHIModule = CreateVulkanRHIModule(); break;
-        case ERHIInterfaceType::D3D12: ensure(false && "Missing API backend"); break;
-        case ERHIInterfaceType::Metal: ensure(false && "Missing API backend"); break;
-        case ERHIInterfaceType::WebGL: ensure(false && "Missing API backend"); break;
+        case RHIInterfaceType::None: ensure(false && "Missing API backend"); break;
+        case RHIInterfaceType::Vulkan: g_rhi_module = create_vulkan_rhi_module(); break;
+        case RHIInterfaceType::D3D12: ensure(false && "Missing API backend"); break;
+        case RHIInterfaceType::Metal: ensure(false && "Missing API backend"); break;
+        case RHIInterfaceType::WebGL: ensure(false && "Missing API backend"); break;
     }
 
-    if (InInterfaceType != ERHIInterfaceType::None)
+    if (InInterfaceType != RHIInterfaceType::None)
     {
-        GRHI = GRHIModule->CreateRHI();
+        g_rhi = g_rhi_module->CreateRHI();
     }
 }

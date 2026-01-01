@@ -8,98 +8,100 @@
 
 #include "VulkanDescriptorManager.h"
 
-FVulkanBuffer::FVulkanBuffer(FVulkanDevice &InDevice, FRHIBufferDesc InDesc)
-    : Device(InDevice), Desc(InDesc)
+VulkanBuffer::VulkanBuffer(VulkanDevice &in_device, const RHIBufferDesc& in_buffer_desc)
+    : RHIBuffer(in_buffer_desc, RHIBufferAccessState::Default()),
+    device(in_device),
+    buffer_handle(nullptr),
+    allocation_handle(nullptr),
+    allocation_offset(0)
 {
     Alloc();
 }
 
-FVulkanBuffer::FVulkanBuffer(FVulkanDevice &InDevice, FRHIBufferDesc InDesc, VkBuffer InBuffer) : Device(InDevice), Desc(InDesc), Buffer(InBuffer)
-{
-}
+VulkanBuffer::VulkanBuffer(VulkanDevice &in_device, const RHIBufferDesc& in_buffer_desc, VkBuffer in_buffer_handle)
+    : RHIBuffer(in_buffer_desc, RHIBufferAccessState::Default()),
+    device(in_device),
+    buffer_handle(in_buffer_handle),
+    allocation_handle(nullptr),
+    allocation_offset(0)
+{}
 
-FVulkanBuffer::~FVulkanBuffer()
+VulkanBuffer::~VulkanBuffer()
 {
     Free();
 }
 
-const FRHIBufferDesc &FVulkanBuffer::GetBufferDesc() const
+void *VulkanBuffer::get_handle() const
 {
-    return Desc;
+    return buffer_handle;
 }
 
-void *FVulkanBuffer::GetHandle() const
+uint32_t VulkanBuffer::GetBindingIndex() const
 {
-    return Buffer;
+    return descriptor.Index;
 }
 
-uint32_t FVulkanBuffer::GetBindingIndex() const
+void VulkanBuffer::map(const void *Data, uint64_t Size, uint64_t DstOffset)
 {
-    return m_DescriptorHandle.Index;
-}
+    ensure(Size <= desc.size, "Trying to map beyond buffer size.");
 
-void FVulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
-{
-    ensure(Size <= Desc.Size, "Trying to map beyond buffer size.");
-
-    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
+    if (desc.Lifetime == RHIResourceLifetime::Transient)
     {
-        void* BasePtr = Device.GetTransientResourceAllocator()->GetMappedBasePtr();
-        void* DestPtr = static_cast<uint8_t*>(BasePtr) + Offset + DstOffset;
+        void* BasePtr = device.get_transient_resource_allocator()->GetMappedBasePtr();
+        void* DestPtr = static_cast<uint8_t*>(BasePtr) + allocation_offset + DstOffset;
 
         memcpy(DestPtr, Data, Size);
     }
-    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
+    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
     {
         void* DataPtr = nullptr;
 
-        VkResult Result = vmaMapMemory(Device.GetVmaAllocator(), Allocation, &DataPtr);
+        VkResult Result = vmaMapMemory(device.get_vma_allocator(), allocation_handle, &DataPtr);
         ensure(Result == VK_SUCCESS);
 
         memcpy(DataPtr, Data, Size);
 
-        vmaUnmapMemory(Device.GetVmaAllocator(), Allocation);
+        vmaUnmapMemory(device.get_vma_allocator(), allocation_handle);
     }
 }
 
-void FVulkanBuffer::Alloc()
+void VulkanBuffer::Alloc()
 {
-    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(Desc.Size, VulkanRHI::GetVkBufferUsage(Desc.Usage));
+    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(desc.size, VulkanRHI::GetVkBufferUsage(desc.Usage));
 
-    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
+    if (desc.Lifetime == RHIResourceLifetime::Transient)
     {
-        VkResult Result = VulkanRHI::vkCreateBuffer(Device.GetVkDevice(), &CreateInfo, nullptr, &Buffer);
+        VkResult Result = VulkanRHI::vkCreateBuffer(device.get_vk_device(), &CreateInfo, nullptr, &buffer_handle);
         ensure(Result == VK_SUCCESS);
 
-        Device.GetTransientResourceAllocator()->AllocBuffer(Buffer, Offset);
+        device.get_transient_resource_allocator()->alloc_buffer(buffer_handle, allocation_offset);
     }
-    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
+    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, allocate a persistent buffer
         VmaAllocationCreateInfo AllocationCreateInfo = {};
-        AllocationCreateInfo.usage = VulkanRHI::ToVmaMemoryUsage(Desc.Memory);
+        AllocationCreateInfo.usage = VulkanRHI::ToVmaMemoryUsage(desc.Memory);
 
-        VkResult Result = vmaCreateBuffer(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Buffer, &Allocation, nullptr);
+        VkResult Result = vmaCreateBuffer(device.get_vma_allocator(), &CreateInfo, &AllocationCreateInfo, &buffer_handle, &allocation_handle, nullptr);
         ensure(Result == VK_SUCCESS);
     }
 
-    if ((Desc.Usage & ERHIBufferUsage::Uniform) == ERHIBufferUsage::Uniform ||
-        (Desc.Usage & ERHIBufferUsage::Storage) == ERHIBufferUsage::Storage)
+    if ((desc.Usage & RHIBufferUsage::Uniform) == RHIBufferUsage::Uniform || (desc.Usage & RHIBufferUsage::Storage) == RHIBufferUsage::Storage)
     {
-        m_DescriptorHandle = Device.GetDescriptorManager()->AddStorageBuffer(Buffer, Desc.Size);
+        descriptor = device.get_descriptor_manager()->add_storage_buffer(buffer_handle, desc.size);
     }
 }
 
-void FVulkanBuffer::Free()
+void VulkanBuffer::Free()
 {
-    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
+    if (desc.Lifetime == RHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
-        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Buffer, Buffer, m_DescriptorHandle);
+        device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::Buffer, buffer_handle, descriptor);
     }
-    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
+    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
-        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Buffer, Buffer, m_DescriptorHandle, Allocation);
+        device.get_deferred_deletion_queue()->enqueue_resource_with_allocation(FDeferredDeletionQueue::EType::Buffer, buffer_handle, descriptor, allocation_handle);
     }
 }

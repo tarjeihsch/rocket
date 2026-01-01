@@ -31,7 +31,7 @@ struct FVulkanShaderRef
     static FVulkanShaderRef Capture(FVulkanShader *pShader);
 };
 
-struct FVulkanPipeline : FRHIPipeline
+struct FVulkanPipeline : RHIPipeline
 {
     FVulkanPipeline(FVulkanShaderRef InVS, FVulkanShaderRef InFS, VkPipeline InPipeline)
         : VertexShaderRef(std::move(InVS)), FragmentShaderRef(std::move(InFS)), Pipeline(InPipeline)
@@ -48,25 +48,25 @@ struct FVulkanPipeline : FRHIPipeline
     VkPipeline Pipeline;
 };
 
-class FVulkanDevice;
+class VulkanDevice;
 
 class FVulkanPipelineManager
 {
 public:
-    explicit FVulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
+    explicit FVulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
     ~FVulkanPipelineManager();
 
-    FVulkanPipeline* GetPipeline(const FRHIPipelineDesc &Desc);
+    FVulkanPipeline* get_pipeline(const RHIPipelineDesc &Desc);
 
     void GC();
     void Invalidate();
 
 private:
-    VkPipeline Compile(const FRHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef);
-    uint64_t Hash(const FRHIPipelineDesc &Desc);
+    VkPipeline Compile(const RHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef);
+    uint64_t Hash(const RHIPipelineDesc &Desc);
 
 private:
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
     VkPipelineCache DriverCache;
     std::unordered_map<uint64_t, FVulkanPipeline*> Data;
 };

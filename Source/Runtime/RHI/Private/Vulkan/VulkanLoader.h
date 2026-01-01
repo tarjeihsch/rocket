@@ -1,7 +1,7 @@
 #pragma once
 
 enum class ERHIQueueSyncStage : uint8_t;
-enum class ERHITextureLayout : uint8_t;
+enum class RHITextureLayout : uint8_t;
 enum class ERHIBorderColor : uint8_t;
 enum class ERHITextureUsage : uint8_t;
 enum class ERHITextureFormat;
@@ -15,8 +15,8 @@ enum class ERHIBlendOp : uint8_t;
 enum class ERHIPrimitiveTopology : uint8_t;
 enum class ERHICullMode : uint8_t;
 enum class ERHIPolygonMode : uint8_t;
-enum class ERHIResourceAccess : uint16_t;
-enum class ERHIPipelineStage : uint16_t;
+enum class RHIResourceAccess : uint16_t;
+enum class RHIPipelineStage : uint16_t;
 
 #if defined(_WIN32)
     #define VK_USE_PLATFORM_WIN32_KHR
@@ -174,8 +174,8 @@ enum class ERHIPipelineStage : uint16_t;
     VULKAN_INSTANCE_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     VULKAN_DEVICE_FUNCTIONS(X)
 
-enum class ERHIResourceMemory;
-enum class ERHIBufferUsage : uint32_t;
+enum class RHIResourceMemory;
+enum class RHIBufferUsage : uint32_t;
 
 namespace VulkanRHI
 {
@@ -190,19 +190,20 @@ namespace VulkanRHI
     VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
     VkBufferCreateInfo GetVkBufferCreateInfo(uint64_t Size, VkBufferUsageFlags UsageFlags);
 
-    VkImageLayout GetVulkanLayout(ERHITextureLayout layout);
-    VkAccessFlags GetVulkanAccess(ERHIResourceAccess access);
-    VkPipelineStageFlags GetVulkanPipelineStage(ERHIPipelineStage stage);
+    VkImageLayout GetVulkanLayout(RHITextureLayout layout);
+    VkAccessFlags2 GetVkAccess(RHIResourceAccess access);
+    VkPipelineStageFlags2 GetVkPipelineStage(RHIPipelineStage stage);
     VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
     VkFormat GetVkFormat(ERHITextureFormat Format);
     VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
     VkFormat ToVkFormat(ERHIFormat Format);
+    VkImageAspectFlags GetVkAspectFromFormat(ERHITextureFormat format);
     VkPrimitiveTopology ToVkTopology(ERHIPrimitiveTopology Topology);
     VkCullModeFlags ToVkCullMode(ERHICullMode Mode);
     VkPolygonMode ToVkPolygonMode(ERHIPolygonMode Mode);
-    VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
+    VmaMemoryUsage ToVmaMemoryUsage(RHIResourceMemory Memory);
 
-    VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
+    VkBufferUsageFlags GetVkBufferUsage(RHIBufferUsage usage);
 
     VkFilter ToVkFilter(ERHIFilterMode mode);
     VkSamplerAddressMode ToVkAddressMode(ERHIAddressMode mode);

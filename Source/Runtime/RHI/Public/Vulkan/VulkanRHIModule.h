@@ -2,8 +2,8 @@
 
 #include "Common/RHI.h"
 
-class FVulkanRHIModule : public IRHIModule
+class FVulkanRHIModule : public RHIModule
 {
 public:
-    virtual IRHI* CreateRHI() override;
+    virtual RHI* CreateRHI() override;
 };

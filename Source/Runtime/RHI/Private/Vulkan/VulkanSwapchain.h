@@ -9,17 +9,17 @@
 
 class VulkanCommandListContext;
 struct FVulkanSemaphore;
-class FVulkanDevice;
-struct FVulkanTexture;
-struct FVulkanTextureView;
+class VulkanDevice;
+struct VulkanTexture;
+struct VulkanTextureView;
 
 class VulkanSwapchain : public RHISwapchain
 {
 private:
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
 
 public:
-    explicit VulkanSwapchain(FVulkanDevice& InDevice);
+    explicit VulkanSwapchain(VulkanDevice& InDevice);
     virtual ~VulkanSwapchain() override;
 
     RHITexture* GetBackBufferTexture() const;
@@ -40,7 +40,7 @@ private:
     VkSwapchainKHR Swapchain;
     VkExtent2D Extent;
 
-    std::vector<std::unique_ptr<FVulkanTexture>> BackBuffers;
+    std::vector<std::unique_ptr<VulkanTexture>> BackBuffers;
     std::vector<std::shared_ptr<FVulkanSemaphore>> ImageAcquiredSemaphores;
     std::vector<std::shared_ptr<FVulkanSemaphore>> RenderFinishedSemaphores;
 

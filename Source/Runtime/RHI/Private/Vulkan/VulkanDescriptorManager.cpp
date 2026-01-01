@@ -14,7 +14,7 @@ static VkDescriptorSetLayoutBinding MakeBinding(uint32_t pBinding, VkDescriptorT
     return Binding;
 }
 
-VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_t MaxSampledImages, uint32_t MaxSamplers, uint32_t MaxStorageImages, uint32_t MaxStorageBuffers)
+VulkanDescriptorManager::VulkanDescriptorManager(VulkanDevice& pDevice, uint32_t MaxSampledImages, uint32_t MaxSamplers, uint32_t MaxStorageImages, uint32_t MaxStorageBuffers)
     : Device(pDevice), DescriptorSetLayout(VK_NULL_HANDLE), DescriptorSet(VK_NULL_HANDLE), DescriptorPool(VK_NULL_HANDLE)
 {
     SampledImages.Infos.resize(MaxSampledImages);
@@ -77,7 +77,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     LayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
     LayoutCreateInfo.pNext = &Extension;
 
-    VkResult Result = VulkanRHI::vkCreateDescriptorSetLayout(pDevice.GetVkDevice(), &LayoutCreateInfo, nullptr, &DescriptorSetLayout);
+    VkResult Result = VulkanRHI::vkCreateDescriptorSetLayout(pDevice.get_vk_device(), &LayoutCreateInfo, nullptr, &DescriptorSetLayout);
     ensure(Result == VK_SUCCESS);
 
     VkDescriptorPoolSize PoolSizes[] = {
@@ -93,7 +93,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     PoolCreateInfo.poolSizeCount = static_cast<uint32_t>(DescriptorBinding::Count);
     PoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
     PoolCreateInfo.pPoolSizes = PoolSizes;
-    Result = VulkanRHI::vkCreateDescriptorPool(pDevice.GetVkDevice(), &PoolCreateInfo, nullptr, &DescriptorPool);
+    Result = VulkanRHI::vkCreateDescriptorPool(pDevice.get_vk_device(), &PoolCreateInfo, nullptr, &DescriptorPool);
     ensure(Result == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo DescriptorSetAllocInfo = {};
@@ -101,7 +101,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     DescriptorSetAllocInfo.descriptorPool     = DescriptorPool;
     DescriptorSetAllocInfo.descriptorSetCount = 1;
     DescriptorSetAllocInfo.pSetLayouts        = &DescriptorSetLayout;
-    Result = VulkanRHI::vkAllocateDescriptorSets(pDevice.GetVkDevice(), &DescriptorSetAllocInfo, &DescriptorSet);
+    Result = VulkanRHI::vkAllocateDescriptorSets(pDevice.get_vk_device(), &DescriptorSetAllocInfo, &DescriptorSet);
     ensure(Result == VK_SUCCESS);
 
     VkPushConstantRange PushConstantRanges[1];
@@ -115,7 +115,7 @@ VulkanDescriptorManager::VulkanDescriptorManager(FVulkanDevice& pDevice, uint32_
     PipelineLayoutCreateInfo.pSetLayouts = &DescriptorSetLayout;
     PipelineLayoutCreateInfo.pushConstantRangeCount = 1;
     PipelineLayoutCreateInfo.pPushConstantRanges = PushConstantRanges;
-    VulkanRHI::vkCreatePipelineLayout(Device.GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
+    VulkanRHI::vkCreatePipelineLayout(Device.get_vk_device(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout);
     ensure(Result == VK_SUCCESS);
 }
 
@@ -131,12 +131,12 @@ void VulkanDescriptorManager::Init()
 
 void VulkanDescriptorManager::Shutdown()
 {
-    VulkanRHI::vkDestroyDescriptorPool(Device.GetVkDevice(), DescriptorPool, nullptr);
-    VulkanRHI::vkDestroyDescriptorSetLayout(Device.GetVkDevice(), DescriptorSetLayout, nullptr);
-    VulkanRHI::vkDestroyPipelineLayout(Device.GetVkDevice(), PipelineLayout, nullptr);
+    VulkanRHI::vkDestroyDescriptorPool(Device.get_vk_device(), DescriptorPool, nullptr);
+    VulkanRHI::vkDestroyDescriptorSetLayout(Device.get_vk_device(), DescriptorSetLayout, nullptr);
+    VulkanRHI::vkDestroyPipelineLayout(Device.get_vk_device(), PipelineLayout, nullptr);
 }
 
-RDescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::SlotBase &Slot)
+Descriptor VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::SlotBase &Slot)
 {
     ensure(!Slot.FreeList.empty(), "Out of slots.");
     uint32_t Index = Slot.FreeList.back();
@@ -144,7 +144,7 @@ RDescriptorHandle VulkanDescriptorManager::AllocSlot(VulkanDescriptorManager::Sl
     return { Index, Slot.Generation[Index] };
 }
 
-void VulkanDescriptorManager::FreeSlot(VulkanDescriptorManager::SlotBase &Slot, RDescriptorHandle Handle)
+void VulkanDescriptorManager::FreeSlot(VulkanDescriptorManager::SlotBase &Slot, Descriptor Handle)
 {
     if (!Handle.IsValid())
     {
@@ -165,57 +165,57 @@ void VulkanDescriptorManager::MarkDirty(VulkanDescriptorManager::SlotBase &Slot,
     Slot.Dirty[Index] = 1;
 }
 
-RDescriptorHandle VulkanDescriptorManager::AddSampledImage(VkImageView View, VkImageLayout Layout)
+Descriptor VulkanDescriptorManager::add_sampled_image(VkImageView View, VkImageLayout Layout)
 {
-    RDescriptorHandle Handle = AllocSlot(SampledImages);
+    Descriptor Handle = AllocSlot(SampledImages);
     SampledImages.Infos[Handle.Index] = { VK_NULL_HANDLE, View, Layout };
     MarkDirty(SampledImages, Handle.Index);
     return Handle;
 }
 
-RDescriptorHandle VulkanDescriptorManager::AddSampler(VkSampler Sampler)
+Descriptor VulkanDescriptorManager::AddSampler(VkSampler Sampler)
 {
-    RDescriptorHandle Handle = AllocSlot(Samplers);
+    Descriptor Handle = AllocSlot(Samplers);
     Samplers.Infos[Handle.Index] = { Sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
     MarkDirty(Samplers, Handle.Index);
     return Handle;
 }
 
-RDescriptorHandle VulkanDescriptorManager::AddStorageImage(VkImageView View, VkImageLayout Layout)
+Descriptor VulkanDescriptorManager::add_storage_image(VkImageView View, VkImageLayout Layout)
 {
-    RDescriptorHandle Handle = AllocSlot(StorageImages);
+    Descriptor Handle = AllocSlot(StorageImages);
     StorageImages.Infos[Handle.Index] = { VK_NULL_HANDLE, View, Layout };
     MarkDirty(StorageImages, Handle.Index);
     return Handle;
 }
 
-RDescriptorHandle VulkanDescriptorManager::AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size)
+Descriptor VulkanDescriptorManager::add_storage_buffer(VkBuffer Buffer, VkDeviceSize Size)
 {
-    RDescriptorHandle Handle = AllocSlot(StorageBuffers);
+    Descriptor Handle = AllocSlot(StorageBuffers);
     StorageBuffers.Infos[Handle.Index] = { Buffer, 0, Size };
     MarkDirty(StorageBuffers, Handle.Index);
     return Handle;
 }
 
-void VulkanDescriptorManager::RemoveSampledImage(RDescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveSampledImage(Descriptor Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(SampledImages, Handle);
 }
 
-void VulkanDescriptorManager::RemoveSampler(RDescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveSampler(Descriptor Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(Samplers, Handle);
 }
 
-void VulkanDescriptorManager::RemoveStorageImage(RDescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveStorageImage(Descriptor Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(StorageImages, Handle);
 }
 
-void VulkanDescriptorManager::RemoveStorageBuffer(RDescriptorHandle Handle)
+void VulkanDescriptorManager::RemoveStorageBuffer(Descriptor Handle)
 {
     // TODO: MarkDirty? Write a dummy null descriptor?
     FreeSlot(StorageBuffers, Handle);
@@ -327,5 +327,5 @@ void VulkanDescriptorManager::Update()
     FlushDirtyStorageImages(DescriptorBinding::StorageImage, StorageImages);
     FlushDirtyStorageBuffers(DescriptorBinding::StorageBuffer, StorageBuffers);
 
-    VulkanRHI::vkUpdateDescriptorSets(Device.GetVkDevice(), static_cast<uint32_t>(Writes.size()), Writes.data(), 0, nullptr);
+    VulkanRHI::vkUpdateDescriptorSets(Device.get_vk_device(), static_cast<uint32_t>(Writes.size()), Writes.data(), 0, nullptr);
 }

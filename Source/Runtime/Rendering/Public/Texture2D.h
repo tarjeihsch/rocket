@@ -13,10 +13,22 @@ enum class ETextureType
     Linear = 1
 };
 
-struct RTexture2D
+enum class TextureState : uint8_t
 {
-    explicit RTexture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight);
-    ~RTexture2D();
+    Undefined,
+    SRV,
+    UAV,
+    RenderTarget,
+    DepthStencil,
+    CopySrc,
+    CopyDst,
+    Present
+};
+
+struct Texture2D
+{
+    explicit Texture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight);
+    ~Texture2D();
 
     inline RHITexture* GetHandle() const;
 
@@ -31,7 +43,7 @@ private:
     uint32_t Height;
 };
 
-inline RHITexture* RTexture2D::GetHandle() const
+inline RHITexture* Texture2D::GetHandle() const
 {
     return Handle;
 }

@@ -6,7 +6,7 @@
 
 class FVulkanCommandBufferPool;
 class FVulkanQueue;
-class FVulkanDevice;
+class VulkanDevice;
 
 enum class EVulkanCommandBufferType : uint8_t
 {
@@ -41,7 +41,7 @@ public:
     void Reset();
 
     inline EVulkanCommandBufferState GetState() const;
-    inline VkCommandBuffer GetHandle() const;
+    inline VkCommandBuffer get_handle() const;
     inline double GetSubmissionTime() const;
 
 private:
@@ -63,11 +63,11 @@ private:
 class FVulkanCommandBufferPool
 {
 private:
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
     FVulkanQueue& Queue;
 
 public:
-    FVulkanCommandBufferPool(FVulkanDevice& InDevice, FVulkanQueue& InQueue);
+    FVulkanCommandBufferPool(VulkanDevice& InDevice, FVulkanQueue& InQueue);
     ~FVulkanCommandBufferPool();
 
     FVulkanCommandBuffer* Acquire();
@@ -91,7 +91,7 @@ EVulkanCommandBufferState FVulkanCommandBuffer::GetState() const
     return State;
 }
 
-VkCommandBuffer FVulkanCommandBuffer::GetHandle() const
+VkCommandBuffer FVulkanCommandBuffer::get_handle() const
 {
     return Handle;
 }

@@ -5,7 +5,7 @@
 
 RSampler::RSampler()
 {
-    RRHISamplerDesc SamplerDesc = {};
+    RHISamplerDesc SamplerDesc = {};
     SamplerDesc.MinFilter = ERHIFilterMode::Linear;
     SamplerDesc.MagFilter = ERHIFilterMode::Linear;
     SamplerDesc.MipFilter = ERHIFilterMode::Linear;
@@ -15,7 +15,7 @@ RSampler::RSampler()
     SamplerDesc.MinLod = 0.0f;
     SamplerDesc.MaxLod = 0.0f;
 
-    Sampler = GetRHI()->RHICreateSampler(SamplerDesc);
+    Sampler = GetRHI()->rhi_create_sampler(SamplerDesc);
 }
 
 RSampler::~RSampler()

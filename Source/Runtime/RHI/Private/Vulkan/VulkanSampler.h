@@ -5,11 +5,11 @@
 #include "VulkanLoader.h"
 #include <vulkan/vulkan_core.h>
 
-class RVulkanSampler : public RRHISampler
+class VulkanSampler : public RHISampler
 {
 public:
-    RVulkanSampler(FVulkanDevice& Device, RRHISamplerDesc& Desc);
-    ~RVulkanSampler() override;
+    VulkanSampler(VulkanDevice& Device, RHISamplerDesc& Desc);
+    ~VulkanSampler() override;
 
     virtual void* GetHandle() const override;
     virtual uint32_t GetBindingIndex() const override;
@@ -19,9 +19,9 @@ private:
     void Free();
 
 private:
-    RRHISamplerDesc Desc;
+    RHISamplerDesc Desc;
     VkSampler Sampler;
 
-    FVulkanDevice& Device;
-    RDescriptorHandle DescriptorHandle;
+    VulkanDevice& Device;
+    Descriptor DescriptorHandle;
 };

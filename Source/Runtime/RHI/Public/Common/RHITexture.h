@@ -2,7 +2,7 @@
 
 #include "Common/RHI.h"
 
-enum class ERHIResourceLifetime : uint8_t;
+enum class RHIResourceLifetime : uint8_t;
 
 enum class ERHITextureUsage : uint8_t
 {
@@ -20,9 +20,9 @@ enum class ERHITextureUsage : uint8_t
 inline ERHITextureUsage operator|(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
 inline ERHITextureUsage operator&(ERHITextureUsage Lhs, ERHITextureUsage Rhs) { return static_cast<ERHITextureUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
 
-enum class ERHITextureLayout : uint8_t
+enum class RHITextureLayout : uint8_t
 {
-    Undefined, // Initial undefined state
+    None, // Initial undefined state
     General, // Read/Write by shader (UAV)
     ColorAttachment, // Render target
     DepthStencil, // Depth/stencil usage
@@ -69,73 +69,136 @@ inline uint32_t GetTextureFormatPixelByteSize(ERHITextureFormat Format)
     }
 }
 
-struct FRHITextureDesc
+struct RHITextureDesc
 {
-    uint32_t Extent[2];
+    uint32_t extent[2];
     uint32_t Offset[2];
 
-    ERHIResourceLifetime Lifetime;
+    RHIResourceLifetime Lifetime;
     ERHITextureFormat Format;
     ERHITextureUsage Usage;
-    ERHITextureLayout InitialLayout;
+    RHITextureLayout initial_layout;
     uint32_t MipLevel;
     uint32_t LayerCount;
     uint32_t SampleCount;
 
-    static FRHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, ERHIResourceLifetime InLifetime, ERHITextureFormat Format, ERHITextureUsage Usage, ERHITextureLayout InitialLayout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
+    static RHITextureDesc Create2D(uint32_t SizeX, uint32_t SizeY, RHIResourceLifetime InLifetime, ERHITextureFormat Format, ERHITextureUsage Usage, RHITextureLayout InitialLayout, uint32_t MipLevel, uint32_t LayerCount, uint32_t SampleCount)
     {
-        FRHITextureDesc Desc = {};
-        Desc.Extent[0] = SizeX;
-        Desc.Extent[1] = SizeY;
+        RHITextureDesc Desc = {};
+        Desc.extent[0] = SizeX;
+        Desc.extent[1] = SizeY;
         Desc.Format = Format;
         Desc.Lifetime = InLifetime;
         Desc.MipLevel = MipLevel;
         Desc.Usage = Usage;
-        Desc.InitialLayout = InitialLayout;
+        Desc.initial_layout = InitialLayout;
         Desc.SampleCount = SampleCount;
         return Desc;
     }
 };
 
-struct RHITexture
+struct RHITextureAccessState
 {
-    virtual ~RHITexture() = default;
+    RHITextureLayout texture_layout;
+    RHIResourceAccess resource_access;
+    RHIPipelineStage pipeline_stage;
+    uint32_t queue_family_index;
 
-    virtual const FRHITextureDesc& RHIGetTextureDesc() const = 0;
-    virtual void* GetHandle() const = 0;
-    
-    virtual void gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage) = 0;
+    static RHITextureAccessState Default()
+    {
+        RHITextureAccessState state = {};
+        state.texture_layout = RHITextureLayout::None;
+        state.pipeline_stage = RHIPipelineStage::None;
+        state.resource_access = RHIResourceAccess::None;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
 
-    ERHITextureLayout current_layout = ERHITextureLayout::Undefined;
-    ERHIResourceAccess current_access = ERHIResourceAccess::None;
-    ERHIPipelineStage current_pipeline_stage = ERHIPipelineStage::None;
-    uint32_t CurrentQueueFamilyIndex = ~(0U);
+    static RHITextureAccessState ShaderRead()
+    {
+        RHITextureAccessState state = {};
+        state.texture_layout = RHITextureLayout::ShaderReadOnly;
+        state.pipeline_stage = RHIPipelineStage::VertexShader | RHIPipelineStage::FragmentShader | RHIPipelineStage::ComputeShader;
+        state.resource_access = RHIResourceAccess::ShaderSampledRead;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
 
-    uint8_t m_is_back_buffer : 1;
+    static RHITextureAccessState UnorderedAccess()
+    {
+        RHITextureAccessState state = {};
+        state.texture_layout = RHITextureLayout::General;
+        state.pipeline_stage = RHIPipelineStage::VertexShader | RHIPipelineStage::FragmentShader | RHIPipelineStage::ComputeShader;
+        state.resource_access = RHIResourceAccess::ShaderStorageRead | RHIResourceAccess::ShaderStorageWrite;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
+
+    static RHITextureAccessState Present()
+    {
+        RHITextureAccessState state = {};
+        state.texture_layout = RHITextureLayout::Present;
+        state.pipeline_stage = RHIPipelineStage::BottomOfPipe;
+        state.resource_access = RHIResourceAccess::None;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
 };
 
-struct FRHITextureViewDesc
+struct RHITexture
+{
+    RHITexture(const RHITextureDesc& in_desc, const RHITextureAccessState& in_texture_access_state)
+        : texture_desc(in_desc),
+        texture_access_state(in_texture_access_state)
+    {
+    }
+
+    virtual ~RHITexture() = default;
+
+    virtual void* GetHandle() const = 0;
+
+    __inline const RHITextureDesc& GetTextureDesc() const
+    {
+        return texture_desc;
+    }
+
+    __inline const RHITextureAccessState& GetTextureAccessState() const
+    {
+        return texture_access_state;
+    }
+
+    __inline void SetTextureAccessState(const RHITextureAccessState& in_texture_access_state)
+    {
+        texture_access_state = in_texture_access_state;
+    }
+
+private:
+    RHITextureDesc texture_desc;
+    RHITextureAccessState texture_access_state;
+};
+
+struct RHITextureViewDesc
 {
     ERHITextureFormat Format = ERHITextureFormat::Invalid;
-    ERHITextureAspect Aspect = ERHITextureAspect::None;
-    ERHIResourceLifetime Lifetime;
+    ERHITextureAspect aspect = ERHITextureAspect::None;
+    RHIResourceLifetime Lifetime;
 
-    static FRHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect, ERHIResourceLifetime Lifetime)
+    static RHITextureViewDesc Create2D(ERHITextureFormat Format, ERHITextureAspect Aspect, RHIResourceLifetime Lifetime)
     {
-        FRHITextureViewDesc Desc = {};
+        RHITextureViewDesc Desc = {};
         Desc.Format = Format;
-        Desc.Aspect = Aspect;
+        Desc.aspect = Aspect;
         Desc.Lifetime = Lifetime;
         return Desc;
     }
 };
 
-struct FRHITextureView
+struct RHITextureView
 {
-    virtual ~FRHITextureView() = default;
+    virtual ~RHITextureView() = default;
 
-    virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const = 0;
-    virtual RHITexture* GetTexture() const = 0;
-    virtual void* GetHandle() const = 0;
+    virtual const RHITextureViewDesc& get_desc() const = 0;
+    virtual RHITexture* get_target_texture() const = 0;
+    virtual void* get_handle() const = 0;
     virtual uint32_t GetBindingIndex() const = 0;
 };

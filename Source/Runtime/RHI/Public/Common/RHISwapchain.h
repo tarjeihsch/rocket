@@ -4,7 +4,7 @@
 #include "PlatformTypes.h"
 
 struct RHISemaphore;
-struct FRHITextureView;
+struct RHITextureView;
 struct RHITexture;
 
 struct RRHISwapchainDesc

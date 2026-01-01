@@ -6,58 +6,54 @@
 #include "VulkanDescriptorManager.h"
 
 class VulkanSurface;
-class FVulkanDevice;
-struct RDescriptorHandle;
+class VulkanDevice;
+struct Descriptor;
 
 // Both persistent and transient textures will only ever live within the duration of this wrapper.
-struct FVulkanTexture : RHITexture
+struct VulkanTexture : RHITexture
 {
-    FVulkanTexture(FVulkanDevice& InDevice);
-    FVulkanTexture(FVulkanDevice& InDevice, FRHITextureDesc& InDesc);
-    FVulkanTexture(FVulkanDevice& InDevice, FRHITextureDesc& InDesc, VkImage InImage);
-    ~FVulkanTexture();
+private:
+    VulkanDevice& device;
 
-    virtual const FRHITextureDesc& RHIGetTextureDesc() const override;
+public:
+    VulkanTexture(VulkanDevice& in_device, RHITextureDesc& in_desc);
+    VulkanTexture(VulkanDevice& in_device, RHITextureDesc& in_desc, VkImage in_image_handle);
+    ~VulkanTexture();
+
     virtual void* GetHandle() const override;
-    virtual void gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage) override;
-    
-    VkImage Image;
-    VmaAllocation Allocation;
-    uint64_t Offset;
 
-    VkImageLayout ImageLayout;
-    VkAccessFlags AccessFlags;
-    VkPipelineStageFlags PipelineStageFlags;
+    VkImage handle;
+    VmaAllocation allocation_handle;
+    uint64_t offset;
 
 private:
-    void Alloc();
-    void Free();
-
-private:
-    FRHITextureDesc Desc;
-    FVulkanDevice& Device;
+    void alloc();
+    void free();
 };
 
-struct FVulkanTextureView : FRHITextureView
+struct VulkanTextureView : RHITextureView
 {
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, RHITexture* Texture);
-    FVulkanTextureView(FVulkanDevice& InDevice, FRHITextureViewDesc& InDesc, RHITexture* Texture, VkImageView InImageView);
-    ~FVulkanTextureView();
+private:
+    VulkanDevice& Device;
 
-    virtual const FRHITextureViewDesc& RHIGetTextureViewDesc() const override;
-    virtual void* GetHandle() const override;
+public:
+    VulkanTextureView(VulkanDevice& InDevice, RHITextureViewDesc& InDesc, RHITexture* Texture);
+    VulkanTextureView(VulkanDevice& InDevice, RHITextureViewDesc& InDesc, RHITexture* Texture, VkImageView InImageView);
+    ~VulkanTextureView();
+
+    virtual void* get_handle() const override;
+    virtual const RHITextureViewDesc& get_desc() const override;
     virtual uint32_t GetBindingIndex() const override;
-    virtual RHITexture* GetTexture() const override;
+    virtual RHITexture* get_target_texture() const override;
 
-    RHITexture* Texture;
-    VkImageView ImageView;
+    VkImageView image_view_handle;
+    RHITexture* target_texture;
 
 private:
     void Alloc();
     void Free();
 
 private:
-    FRHITextureViewDesc Desc;
-    FVulkanDevice& Device;
-    RDescriptorHandle DescriptorHandle;
+    RHITextureViewDesc desc;
+    Descriptor descriptor_handle;
 };

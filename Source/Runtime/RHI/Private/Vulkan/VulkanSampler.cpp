@@ -1,28 +1,28 @@
 #include "VulkanSampler.h"
 
-RVulkanSampler::RVulkanSampler(FVulkanDevice& InDevice, RRHISamplerDesc &InDesc)
+VulkanSampler::VulkanSampler(VulkanDevice& InDevice, RHISamplerDesc &InDesc)
     : Device(InDevice),
     Desc(InDesc),
     Sampler(VK_NULL_HANDLE)
 {
     Alloc();
 }
-RVulkanSampler::~RVulkanSampler()
+VulkanSampler::~VulkanSampler()
 {
     Free();
 }
 
-void* RVulkanSampler::GetHandle() const
+void* VulkanSampler::GetHandle() const
 {
     return Sampler;
 }
 
-uint32_t RVulkanSampler::GetBindingIndex() const
+uint32_t VulkanSampler::GetBindingIndex() const
 {
     return DescriptorHandle.Index;
 }
 
-void RVulkanSampler::Alloc()
+void VulkanSampler::Alloc()
 {
     VkSamplerCreateInfo SamplerCreateInfo = {};
     SamplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -60,13 +60,13 @@ void RVulkanSampler::Alloc()
         SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     }
 
-    VkResult Result = VulkanRHI::vkCreateSampler(Device.GetVkDevice(), &SamplerCreateInfo, nullptr, &Sampler);
+    VkResult Result = VulkanRHI::vkCreateSampler(Device.get_vk_device(), &SamplerCreateInfo, nullptr, &Sampler);
     ensure(Result == VK_SUCCESS, "Failed to create sampler");
 
-    DescriptorHandle = Device.GetDescriptorManager()->AddSampler(Sampler);
+    DescriptorHandle = Device.get_descriptor_manager()->AddSampler(Sampler);
 }
 
-void RVulkanSampler::Free()
+void VulkanSampler::Free()
 {
-    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Sampler, Sampler, DescriptorHandle);
+    Device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::Sampler, Sampler, DescriptorHandle);
 }

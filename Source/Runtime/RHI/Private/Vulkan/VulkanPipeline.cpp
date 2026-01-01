@@ -89,7 +89,7 @@ FVulkanShaderRef FVulkanShaderRef::Capture(FVulkanShader *pShader)
     return Ref;
 }
 
-FVulkanPipelineManager::FVulkanPipelineManager(FVulkanDevice& pDevice, VkPipelineCache pDriverCache)
+FVulkanPipelineManager::FVulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache)
     : Device(pDevice), DriverCache(pDriverCache)
 {
 }
@@ -99,7 +99,7 @@ FVulkanPipelineManager::~FVulkanPipelineManager()
     Invalidate();
 }
 
-FVulkanPipeline* FVulkanPipelineManager::GetPipeline(const FRHIPipelineDesc &Desc)
+FVulkanPipeline* FVulkanPipelineManager::get_pipeline(const RHIPipelineDesc &Desc)
 {
     //const uint64_t Key = Hash(Desc);
     //if (auto It = Data.find(Key); It != Data.end())
@@ -153,7 +153,7 @@ void FVulkanPipelineManager::GC()
 
         if (Stale)
         {
-            VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), It->second->Pipeline, nullptr);
+            VulkanRHI::vkDestroyPipeline(Device.get_vk_device(), It->second->Pipeline, nullptr);
             It = Data.erase(It);
         }
         else
@@ -167,14 +167,14 @@ void FVulkanPipelineManager::Invalidate()
 {
     for (auto& KV : Data)
     {
-        VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), KV.second->Pipeline, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->VertexShaderRef.Shader->Module, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->FragmentShaderRef.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyPipeline(Device.get_vk_device(), KV.second->Pipeline, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.get_vk_device(), KV.second->VertexShaderRef.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.get_vk_device(), KV.second->FragmentShaderRef.Shader->Module, nullptr);
     }
     Data.clear();
 }
 
-VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef)
+VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef)
 {
     std::vector<VkPipelineShaderStageCreateInfo> ShaderStages = {};
 
@@ -305,16 +305,16 @@ VkPipeline FVulkanPipelineManager::Compile(const FRHIPipelineDesc &Desc, FVulkan
     PipelineCreateInfo.pColorBlendState = &ColorBlendCreateInfo;
     PipelineCreateInfo.pDepthStencilState = &DepthStencilCreateInfo;
     PipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
-    PipelineCreateInfo.layout = Device.GetDescriptorManager()->GetPipelineLayout();
+    PipelineCreateInfo.layout = Device.get_descriptor_manager()->GetPipelineLayout();
 
     VkPipeline Pipeline = VK_NULL_HANDLE;
-    VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.GetVkDevice(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
+    VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.get_vk_device(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
     ensure(Result == VK_SUCCESS, "Failed to create graphics pipeline");
 
     return Pipeline;
 }
 
-uint64_t FVulkanPipelineManager::Hash(const FRHIPipelineDesc &P_Spec)
+uint64_t FVulkanPipelineManager::Hash(const RHIPipelineDesc &P_Spec)
 {
     uint64_t Hash = FNV_OFFSET;
 

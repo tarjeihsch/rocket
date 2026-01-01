@@ -21,7 +21,7 @@ FVulkanCommandBuffer::~FVulkanCommandBuffer()
 
 void FVulkanCommandBuffer::Alloc()
 {
-    assert(State == EVulkanCommandBufferState::NotAllocated);
+    ensure(State == EVulkanCommandBufferState::NotAllocated);
 
     VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
     CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -29,7 +29,7 @@ void FVulkanCommandBuffer::Alloc()
     CommandBufferAllocateInfo.commandBufferCount = 1;
     CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkResult Result = VulkanRHI::vkAllocateCommandBuffers(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CommandBufferAllocateInfo, &Handle);
+    VkResult Result = VulkanRHI::vkAllocateCommandBuffers(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &CommandBufferAllocateInfo, &Handle);
     ensure(Result == VK_SUCCESS, "Failed to allocate command buffers.");
 
     State = EVulkanCommandBufferState::ReadyForBegin;
@@ -37,16 +37,16 @@ void FVulkanCommandBuffer::Alloc()
 
 void FVulkanCommandBuffer::Free()
 {
-    assert(State != EVulkanCommandBufferState::NotAllocated);
+    ensure(State != EVulkanCommandBufferState::NotAllocated);
 
-    VulkanRHI::vkFreeCommandBuffers(GetVulkanRHIMinimal()->RHIGetVkDevice(), Pool.GetHandle(), 1, &Handle);
+    VulkanRHI::vkFreeCommandBuffers(get_vulkan_rhi_minimal()->RHIGetVkDevice(), Pool.GetHandle(), 1, &Handle);
 
     State = EVulkanCommandBufferState::NotAllocated;
 }
 
 void FVulkanCommandBuffer::Begin()
 {
-    assert(State == EVulkanCommandBufferState::ReadyForBegin || State == EVulkanCommandBufferState::NeedReset);
+    ensure(State == EVulkanCommandBufferState::ReadyForBegin || State == EVulkanCommandBufferState::NeedReset);
 
     if (State == EVulkanCommandBufferState::NeedReset)
     {
@@ -67,7 +67,7 @@ void FVulkanCommandBuffer::Begin()
 
 void FVulkanCommandBuffer::End()
 {
-    assert(State == EVulkanCommandBufferState::IsInsideBegin);
+    ensure(State == EVulkanCommandBufferState::IsInsideBegin);
 
     VulkanRHI::vkEndCommandBuffer(Handle);
 
@@ -76,7 +76,7 @@ void FVulkanCommandBuffer::End()
 
 void FVulkanCommandBuffer::Submit()
 {
-    assert(State == EVulkanCommandBufferState::HasEnded);
+    ensure(State == EVulkanCommandBufferState::HasEnded);
 
     static const auto Start = std::chrono::steady_clock::now();
     const auto Now = std::chrono::steady_clock::now();
@@ -87,7 +87,7 @@ void FVulkanCommandBuffer::Submit()
 
 void FVulkanCommandBuffer::Finish()
 {
-    assert(State == EVulkanCommandBufferState::Submitted);
+    ensure(State == EVulkanCommandBufferState::Submitted);
 
     // todo: calculate submission time
 
@@ -96,14 +96,14 @@ void FVulkanCommandBuffer::Finish()
 
 void FVulkanCommandBuffer::Reset()
 {
-    //assert(State == EVulkanCommandBufferState::NeedReset);
+    //ensure(State == EVulkanCommandBufferState::NeedReset);
 
     VulkanRHI::vkResetCommandBuffer(Handle, 0);
 
     State = EVulkanCommandBufferState::ReadyForBegin;
 }
 
-FVulkanCommandBufferPool::FVulkanCommandBufferPool(FVulkanDevice& InDevice, FVulkanQueue& InQueue)
+FVulkanCommandBufferPool::FVulkanCommandBufferPool(VulkanDevice& InDevice, FVulkanQueue& InQueue)
     : Device(InDevice),
     Queue(InQueue)
 {
@@ -157,7 +157,7 @@ void FVulkanCommandBufferPool::Initialize()
     CommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     CommandPoolCreateInfo.queueFamilyIndex = Queue.GetQueueFamilyIndex();
 
-    VkResult Result = VulkanRHI::vkCreateCommandPool(Device.GetVkDevice(), &CommandPoolCreateInfo, nullptr, &Handle);
+    VkResult Result = VulkanRHI::vkCreateCommandPool(Device.get_vk_device(), &CommandPoolCreateInfo, nullptr, &Handle);
     ensure(Result == VK_SUCCESS, "Failed to create command pool.");
 }
 
@@ -173,6 +173,6 @@ void FVulkanCommandBufferPool::Shutdown()
         delete FreeCommandBuffer;
     }
 
-    VulkanRHI::vkDestroyCommandPool(Device.GetVkDevice(), Handle, nullptr); 
+    VulkanRHI::vkDestroyCommandPool(Device.get_vk_device(), Handle, nullptr); 
     Handle = nullptr;
 }

@@ -6,7 +6,7 @@
 
 #include <span>
 
-struct FRHIBuffer;
+struct RHIBuffer;
 
 struct FVertex
 {
@@ -32,8 +32,8 @@ public:
     RStaticMesh(const char* InFilePath);
     ~RStaticMesh();
 
-    inline FRHIBuffer* GetVertexBuffer() const;
-    inline FRHIBuffer* GetIndexBuffer() const;
+    inline RHIBuffer* GetVertexBuffer() const;
+    inline RHIBuffer* GetIndexBuffer() const;
     inline uint32_t GetVertexCount() const;
     inline uint32_t GetIndexCount() const;
 
@@ -46,8 +46,8 @@ private:
 private:
     std::vector<FMeshChildSection> Sections;
 
-    FRHIBuffer* M_VertexBuffer;
-    FRHIBuffer* M_IndexBuffer;
+    RHIBuffer* M_VertexBuffer;
+    RHIBuffer* M_IndexBuffer;
 
     uint32_t M_VertexCount;
     uint32_t M_IndexCount;
@@ -56,12 +56,12 @@ private:
     const char* FilePath;
 };
 
-inline FRHIBuffer* RStaticMesh::GetVertexBuffer() const
+inline RHIBuffer* RStaticMesh::GetVertexBuffer() const
 {
     return M_VertexBuffer;
 }
 
-inline FRHIBuffer* RStaticMesh::GetIndexBuffer() const
+inline RHIBuffer* RStaticMesh::GetIndexBuffer() const
 {
     return M_IndexBuffer;
 }

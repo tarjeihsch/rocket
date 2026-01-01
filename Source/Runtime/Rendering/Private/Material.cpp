@@ -7,7 +7,7 @@
 RMaterial::RMaterial(EMaterialPass InPass, EMaterialBlendMode InBlendMode, const char* InVertexShaderPath, const char* InPixelShaderPath)
     : Pipeline(nullptr), VertexShaderPath(InVertexShaderPath), PixelShaderPath(InPixelShaderPath), Pass(InPass), BlendMode(InBlendMode)
 {
-    FRHIPipelineDesc Desc = {};
+    RHIPipelineDesc Desc = {};
     Desc.VertexShaderPath = InVertexShaderPath;
     Desc.PixelShaderPath = InPixelShaderPath;
     Desc.ColorAttachmentFormats.push_back(ERHIFormat::BGRA8_SRGB);
@@ -85,7 +85,7 @@ RMaterial::RMaterial(EMaterialPass InPass, EMaterialBlendMode InBlendMode, const
 		break;
     }
 
-    Pipeline = GetRHI()->RHICreatePipelineStateObject(Desc);
+    Pipeline = GetRHI()->rhi_create_pipeline(Desc);
 }
 
 RMaterial::~RMaterial()
@@ -96,11 +96,11 @@ void RMaterial::SetBufferParameter(const std::string &Name, RBuffer* Buffer)
 {
 }
 
-void RMaterial::SetTextureParameter(const std::string &Name, RTexture2D* Texture)
+void RMaterial::SetTextureParameter(const std::string &Name, Texture2D* Texture)
 {
 }
 
 void RMaterial::Bind(RHICommandList& CmdList)
 {
-    GetRHI()->RHICmdBindPipeline(CmdList, Pipeline);
+//    GetRHI()->RHICmdBindPipeline(CmdList, Pipeline);
 }

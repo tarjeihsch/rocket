@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-struct RDescriptorHandle
+struct Descriptor
 {
     uint32_t Index = UINT32_MAX;
     uint32_t Generation = UINT32_MAX;
@@ -31,24 +31,23 @@ struct PushConstantConfig
     VkShaderStageFlags Stages = 0;
 };
 
-class FVulkanDevice;
+class VulkanDevice;
 
 class VulkanDescriptorManager
 {
 public:
-    explicit VulkanDescriptorManager(FVulkanDevice& p_Device, uint32_t p_MaxSampledImages = 16384, uint32_t p_MaxSamplers = 1024, uint32_t p_MaxStorageImages = 2048, uint32_t p_MaxStorageBuffers = 4096);
-    //explicit VulkanDescriptorManager(FVulkanDevice& p_Device, uint32_t p_MaxSampledImages = 1024, uint32_t p_MaxSamplers = 32, uint32_t p_MaxStorageImages = 32, uint32_t p_MaxStorageBuffers = 32);
+    explicit VulkanDescriptorManager(VulkanDevice& p_Device, uint32_t p_MaxSampledImages = 16384, uint32_t p_MaxSamplers = 1024, uint32_t p_MaxStorageImages = 2048, uint32_t p_MaxStorageBuffers = 4096);
     ~VulkanDescriptorManager();
 
-    RDescriptorHandle AddSampledImage(VkImageView View, VkImageLayout Layout);
-    RDescriptorHandle AddSampler(VkSampler Sampler);
-    RDescriptorHandle AddStorageImage(VkImageView View, VkImageLayout Layout);
-    RDescriptorHandle AddStorageBuffer(VkBuffer Buffer, VkDeviceSize Size);
+    Descriptor add_sampled_image(VkImageView View, VkImageLayout Layout);
+    Descriptor AddSampler(VkSampler Sampler);
+    Descriptor add_storage_image(VkImageView View, VkImageLayout Layout);
+    Descriptor add_storage_buffer(VkBuffer Buffer, VkDeviceSize Size);
 
-    void RemoveSampledImage(RDescriptorHandle Handle);
-    void RemoveSampler(RDescriptorHandle Handle);
-    void RemoveStorageImage(RDescriptorHandle Handle);
-    void RemoveStorageBuffer(RDescriptorHandle Handle);
+    void RemoveSampledImage(Descriptor Handle);
+    void RemoveSampler(Descriptor Handle);
+    void RemoveStorageImage(Descriptor Handle);
+    void RemoveStorageBuffer(Descriptor Handle);
 
     void Update();
 
@@ -85,12 +84,12 @@ private:
     };
 
 private:
-    RDescriptorHandle AllocSlot(SlotBase& Slot);
-    void FreeSlot(SlotBase& Slot, RDescriptorHandle Handle);
+    Descriptor AllocSlot(SlotBase& Slot);
+    void FreeSlot(SlotBase& Slot, Descriptor Handle);
     void MarkDirty(SlotBase& Slot, uint32_t Index);
 
 private:
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
 
     VkDescriptorSetLayout DescriptorSetLayout;
     VkDescriptorSet DescriptorSet;

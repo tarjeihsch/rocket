@@ -3,10 +3,10 @@
 #include "Common/RHI.h"
 #include "Common/RHITexture.h"
 
-RTexture2D::RTexture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight)
+Texture2D::Texture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight)
     : Type(InType), Width(InWidth), Height(InHeight)
 {
-	FRHITextureDesc TextureDesc;
+	RHITextureDesc TextureDesc;
 
     switch (Type)
     {
@@ -22,21 +22,21 @@ RTexture2D::RTexture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight)
 	TextureDesc.LayerCount = 1;
 	TextureDesc.MipLevel = 1;
 	TextureDesc.SampleCount = 1;
-	TextureDesc.Lifetime = ERHIResourceLifetime::Persistent;
-	TextureDesc.Extent[0] = Width;
-	TextureDesc.Extent[1] = Height;
+	TextureDesc.Lifetime = RHIResourceLifetime::Persistent;
+	TextureDesc.extent[0] = Width;
+	TextureDesc.extent[1] = Height;
 	TextureDesc.Usage = ERHITextureUsage::SRV | ERHITextureUsage::CopyDst;
-	TextureDesc.InitialLayout = ERHITextureLayout::ShaderReadOnly;
+	TextureDesc.initial_layout = RHITextureLayout::ShaderReadOnly;
 
-    Handle = GetRHI()->RHICreateTexture(TextureDesc);
+    Handle = GetRHI()->rhi_create_texture(TextureDesc);
 }
 
-RTexture2D::~RTexture2D()
+Texture2D::~Texture2D()
 {
     delete Handle;
 }
 
-void RTexture2D::LoadRawTextureData(const uint8_t* Data)
+void Texture2D::LoadRawTextureData(const uint8_t* Data)
 {
-    GetRHI()->RHIUploadTextureBlocking(Handle, Data, Width, Height);
+//    GetRHI()->RHIUploadTextureBlocking(Handle, Data, Width, Height);
 }

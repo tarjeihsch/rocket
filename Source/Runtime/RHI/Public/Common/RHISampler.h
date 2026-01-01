@@ -39,7 +39,7 @@ enum class ERHICompareOp : uint8_t
     Always
 };
 
-struct RRHISamplerDesc
+struct RHISamplerDesc
 {
     // Filtering
     ERHIFilterMode MinFilter;   // Nearest / Linear
@@ -68,10 +68,10 @@ struct RRHISamplerDesc
     ERHICompareOp CompareOp = ERHICompareOp::Always;
 };
 
-class RRHISampler
+class RHISampler
 {
 public:
-    virtual ~RRHISampler() = default;
+    virtual ~RHISampler() = default;
 
     virtual void* GetHandle() const = 0;
     virtual uint32_t GetBindingIndex() const = 0;

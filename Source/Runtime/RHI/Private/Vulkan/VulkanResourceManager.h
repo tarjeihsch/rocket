@@ -54,7 +54,7 @@ struct ImageDesc
     bool Persistent;
 };
 
-class FVulkanDevice;
+class VulkanDevice;
 
 // As we are mixing both transient and persistent resource objects in one large vector, true O(1) invalidation reset on transient
 // objects is not possible. Transient objects will be reset at speed of O(N) where N = number of elements in deque.
@@ -64,7 +64,7 @@ class FVulkanDevice;
 class VulkanResourceManager
 {
 public:
-    VulkanResourceManager(FVulkanDevice& p_Device, uint32_t p_FramesInFlight = 2);
+    VulkanResourceManager(VulkanDevice& p_Device, uint32_t p_FramesInFlight = 2);
     ~VulkanResourceManager();
 
     BufferHandle AddBuffer(BufferDesc& Desc);
@@ -111,7 +111,7 @@ private:
     };
 
 private:
-    FVulkanDevice& m_Device;
+    VulkanDevice& m_Device;
     uint32_t m_FramesInFlight;
 
     std::vector<BufferRecord> m_List_Buffer;

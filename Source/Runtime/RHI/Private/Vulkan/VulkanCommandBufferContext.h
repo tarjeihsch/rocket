@@ -9,7 +9,7 @@
 class RHISwapchain;
 class VulkanSwapchain;
 struct RHISemaphore;
-class FVulkanDevice;
+class VulkanDevice;
 struct FVulkanCommandBuffer;
 struct FVulkanCommandBufferPool;
 
@@ -43,26 +43,23 @@ inline bool operator<(VulkanCommandBufferContextState a, VulkanCommandBufferCont
 class VulkanCommandBufferContext
 {
 private:
-    FVulkanCommandBufferPool& pool;
+    FVulkanCommandBufferPool& command_buffer_pool;
 
 public:
-    explicit VulkanCommandBufferContext(FVulkanCommandBufferPool& InPool);
+    explicit VulkanCommandBufferContext(FVulkanCommandBufferPool& in_command_buffer_pool);
 
     FVulkanCommandBuffer* get_current_command_buffer();
-    VulkanCommandBufferPayload& get_payload(VulkanCommandBufferContextState State);
+    VulkanCommandBufferPayload& get_payload(VulkanCommandBufferContextState state);
 
     void new_payload();
     void end_payload();
 
-    void add_pre_submit_event(std::function<void()>&& callback);
-    void add_post_submit_event(std::function<void()>&& callback);
+    void finalize(std::vector<VulkanCommandBufferPayload*>& payloads);
 
-    void submit(std::vector<VulkanCommandBufferPayload*>& OutPayloads);
-
-    void add_wait_semaphore(VkSemaphore WaitSemaphore, VkPipelineStageFlags2 WaitStageMask);
-    void add_wait_semaphore(std::span<VkSemaphore> WaitSemaphores, std::span<VkPipelineStageFlags2> WaitStageMasks);
-    void add_signal_semaphore(VkSemaphore ReadySemaphore, VkPipelineStageFlags2 SignalStageMask);
-    void add_signal_semaphore(std::span<VkSemaphore> ReadySemaphores, std::span<VkPipelineStageFlags2> SignalStageMasks);
+    void add_wait_semaphore(VkSemaphore wait_semaphore, VkPipelineStageFlags2 wait_stage_mask);
+    void add_wait_semaphore(std::span<VkSemaphore> wait_semaphores, std::span<VkPipelineStageFlags2> wait_stage_masks);
+    void add_signal_semaphore(VkSemaphore ready_semaphore, VkPipelineStageFlags2 signal_stage_mask);
+    void add_signal_semaphore(std::span<VkSemaphore> ready_semaphores, std::span<VkPipelineStageFlags2> signal_stage_masks);
 
 private:
     std::vector<VulkanCommandBufferPayload*> m_payloads;

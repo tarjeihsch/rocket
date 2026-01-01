@@ -1,7 +1,6 @@
 #include "VulkanSurface.h"
 
 #include "Assertion.h"
-#include "VulkanCommandList.h"
 #include "VulkanLoader.h"
 #include "VulkanSemaphore.h"
 #include "VulkanSwapchain.h"
@@ -19,7 +18,7 @@
     #include <objc/objc.h>
 #endif
 
-VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
+VulkanSurface::VulkanSurface(VulkanDevice& InDevice, RHISurfaceDesc& InDesc)
     : Device(InDevice)
 {
     VkResult Result;
@@ -29,7 +28,7 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
         case ENativePlatformBackend::Win32:
         {
 #if defined(_WIN32)
-            auto ptr = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWin32SurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), "vkCreateWin32SurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateWin32SurfaceKHR not available. Did you enable VK_KHR_win32_surface?");
 
             VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -37,7 +36,7 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
             surfaceCreateInfo.hwnd = static_cast<HWND>(InDesc.NativeWindowHandle);
             surfaceCreateInfo.hinstance = static_cast<HINSTANCE>(InDesc.NativeInstanceHandle);
 
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
+            Result = ptr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
             break;
         }
@@ -45,7 +44,7 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
         case ENativePlatformBackend::X11:
         {
 #if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateXlibSurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), "vkCreateXlibSurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateXlibSurfaceKHR not available. Did you enable VK_KHR_xlib_surface?");
 
             VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -53,14 +52,14 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
             surfaceCreateInfo.dpy = static_cast<Display*>(InDesc.NativeInstanceHandle);
             surfaceCreateInfo.window = reinterpret_cast<uintptr_t>(InDesc.NativeWindowHandle);
 
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
+            Result = ptr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
             break;
         }
         case ENativePlatformBackend::Wayland:
         {
 #if defined(__linux__)
-            auto ptr = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(GetVulkanRHIMinimal()->RHIGetVkInstance(), "vkCreateWaylandSurfaceKHR"));
+            auto ptr = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(VulkanRHI::vkGetInstanceProcAddr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), "vkCreateWaylandSurfaceKHR"));
             ensure(ptr != nullptr, "vkCreateWaylandSurfaceKHR not available. Did you enable VK_KHR_wayland_surface?");
 
             VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
@@ -68,7 +67,7 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
             surfaceCreateInfo.display = static_cast<wl_display*>(InDesc.NativeWindowHandle);
             surfaceCreateInfo.surface = static_cast<wl_surface*>(InDesc.NativeInstanceHandle);
 
-            Result = ptr(GetVulkanRHIMinimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
+            Result = ptr(get_vulkan_rhi_minimal()->RHIGetVkInstance(), &surfaceCreateInfo, nullptr, &Surface);
 #endif
             break;
         }
@@ -90,13 +89,13 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
     ensure(Surface != VK_NULL_HANDLE, "Failed to create Vulkan surface.");
 
     uint32_t SurfaceFormatCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
+    VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(get_vulkan_rhi_minimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr);
 
     std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
     if (SurfaceFormatCount)
     {
         SurfaceFormats.resize(SurfaceFormatCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
+        VulkanRHI::vkGetPhysicalDeviceSurfaceFormatsKHR(get_vulkan_rhi_minimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceFormatCount, SurfaceFormats.data());
     }
 
     for (const auto& Element : SurfaceFormats)
@@ -108,13 +107,13 @@ VulkanSurface::VulkanSurface(FVulkanDevice& InDevice, RHISurfaceDesc& InDesc)
     }
 
     uint32_t PresentModeCount;
-    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
+    VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(get_vulkan_rhi_minimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr);
 
     std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
     if (PresentModeCount)
     {
         PresentModes.resize(PresentModeCount);
-        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
+        VulkanRHI::vkGetPhysicalDeviceSurfacePresentModesKHR(get_vulkan_rhi_minimal()->RHIGetVkPhysicalDevice(), Surface, &PresentModeCount, PresentModes.data());
     }
 
     for (const auto& Element : PresentModes)
@@ -133,7 +132,7 @@ VulkanSurface::~VulkanSurface()
 {
     delete Swapchain;
 
-    VulkanRHI::vkDestroySurfaceKHR(GetVulkanRHIMinimal()->RHIGetVkInstance(), Surface, nullptr);
+    VulkanRHI::vkDestroySurfaceKHR(get_vulkan_rhi_minimal()->RHIGetVkInstance(), Surface, nullptr);
 }
 
 RHITexture* VulkanSurface::get_back_buffer_texture()
@@ -141,7 +140,7 @@ RHITexture* VulkanSurface::get_back_buffer_texture()
     return Swapchain->GetBackBufferTexture();
 }
 
-void VulkanSurface::acquire(IRHICommandListContext& ctx)
+void VulkanSurface::acquire(RHICommandListContext& ctx)
 {
     if (!Swapchain->acquire_back_buffer_image((VulkanCommandListContext&)ctx))
     {
@@ -151,7 +150,7 @@ void VulkanSurface::acquire(IRHICommandListContext& ctx)
     }
 }
 
-void VulkanSurface::present(IRHICommandListContext& ctx)
+void VulkanSurface::present(RHICommandListContext& ctx)
 {
     Swapchain->present_back_buffer_image((VulkanCommandListContext&)ctx);
 }

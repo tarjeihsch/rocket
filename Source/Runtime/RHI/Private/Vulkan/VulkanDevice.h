@@ -6,8 +6,8 @@
 #include <vma/vk_mem_alloc.h>
 
 class VulkanCommandListContext;
-class FVulkanDevice;
-struct FVulkanTexture;
+class VulkanDevice;
+struct VulkanTexture;
 class FVulkanQueue;
 class FVulkanPipelineManager;
 class VulkanDescriptorManager;
@@ -15,7 +15,7 @@ class VulkanResourceManager;
 
 struct FTransientResourceAllocator
 {
-    FTransientResourceAllocator(FVulkanDevice& InDevice, VkDeviceSize InSize)
+    FTransientResourceAllocator(VulkanDevice& InDevice, VkDeviceSize InSize)
         : Device(InDevice), Size(InSize)
     {
         Init();
@@ -28,8 +28,8 @@ struct FTransientResourceAllocator
 
     void Reset();
 
-    void AllocImage(VkImage Image, uint64_t& OutOffset);
-    void AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset);
+    void alloc_image(VkImage Image, uint64_t& OutOffset);
+    void alloc_buffer(VkBuffer Buffer, uint64_t& OutOffset);
 
     void* GetMappedBasePtr() const;
 
@@ -50,7 +50,7 @@ private:
     uint64_t TotalAllocations;
     uint64_t CurrentAllocations;
 
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
 };
 
 inline size_t FTransientResourceAllocator::GetSize() const
@@ -66,7 +66,7 @@ inline size_t FTransientResourceAllocator::GetOffset() const
 class FDeferredDeletionQueue
 {
 public:
-    FDeferredDeletionQueue(FVulkanDevice& InDevice);
+    FDeferredDeletionQueue(VulkanDevice& InDevice);
     ~FDeferredDeletionQueue();
 
     enum class EType
@@ -84,20 +84,20 @@ public:
     };
 
     template <typename T>
-    inline void EnqueueResource(EType Type, T Handle, RDescriptorHandle BindingIndex)
+    inline void enqueue_resource(EType Type, T Handle, Descriptor BindingIndex)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, nullptr);
     }
 
     template <typename T>
-    inline void EnqueueResourceWithAllocation(EType Type, T Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation)
+    inline void enqueue_resource_with_allocation(EType Type, T Handle, Descriptor BindingIndex, VmaAllocation Allocation)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, Allocation);
     }
 
-    void EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation);
+    void EnqueueGenericResource(EType Type, uint64_t Handle, Descriptor BindingIndex, VmaAllocation Allocation);
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
 private:
@@ -106,20 +106,20 @@ private:
         EType StructureType;
         uint64_t FrameNumber;
         uint64_t Handle;
-        RDescriptorHandle m_DescriptorHandle;
+        Descriptor m_DescriptorHandle;
         VmaAllocation Allocation;
     };
 
     std::vector<FEntry> Entries;
 
-    FVulkanDevice& Device;
+    VulkanDevice& Device;
 };
 
-class FVulkanDevice
+class VulkanDevice
 {
 public:
-    FVulkanDevice(VkPhysicalDevice InPhysicalDevice);
-    ~FVulkanDevice();
+    VulkanDevice(VkPhysicalDevice InPhysicalDevice);
+    ~VulkanDevice();
 
     void WaitUntilIdle() const;
 
@@ -129,18 +129,18 @@ public:
     FVulkanQueue* GetTransferQueue() const;
     FVulkanQueue* GetPresentQueue() const;
 
-    inline VkDevice GetVkDevice() const;
+    inline VkDevice get_vk_device() const;
     inline VkPhysicalDevice GetVkPhysicalDevice() const;
-    inline VmaAllocator GetVmaAllocator() const;
+    inline VmaAllocator get_vma_allocator() const;
     inline VkDebugUtilsMessengerEXT GetVkDebugUtilsMessenger() const;
 
-    inline FVulkanPipelineManager* GetPipelineManager() const;
-    inline VulkanDescriptorManager* GetDescriptorManager() const;
+    inline FVulkanPipelineManager* get_pipeline_manager() const;
+    inline VulkanDescriptorManager* get_descriptor_manager() const;
 
-    inline FTransientResourceAllocator* GetTransientResourceAllocator() const;
+    inline FTransientResourceAllocator* get_transient_resource_allocator() const;
     inline VulkanCommandListContext* GetCommandListContext() const;
     inline VulkanCommandListContext* GetImmediateCommandListContext() const;
-    inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
+    inline FDeferredDeletionQueue* get_deferred_deletion_queue() const;
 
     void GC();
 
@@ -166,47 +166,47 @@ private:
     VkPhysicalDevice PhysicalDevice;
 };
 
-inline VkDevice FVulkanDevice::GetVkDevice() const
+inline VkDevice VulkanDevice::get_vk_device() const
 {
     return Device;
 }
 
-inline VkPhysicalDevice FVulkanDevice::GetVkPhysicalDevice() const
+inline VkPhysicalDevice VulkanDevice::GetVkPhysicalDevice() const
 {
     return PhysicalDevice;
 }
 
-inline VmaAllocator FVulkanDevice::GetVmaAllocator() const
+inline VmaAllocator VulkanDevice::get_vma_allocator() const
 {
     return Allocator;
 }
 
-inline VkDebugUtilsMessengerEXT FVulkanDevice::GetVkDebugUtilsMessenger() const
+inline VkDebugUtilsMessengerEXT VulkanDevice::GetVkDebugUtilsMessenger() const
 {
     return DebugUtilsMessenger;
 }
 
-inline FVulkanPipelineManager* FVulkanDevice::GetPipelineManager() const
+inline FVulkanPipelineManager* VulkanDevice::get_pipeline_manager() const
 {
     return PipelineManager;
 }
 
-inline VulkanDescriptorManager* FVulkanDevice::GetDescriptorManager() const
+inline VulkanDescriptorManager* VulkanDevice::get_descriptor_manager() const
 {
     return DescriptorManager;
 }
 
-inline FTransientResourceAllocator *FVulkanDevice::GetTransientResourceAllocator() const
+inline FTransientResourceAllocator *VulkanDevice::get_transient_resource_allocator() const
 {
     return TransientResourceAllocator;
 }
 
-inline VulkanCommandListContext *FVulkanDevice::GetCommandListContext() const
+inline VulkanCommandListContext *VulkanDevice::GetCommandListContext() const
 {
     return CommandListContext;
 }
 
-inline FDeferredDeletionQueue *FVulkanDevice::GetDeferredDeletionQueue() const
+inline FDeferredDeletionQueue *VulkanDevice::get_deferred_deletion_queue() const
 {
     return DeferredDeletionQueue;
 }

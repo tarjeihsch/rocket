@@ -1,14 +1,16 @@
 #pragma once
 
+#include <span>
+
 #include "Common/RHI.h"
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan_core.h>
 
-class IVulkanRHIMinimal : public IRHI
+class IVulkanRHIMinimal : public RHI
 {
 public:
-    static constexpr ERHIInterfaceType StaticType = ERHIInterfaceType::Vulkan;
+    static constexpr RHIInterfaceType StaticType = RHIInterfaceType::Vulkan;
 
     virtual VkInstance RHIGetVkInstance() const = 0;
     virtual VkDevice RHIGetVkDevice() const = 0;
@@ -30,8 +32,8 @@ public:
     virtual std::span<const char *> GetPhysicalDeviceExtensions() = 0;
 };
 
-inline IVulkanRHIMinimal* GetVulkanRHIMinimal()
+inline IVulkanRHIMinimal* get_vulkan_rhi_minimal()
 {
-    assert(GRHI->GetInterfaceType() == IVulkanRHIMinimal::StaticType);
+    ensure(g_rhi->get_interface_type() == IVulkanRHIMinimal::StaticType);
     return GetRHI<IVulkanRHIMinimal>();
 }

@@ -3,12 +3,11 @@
 #include "RHI.h"
 
 #include <glm/glm.hpp>
-#include "RHITexture.h"
 
-enum class ERHIResourceAccess : uint16_t;
-enum class ERHIPipelineStage : uint16_t;
+enum class RHIResourceAccess : uint16_t;
+enum class RHIPipelineStage : uint16_t;
 
-enum class ERHIBufferUsage : uint32_t
+enum class RHIBufferUsage : uint32_t
 {
     Vertex = 1 << 0,
     Index = 1 << 1,
@@ -19,93 +18,129 @@ enum class ERHIBufferUsage : uint32_t
     Indirect = 1 << 6,
 };
 
-inline ERHIBufferUsage operator|(ERHIBufferUsage Lhs, ERHIBufferUsage Rhs) { return static_cast<ERHIBufferUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline ERHIBufferUsage operator&(ERHIBufferUsage Lhs, ERHIBufferUsage Rhs) { return static_cast<ERHIBufferUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+inline RHIBufferUsage operator|(RHIBufferUsage Lhs, RHIBufferUsage Rhs) { return static_cast<RHIBufferUsage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
+inline RHIBufferUsage operator&(RHIBufferUsage Lhs, RHIBufferUsage Rhs) { return static_cast<RHIBufferUsage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
 
-struct FRHIBufferDesc
+struct RHIBufferDesc
 {
-    uint64_t Size = 0;
+    uint64_t size = 0;
 
-    ERHIResourceLifetime Lifetime = ERHIResourceLifetime::Unknown;
-    ERHIBufferUsage Usage = ERHIBufferUsage::Vertex;
-    ERHIResourceMemory Memory = ERHIResourceMemory::Unknown;
+    RHIResourceLifetime Lifetime = RHIResourceLifetime::Unknown;
+    RHIBufferUsage Usage = RHIBufferUsage::Vertex;
+    RHIResourceMemory Memory = RHIResourceMemory::Unknown;
 
-    static FRHIBufferDesc CreateStagingBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateStagingBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Transient;
-        Desc.Memory = ERHIResourceMemory::HostVisible;
-        Desc.Usage = ERHIBufferUsage::TransferSrc;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Transient;
+        Desc.Memory = RHIResourceMemory::HostVisible;
+        Desc.Usage = RHIBufferUsage::TransferSrc;
         return Desc;
     }
 
-    static FRHIBufferDesc CreateVertexBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateVertexBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Persistent;
-        Desc.Memory = ERHIResourceMemory::DeviceLocal;
-        Desc.Usage = ERHIBufferUsage::Vertex | ERHIBufferUsage::TransferDst;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Persistent;
+        Desc.Memory = RHIResourceMemory::DeviceLocal;
+        Desc.Usage = RHIBufferUsage::Vertex | RHIBufferUsage::TransferDst;
         return Desc;
     }
 
-    static FRHIBufferDesc CreateTransientVertexBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateTransientVertexBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Transient;
-        Desc.Memory = ERHIResourceMemory::HostVisible;
-        Desc.Usage = ERHIBufferUsage::Vertex;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Transient;
+        Desc.Memory = RHIResourceMemory::HostVisible;
+        Desc.Usage = RHIBufferUsage::Vertex;
         return Desc;
     }
 
-    static FRHIBufferDesc CreateIndexBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateIndexBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Persistent;
-        Desc.Memory = ERHIResourceMemory::DeviceLocal;
-        Desc.Usage = ERHIBufferUsage::Index | ERHIBufferUsage::TransferDst;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Persistent;
+        Desc.Memory = RHIResourceMemory::DeviceLocal;
+        Desc.Usage = RHIBufferUsage::Index | RHIBufferUsage::TransferDst;
         return Desc;
     }
 
-    static FRHIBufferDesc CreateTransientIndexBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateTransientIndexBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Transient;
-        Desc.Memory = ERHIResourceMemory::HostVisible;
-        Desc.Usage = ERHIBufferUsage::Index;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Transient;
+        Desc.Memory = RHIResourceMemory::HostVisible;
+        Desc.Usage = RHIBufferUsage::Index;
         return Desc;
     }
 
-    static FRHIBufferDesc CreateStorageBuffer(uint64_t InSize)
+    static RHIBufferDesc CreateStorageBuffer(uint64_t InSize)
     {
-        FRHIBufferDesc Desc = {};
-        Desc.Size = InSize;
-        Desc.Lifetime = ERHIResourceLifetime::Transient;
-        Desc.Memory = ERHIResourceMemory::HostVisible;
-        Desc.Usage = ERHIBufferUsage::Storage;
+        RHIBufferDesc Desc = {};
+        Desc.size = InSize;
+        Desc.Lifetime = RHIResourceLifetime::Transient;
+        Desc.Memory = RHIResourceMemory::HostVisible;
+        Desc.Usage = RHIBufferUsage::Storage;
         return Desc;
     }
 };
 
-struct FRHIBuffer
+struct RHIBufferAccessState
 {
-    virtual ~FRHIBuffer() = default;
+    RHIResourceAccess resource_access;
+    RHIPipelineStage pipeline_stage;
+    uint32_t queue_family_index;
 
-    virtual const FRHIBufferDesc& GetBufferDesc() const = 0;
-    virtual void* GetHandle() const = 0;
-    virtual uint32_t GetBindingIndex() const = 0;
-    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+    static RHIBufferAccessState Default()
+    {
+        RHIBufferAccessState state = {};
+        state.resource_access = RHIResourceAccess::None;
+        state.pipeline_stage = RHIPipelineStage::None;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
 
-    ERHIResourceAccess CurrentAccess = ERHIResourceAccess::None;
-    ERHIPipelineStage CurrentPipelineStage = ERHIPipelineStage::None;
-    uint32_t CurrentQueueFamilyIndex = ~(0U);
+    static RHIBufferAccessState ShaderRead()
+    {
+        RHIBufferAccessState state = {};
+        state.resource_access = RHIResourceAccess::ShaderSampledRead;
+        state.pipeline_stage = RHIPipelineStage::VertexShader | RHIPipelineStage::FragmentShader | RHIPipelineStage::ComputeShader;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
+
+    static RHIBufferAccessState UnorderedAccess()
+    {
+        RHIBufferAccessState state = {};
+        state.resource_access = RHIResourceAccess::ShaderStorageRead | RHIResourceAccess::ShaderStorageWrite;
+        state.pipeline_stage = RHIPipelineStage::VertexShader | RHIPipelineStage::FragmentShader | RHIPipelineStage::ComputeShader;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
 };
 
-enum class ERHIBufferMemoryPackerAlignmentLayout
+struct RHIBuffer : public IBindable
+{
+    RHIBuffer(const RHIBufferDesc& in_desc, const RHIBufferAccessState& in_state)
+        : desc(in_desc), state(in_state)
+    {
+    }
+
+    virtual ~RHIBuffer() = default;
+
+    virtual void* get_handle() const = 0;
+    virtual void map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+
+    RHIBufferDesc desc;
+    RHIBufferAccessState state;
+};
+
+enum class RHIBufferMemoryPackerAlignmentLayout
 {
     // No layout
     None = 0,
@@ -117,7 +152,7 @@ enum class ERHIBufferMemoryPackerAlignmentLayout
     STD430
 };
 
-struct FRHIBufferMemoryPackerTypeLayout
+struct RHIBufferMemoryPackerTypeLayout
 {
     // Required alignment for elements of same type (cursor must start at this value)
     uint64_t Alignment;
@@ -126,10 +161,10 @@ struct FRHIBufferMemoryPackerTypeLayout
     uint64_t Stride;
 };
 
-class FRHIBufferMemoryPacker
+class RHIBufferMemoryPacker
 {
 public:
-    explicit FRHIBufferMemoryPacker(ERHIBufferMemoryPackerAlignmentLayout P_AlignmentLayout)
+    explicit RHIBufferMemoryPacker(RHIBufferMemoryPackerAlignmentLayout P_AlignmentLayout)
         : M_AlignmentLayout(P_AlignmentLayout)
     {
     }
@@ -146,22 +181,22 @@ public:
 private:
     void Align(uint64_t P_Alignment);
 
-    ERHIBufferMemoryPackerAlignmentLayout M_AlignmentLayout;
+    RHIBufferMemoryPackerAlignmentLayout M_AlignmentLayout;
     std::vector<uint8_t> M_Data;
     uint64_t M_Offset = 0;
 };
 
-inline uint8_t* FRHIBufferMemoryPacker::GetData()
+inline uint8_t* RHIBufferMemoryPacker::GetData()
 {
     return M_Data.data();
 }
 
-inline uint64_t FRHIBufferMemoryPacker::GetSize() const
+inline uint64_t RHIBufferMemoryPacker::GetSize() const
 {
     return M_Offset;
 }
 
-inline void FRHIBufferMemoryPacker::Align(uint64_t P_Alignment)
+inline void RHIBufferMemoryPacker::Align(uint64_t P_Alignment)
 {
     uint64_t Misalignment = M_Offset % P_Alignment;
 
@@ -175,42 +210,42 @@ inline void FRHIBufferMemoryPacker::Align(uint64_t P_Alignment)
 }
 
 template<typename T>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout(ERHIBufferMemoryPackerAlignmentLayout P_Layout);
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout(RHIBufferMemoryPackerAlignmentLayout P_Layout);
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<float>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<float>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {4, 4};
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<int>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<int>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {4, 4};
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec2>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec2>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {8, 8};
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec3>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec3>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {16, 16};
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::vec4>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec4>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {16, 16};
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat2>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat2>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
-    if (P_Layout == ERHIBufferMemoryPackerAlignmentLayout::STD140)
+    if (P_Layout == RHIBufferMemoryPackerAlignmentLayout::STD140)
     {
         return {16, 32}; // 2 vec4 columns
     }
@@ -221,9 +256,9 @@ constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat2>(ERHIBufferMemory
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat3>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat3>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
-    if (P_Layout == ERHIBufferMemoryPackerAlignmentLayout::STD140)
+    if (P_Layout == RHIBufferMemoryPackerAlignmentLayout::STD140)
     {
         return {16, 48}; // 3 vec4 columns
     }
@@ -234,15 +269,15 @@ constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat3>(ERHIBufferMemory
 }
 
 template<>
-constexpr FRHIBufferMemoryPackerTypeLayout GetLayout<glm::mat4>(ERHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat4>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
     return {16, 64}; // 4 vec4 columns
 }
 
 template <typename T>
-void FRHIBufferMemoryPacker::Write(const T& P_Object)
+void RHIBufferMemoryPacker::Write(const T& P_Object)
 {
-    const FRHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
+    const RHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
     Align(Layout.Alignment);
 
     const uint8_t* Bytes = reinterpret_cast<const uint8_t*>(&P_Object);
@@ -251,9 +286,9 @@ void FRHIBufferMemoryPacker::Write(const T& P_Object)
 }
 
 template <typename T>
-void FRHIBufferMemoryPacker::Write(const T* P_Objects, uint32_t P_Count)
+void RHIBufferMemoryPacker::Write(const T* P_Objects, uint32_t P_Count)
 {
-    const FRHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
+    const RHIBufferMemoryPackerTypeLayout Layout = GetLayout<T>(M_AlignmentLayout);
     Align(Layout.Alignment);
 
     for (uint32_t Index = 0; Index < P_Count; Index++)

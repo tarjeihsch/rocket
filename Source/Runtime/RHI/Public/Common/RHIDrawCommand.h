@@ -5,14 +5,14 @@
 #include <memory>
 
 class RMaterial;
-class FRHIBuffer;
+class RHIBuffer;
 
 struct FRHIDrawCommand
 {
     enum class EIndexType : uint8_t { U32, U16 };
 
-    FRHIBuffer* VertexBuffer;
-    FRHIBuffer* IndexBuffer;
+    RHIBuffer* VertexBuffer;
+    RHIBuffer* IndexBuffer;
 
     uint32_t IndexCount;
     uint32_t VertexBufferOffset;

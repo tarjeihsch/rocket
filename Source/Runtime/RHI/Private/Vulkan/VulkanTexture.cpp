@@ -3,152 +3,130 @@
 #include "Assertion.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
-#include "VulkanResourceManager.h"
 #include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanCommandList.h"
 
-FVulkanTexture::FVulkanTexture(FVulkanDevice& InDevice)
-    : Device(InDevice)
+VulkanTexture::VulkanTexture(VulkanDevice &in_device, RHITextureDesc &in_desc)
+    : RHITexture(in_desc, RHITextureAccessState::Default()), device(in_device), allocation_handle(nullptr)
 {
+    alloc();
 }
 
-FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc)
-    : Device(InDevice), Desc(InDesc), Allocation(nullptr)
+VulkanTexture::VulkanTexture(VulkanDevice &in_device, RHITextureDesc &in_desc, VkImage in_image_handle)
+    : RHITexture(in_desc, RHITextureAccessState::Default()), device(in_device), handle(in_image_handle), allocation_handle(nullptr)
 {
-    Alloc();
+    ensure(GetTextureDesc().Lifetime != RHIResourceLifetime::Unknown);
 }
 
-FVulkanTexture::FVulkanTexture(FVulkanDevice &InDevice, FRHITextureDesc &InDesc, VkImage InImage)
-    : Device(InDevice), Desc(InDesc), Image(InImage), Allocation(nullptr)
+VulkanTexture::~VulkanTexture()
 {
-    assert(Desc.Lifetime != ERHIResourceLifetime::Unknown);
+    free();
 }
 
-FVulkanTexture::~FVulkanTexture()
+void* VulkanTexture::GetHandle() const
 {
-    Free();
+    return handle;
 }
 
-const FRHITextureDesc& FVulkanTexture::RHIGetTextureDesc() const
+void VulkanTexture::alloc()
 {
-    return Desc;
-}
+    VkImageCreateInfo image_create_info = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(GetTextureDesc().extent[0], GetTextureDesc().extent[1], 1), VulkanRHI::GetVkFormat(GetTextureDesc().Format), VulkanRHI::GetVulkanUsage(GetTextureDesc().Usage));
 
-void* FVulkanTexture::GetHandle() const
-{
-    return Image;
-}
-
-void FVulkanTexture::gpu_barrier(RHICommandList& cmd_list, ERHITextureLayout new_layout, ERHIResourceAccess new_access, ERHIPipelineStage new_pipeline_stage)
-{
-    if (current_layout != new_layout || current_access != new_access || current_pipeline_stage != new_pipeline_stage)
+    if (GetTextureDesc().Lifetime == RHIResourceLifetime::Transient)
     {
-        //cmd_list.Enqueue<FVulkanCommandPipelineBarrier>(new_layout, new_access, new_pipeline_stage);
-
-        current_layout = new_layout;
-        current_access = new_access;
-        current_pipeline_stage = new_pipeline_stage;
-    }
-}
-
-void FVulkanTexture::Alloc()
-{
-    VkImageCreateInfo CreateInfo = VulkanRHI::GetVkImageCreateInfo(VkExtent3D(Desc.Extent[0], Desc.Extent[1], 1), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVulkanUsage(Desc.Usage));
-
-    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
-    {
-        VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CreateInfo, nullptr, &Image);
+        VkResult Result = VulkanRHI::vkCreateImage(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &image_create_info, nullptr, &handle);
         ensure(Result == VK_SUCCESS);
 
-        Device.GetTransientResourceAllocator()->AllocImage(Image, Offset);
+        device.get_transient_resource_allocator()->alloc_image(handle, offset);
     }
-    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
+    else if (GetTextureDesc().Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, allocate a persistent image
-        VmaAllocationCreateInfo AllocationCreateInfo = {};
-        AllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VmaAllocationCreateInfo allocation_create_info = {};
+        allocation_create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-        VkResult Result = vmaCreateImage(Device.GetVmaAllocator(), &CreateInfo, &AllocationCreateInfo, &Image, &Allocation, nullptr);
-        ensure(Result == VK_SUCCESS);
+        VkResult result = vmaCreateImage(device.get_vma_allocator(), &image_create_info, &allocation_create_info, &handle, &allocation_handle, nullptr);
+        ensure(result == VK_SUCCESS);
     }
 
-    current_layout = Desc.InitialLayout;
+    RHITextureAccessState new_texture_access_state = RHITextureAccessState::Default();
+    new_texture_access_state.texture_layout = GetTextureDesc().initial_layout;
+    SetTextureAccessState(new_texture_access_state);
 }
 
-void FVulkanTexture::Free()
+void VulkanTexture::free()
 {
-    if (Desc.Lifetime == ERHIResourceLifetime::Transient)
+    if (GetTextureDesc().Lifetime == RHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
-        Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Image, Image, {});
+        device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::Image, handle, {});
     }
-    else if (Desc.Lifetime == ERHIResourceLifetime::Persistent)
+    else if (GetTextureDesc().Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
-        Device.GetDeferredDeletionQueue()->EnqueueResourceWithAllocation(FDeferredDeletionQueue::EType::Image, Image, {}, Allocation);
+        device.get_deferred_deletion_queue()->enqueue_resource_with_allocation(FDeferredDeletionQueue::EType::Image, handle, {}, allocation_handle);
     }
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, RHITexture* InTexture)
-    : Device(InDevice), Desc(InDesc), Texture(InTexture)
+VulkanTextureView::VulkanTextureView(VulkanDevice &InDevice, RHITextureViewDesc &InDesc, RHITexture* InTexture)
+    : Device(InDevice), target_texture(InTexture), desc(InDesc)
 {
     Alloc();
 }
 
-FVulkanTextureView::FVulkanTextureView(FVulkanDevice &InDevice, FRHITextureViewDesc &InDesc, RHITexture* InTexture, VkImageView InImageView)
-    : Device(InDevice), Desc(InDesc), Texture(InTexture), ImageView(InImageView)
+VulkanTextureView::VulkanTextureView(VulkanDevice &InDevice, RHITextureViewDesc &InDesc, RHITexture* InTexture, VkImageView InImageView)
+    : Device(InDevice), image_view_handle(InImageView), target_texture(InTexture), desc(InDesc)
 {
 }
 
-FVulkanTextureView::~FVulkanTextureView()
+VulkanTextureView::~VulkanTextureView()
 {
     Free();
 }
 
-const FRHITextureViewDesc& FVulkanTextureView::RHIGetTextureViewDesc() const
+const RHITextureViewDesc& VulkanTextureView::get_desc() const
 {
-    return Desc;
+    return desc;
 }
 
-void* FVulkanTextureView::GetHandle() const
+void* VulkanTextureView::get_handle() const
 {
-    return ImageView;
+    return image_view_handle;
 }
 
-uint32_t FVulkanTextureView::GetBindingIndex() const
+uint32_t VulkanTextureView::GetBindingIndex() const
 {
-    return DescriptorHandle.Index;
+    return descriptor_handle.Index;
 }
 
-RHITexture* FVulkanTextureView::GetTexture() const
+RHITexture* VulkanTextureView::get_target_texture() const
 {
-    return Texture;
+    return target_texture;
 }
 
-void FVulkanTextureView::Alloc()
+void VulkanTextureView::Alloc()
 {
-    VkImageViewCreateInfo CreateInfo = VulkanRHI::GetVkImageViewCreateInfo(static_cast<VkImage>(Texture->GetHandle()), VulkanRHI::GetVkFormat(Desc.Format), VulkanRHI::GetVkAspect(Desc.Aspect));
+    VkImageViewCreateInfo image_view_create_info = VulkanRHI::GetVkImageViewCreateInfo(static_cast<VkImage>(target_texture->GetHandle()), VulkanRHI::GetVkFormat(desc.Format), VulkanRHI::GetVkAspect(desc.aspect));
 
-    VkResult Result = VulkanRHI::vkCreateImageView(Device.GetVkDevice(), &CreateInfo, nullptr, &ImageView);
-    assert(Result == VK_SUCCESS);
+    VkResult result = VulkanRHI::vkCreateImageView(Device.get_vk_device(), &image_view_create_info, nullptr, &image_view_handle);
+    ensure(result == VK_SUCCESS);
 
-    if ((Texture->RHIGetTextureDesc().Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
+    if ((target_texture->GetTextureDesc().Usage & ERHITextureUsage::SRV) == ERHITextureUsage::SRV)
     {
-        if (Desc.Aspect == ERHITextureAspect::Color || Desc.Aspect == ERHITextureAspect::Depth)
+        if (desc.aspect == ERHITextureAspect::Color || desc.aspect == ERHITextureAspect::Depth)
         {
-            DescriptorHandle = Device.GetDescriptorManager()->AddSampledImage(ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            descriptor_handle = Device.get_descriptor_manager()->add_sampled_image(image_view_handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
     }
-    else if ((Texture->RHIGetTextureDesc().Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
+    else if ((target_texture->GetTextureDesc().Usage & ERHITextureUsage::UAV) == ERHITextureUsage::UAV)
     {
-        if (Desc.Aspect == ERHITextureAspect::Color)
+        if (desc.aspect == ERHITextureAspect::Color)
         {
-            DescriptorHandle = Device.GetDescriptorManager()->AddStorageImage(ImageView, VK_IMAGE_LAYOUT_GENERAL);
+            descriptor_handle = Device.get_descriptor_manager()->add_storage_image(image_view_handle, VK_IMAGE_LAYOUT_GENERAL);
         }
     }
 }
 
-void FVulkanTextureView::Free()
+void VulkanTextureView::Free()
 {
-    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::ImageView, ImageView, DescriptorHandle);
+    Device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::ImageView, image_view_handle, descriptor_handle);
 }

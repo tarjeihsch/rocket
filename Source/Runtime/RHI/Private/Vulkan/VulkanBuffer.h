@@ -7,33 +7,29 @@
 
 #include "VulkanDescriptorManager.h"
 
-class FVulkanDevice;
+class VulkanDevice;
 
-struct FVulkanBuffer : FRHIBuffer
+struct VulkanBuffer : RHIBuffer
 {
-public:
-    FVulkanBuffer(FVulkanDevice& InDevice, FRHIBufferDesc InDesc);
-    FVulkanBuffer(FVulkanDevice& InDevice, FRHIBufferDesc InDesc, VkBuffer InBuffer);
-    ~FVulkanBuffer();
+private:
+    VulkanDevice& device;
 
-    virtual const FRHIBufferDesc& GetBufferDesc() const override;
-    virtual void* GetHandle() const override;
+public:
+    VulkanBuffer(VulkanDevice& in_device, const RHIBufferDesc& in_buffer_desc);
+    VulkanBuffer(VulkanDevice& in_device, const RHIBufferDesc& in_buffer_desc, VkBuffer in_buffer_handle);
+    ~VulkanBuffer();
+
+    virtual void* get_handle() const override;
     virtual uint32_t GetBindingIndex() const override;
-    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) override;
+    virtual void map(const void *Data, uint64_t Size, uint64_t DstOffset) override;
 
 private:
     void Alloc();
     void Free();
 
 private:
-    VkBuffer Buffer;
-    VmaAllocation Allocation;
-    VkDeviceSize Offset;
-
-    RDescriptorHandle m_DescriptorHandle;
-
-    FRHIBufferDesc Desc;
-
-private:
-    FVulkanDevice& Device;
+    VkBuffer buffer_handle;
+    VmaAllocation allocation_handle;
+    VkDeviceSize allocation_offset;
+    Descriptor descriptor;
 };

@@ -28,11 +28,11 @@ int main()
 
 		Application::get().pump_message_queue();
 
-		Renderer::get().begin_frame();
+		Renderer::get().BeginFrame();
 
-		Renderer::get().end_frame();
+		//Renderer::get().end_frame();
 	}
 
-	Renderer::get().shutdown();
+	//Renderer::get().shutdown();
 	Application::get().shutdown();
 }

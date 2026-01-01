@@ -6,7 +6,7 @@
 
 struct RHITexture;
 struct RHISemaphore;
-class IRHICommandListContext;
+class RHICommandListContext;
 
 struct RHISurfaceDesc
 {
@@ -26,8 +26,8 @@ public:
 
     virtual RHITexture* get_back_buffer_texture() = 0;
 
-    virtual void acquire(IRHICommandListContext& ctx) = 0;
-    virtual void present(IRHICommandListContext& ctx) = 0;
+    virtual void acquire(RHICommandListContext& ctx) = 0;
+    virtual void present(RHICommandListContext& ctx) = 0;
 
     virtual std::shared_ptr<RHISemaphore> GetImageAvailableSemaphore() const = 0;
     virtual std::shared_ptr<RHISemaphore> GetRenderFinishedSemaphore() const = 0;

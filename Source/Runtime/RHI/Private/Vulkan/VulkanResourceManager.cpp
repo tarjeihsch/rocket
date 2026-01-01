@@ -6,7 +6,7 @@
 #include  <cstring>
 #include <Vulkan/VulkanRHIMinimal.h>
 
-void CreatePoolAllocator(FVulkanDevice& p_Device, VulkanPoolAllocator& OutPoolAllocator, PoolAllocatorType Type, VkDeviceSize Size)
+void CreatePoolAllocator(VulkanDevice& p_Device, VulkanPoolAllocator& OutPoolAllocator, PoolAllocatorType Type, VkDeviceSize Size)
 {
     VkResult Result = VK_SUCCESS;
 
@@ -34,7 +34,7 @@ void CreatePoolAllocator(FVulkanDevice& p_Device, VulkanPoolAllocator& OutPoolAl
     AllocInfo.allocationSize = Size;
     AllocInfo.memoryTypeIndex = TypeIndex;
 
-    Result = VulkanRHI::vkAllocateMemory(p_Device.GetVkDevice(), &AllocInfo, nullptr, &OutPoolAllocator.PhysicalMemory);
+    Result = VulkanRHI::vkAllocateMemory(p_Device.get_vk_device(), &AllocInfo, nullptr, &OutPoolAllocator.PhysicalMemory);
     ensure(Result == VK_SUCCESS, "Failed to allocate memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
@@ -47,7 +47,7 @@ void CreatePoolAllocator(FVulkanDevice& p_Device, VulkanPoolAllocator& OutPoolAl
 
 void DestroyPoolAllocator(VulkanPoolAllocator& PoolAllocator)
 {
-    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PoolAllocator.PhysicalMemory, nullptr);
+    VulkanRHI::vkFreeMemory(get_vulkan_rhi_minimal()->RHIGetVkDevice(), PoolAllocator.PhysicalMemory, nullptr);
     vmaClearVirtualBlock(PoolAllocator.VirtualMemory);
     vmaDestroyVirtualBlock(PoolAllocator.VirtualMemory);
 }
@@ -59,7 +59,7 @@ void ResetPoolAllocator(VulkanPoolAllocator &PoolAllocator)
 }
 
 
-VulkanResourceManager::VulkanResourceManager(FVulkanDevice &p_Device, uint32_t p_FramesInFlight)
+VulkanResourceManager::VulkanResourceManager(VulkanDevice &p_Device, uint32_t p_FramesInFlight)
     : m_Device(p_Device), m_FramesInFlight(p_FramesInFlight)
 {
     Init();
@@ -78,11 +78,11 @@ void VulkanResourceManager::Shutdown()
     {
         if (Record.Persistent)
         {
-            vmaDestroyBuffer(m_Device.GetVmaAllocator(), Record.m_Buffer, Record.Allocation);
+            vmaDestroyBuffer(m_Device.get_vma_allocator(), Record.m_Buffer, Record.Allocation);
         }
         else
         {
-            VulkanRHI::vkDestroyBuffer(m_Device.GetVkDevice(), Record.m_Buffer, nullptr);
+            VulkanRHI::vkDestroyBuffer(m_Device.get_vk_device(), Record.m_Buffer, nullptr);
         }
     }
 
@@ -90,13 +90,13 @@ void VulkanResourceManager::Shutdown()
     {
         if (Record.Persistent)
         {
-            vmaDestroyImage(m_Device.GetVmaAllocator(), Record.m_Image, Record.Allocation);
-            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
+            vmaDestroyImage(m_Device.get_vma_allocator(), Record.m_Image, Record.Allocation);
+            VulkanRHI::vkDestroyImageView(m_Device.get_vk_device(), Record.m_View, nullptr);
         }
         else
         {
-            VulkanRHI::vkDestroyImage(m_Device.GetVkDevice(), Record.m_Image, nullptr);
-            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
+            VulkanRHI::vkDestroyImage(m_Device.get_vk_device(), Record.m_Image, nullptr);
+            VulkanRHI::vkDestroyImageView(m_Device.get_vk_device(), Record.m_View, nullptr);
         }
     }
 
@@ -130,7 +130,7 @@ BufferHandle VulkanResourceManager::AddBuffer(BufferDesc &p_Desc)
         VmaAllocationCreateInfo AllocationCreateInfo = {};
         AllocationCreateInfo.usage = p_Desc.MemoryUsage;
         AllocationCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        VkResult Result = vmaCreateBuffer(m_Device.GetVmaAllocator(), &BufferCreateInfo, &AllocationCreateInfo, &Record.m_Buffer, &Record.Allocation, nullptr);
+        VkResult Result = vmaCreateBuffer(m_Device.get_vma_allocator(), &BufferCreateInfo, &AllocationCreateInfo, &Record.m_Buffer, &Record.Allocation, nullptr);
         ensure(Result == VK_SUCCESS);
     }
     else
@@ -227,7 +227,7 @@ void VulkanResourceManager::GC()
         if (Front.Handle.Type == ResourceType::Buffer)
         {
             auto& Record = m_List_Buffer[Index];
-            vmaDestroyBuffer(m_Device.GetVmaAllocator(), Record.m_Buffer, Record.Allocation);
+            vmaDestroyBuffer(m_Device.get_vma_allocator(), Record.m_Buffer, Record.Allocation);
             Record.m_Buffer = VK_NULL_HANDLE;
             Record.Allocation = nullptr;
             m_FreeList_Buffer.push_back(Index);
@@ -235,8 +235,8 @@ void VulkanResourceManager::GC()
         else
         {
             auto& Record = m_List_Image[Index];
-            VulkanRHI::vkDestroyImage(m_Device.GetVkDevice(), Record.m_Image, nullptr);
-            VulkanRHI::vkDestroyImageView(m_Device.GetVkDevice(), Record.m_View, nullptr);
+            VulkanRHI::vkDestroyImage(m_Device.get_vk_device(), Record.m_Image, nullptr);
+            VulkanRHI::vkDestroyImageView(m_Device.get_vk_device(), Record.m_View, nullptr);
             Record.m_Image = VK_NULL_HANDLE;
             Record.Allocation = nullptr;
             m_FreeList_Image.push_back(Index);
@@ -252,9 +252,9 @@ void VulkanResourceManager::MapBuffer(BufferHandle p_Handle, void* p_Data, size_
     const BufferRecord& Record = m_List_Buffer[p_Handle.Index];
 
     uint8_t* Base = nullptr;
-    vmaMapMemory(m_Device.GetVmaAllocator(), Record.Allocation, reinterpret_cast<void**>(&Base));
+    vmaMapMemory(m_Device.get_vma_allocator(), Record.Allocation, reinterpret_cast<void**>(&Base));
     memcpy(Base + p_Offset, p_Data, p_Size);
-    vmaUnmapMemory(m_Device.GetVmaAllocator(), Record.Allocation);
+    vmaUnmapMemory(m_Device.get_vma_allocator(), Record.Allocation);
 }
 
 ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
@@ -279,7 +279,7 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
     {
         VmaAllocationCreateInfo AllocationCreateInfo = {};
         AllocationCreateInfo.usage = p_Desc.MemoryUsage;
-        VkResult Result = vmaCreateImage(m_Device.GetVmaAllocator(), &ImageCreateInfo, &AllocationCreateInfo, &Record.m_Image, &Record.Allocation, nullptr);
+        VkResult Result = vmaCreateImage(m_Device.get_vma_allocator(), &ImageCreateInfo, &AllocationCreateInfo, &Record.m_Image, &Record.Allocation, nullptr);
         ensure(Result == VK_SUCCESS);
 
         VkImageViewCreateInfo ImageViewCreateInfo = {};
@@ -296,16 +296,16 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
         ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
         ImageViewCreateInfo.subresourceRange.layerCount = 1;
         ImageViewCreateInfo.subresourceRange.aspectMask = p_Desc.AspectFlags;
-        Result = VulkanRHI::vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &Record.m_View);
+        Result = VulkanRHI::vkCreateImageView(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &Record.m_View);
         ensure(Result == VK_SUCCESS, "Failed to create image view.");
     }
     else
     {
-        VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &Record.m_Image);
+        VkResult Result = VulkanRHI::vkCreateImage(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &ImageCreateInfo, nullptr, &Record.m_Image);
         ensure(Result == VK_SUCCESS);
 
         VkMemoryRequirements MemoryRequirements;
-        VulkanRHI::vkGetImageMemoryRequirements(GetVulkanRHIMinimal()->RHIGetVkDevice(), Record.m_Image, &MemoryRequirements);
+        VulkanRHI::vkGetImageMemoryRequirements(get_vulkan_rhi_minimal()->RHIGetVkDevice(), Record.m_Image, &MemoryRequirements);
 
         VmaVirtualAllocationCreateInfo AllocInfo = {};
         AllocInfo.size = MemoryRequirements.size;
@@ -316,7 +316,7 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
         Result = vmaVirtualAllocate(ImagePoolAllocator->VirtualMemory, &AllocInfo, &Allocation, &Offset);
         ensure(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
 
-        VulkanRHI::vkBindImageMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), Record.m_Image, ImagePoolAllocator->PhysicalMemory, Offset);
+        VulkanRHI::vkBindImageMemory(get_vulkan_rhi_minimal()->RHIGetVkDevice(), Record.m_Image, ImagePoolAllocator->PhysicalMemory, Offset);
 
         VkImageViewCreateInfo ImageViewCreateInfo = {};
         ImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -333,7 +333,7 @@ ImageHandle VulkanResourceManager::AddImage(ImageDesc &p_Desc)
         ImageViewCreateInfo.subresourceRange.layerCount = 1;
         ImageViewCreateInfo.subresourceRange.aspectMask = p_Desc.AspectFlags;
 
-        Result = VulkanRHI::vkCreateImageView(GetVulkanRHIMinimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &Record.m_View);
+        Result = VulkanRHI::vkCreateImageView(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &ImageViewCreateInfo, nullptr, &Record.m_View);
         ensure(Result == VK_SUCCESS, "Failed to create image view.");
 
         // Immediately defer transient resource pending free

@@ -92,56 +92,50 @@ VkBufferCreateInfo VulkanRHI::GetVkBufferCreateInfo(uint64_t Size, VkBufferUsage
     return BufferCreateInfo;
 }
 
-VkAccessFlags VulkanRHI::GetVulkanAccess(ERHIResourceAccess access)
+VkAccessFlags2 VulkanRHI::GetVkAccess(RHIResourceAccess access)
 {
-    VkAccessFlags flags = 0;
-
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderSampledRead)) flags |= VK_ACCESS_SHADER_READ_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderStorageRead)) flags |= VK_ACCESS_SHADER_READ_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::ShaderStorageWrite)) flags |= VK_ACCESS_SHADER_WRITE_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::InputAttachmentRead)) flags |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::TransferRead)) flags |= VK_ACCESS_TRANSFER_READ_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::TransferWrite)) flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::ColorAttachmentWrite)) flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::DepthStencilAttachmentWrite)) flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::HostRead)) flags |= VK_ACCESS_HOST_READ_BIT;
-    if (EnumHasAnyFlags(access, ERHIResourceAccess::HostWrite)) flags |= VK_ACCESS_HOST_WRITE_BIT;
-
+    VkAccessFlags2 flags = 0;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::ShaderSampledRead))      flags |= VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::ShaderStorageRead))      flags |= VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::ShaderStorageWrite))     flags |= VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::InputAttachmentRead))    flags |= VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::TransferRead))           flags |= VK_ACCESS_2_TRANSFER_READ_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::TransferWrite))          flags |= VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::ColorAttachmentWrite))   flags |= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::DepthStencilAttachmentWrite)) flags |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::HostRead))               flags |= VK_ACCESS_2_HOST_READ_BIT;
+    if (EnumHasAnyFlags(access, RHIResourceAccess::HostWrite))              flags |= VK_ACCESS_2_HOST_WRITE_BIT;
     return flags;
 }
 
-
-VkImageLayout VulkanRHI::GetVulkanLayout(ERHITextureLayout layout)
+VkImageLayout VulkanRHI::GetVulkanLayout(RHITextureLayout layout)
 {
     switch (layout)
     {
-    case ERHITextureLayout::Undefined:         return VK_IMAGE_LAYOUT_UNDEFINED;
-    case ERHITextureLayout::General:           return VK_IMAGE_LAYOUT_GENERAL;
-    case ERHITextureLayout::ColorAttachment:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case ERHITextureLayout::DepthStencil:      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case ERHITextureLayout::DepthReadOnly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    case ERHITextureLayout::ShaderReadOnly:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case ERHITextureLayout::TransferSrc:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case ERHITextureLayout::TransferDst:       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    case ERHITextureLayout::Present:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    case RHITextureLayout::None:         return VK_IMAGE_LAYOUT_UNDEFINED;
+    case RHITextureLayout::General:           return VK_IMAGE_LAYOUT_GENERAL;
+    case RHITextureLayout::ColorAttachment:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case RHITextureLayout::DepthStencil:      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case RHITextureLayout::DepthReadOnly:     return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    case RHITextureLayout::ShaderReadOnly:    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    case RHITextureLayout::TransferSrc:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    case RHITextureLayout::TransferDst:       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case RHITextureLayout::Present:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     default:                                   return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 }
 
-VkPipelineStageFlags VulkanRHI::GetVulkanPipelineStage(ERHIPipelineStage stage)
+VkPipelineStageFlags2 VulkanRHI::GetVkPipelineStage(RHIPipelineStage stage)
 {
-    VkPipelineStageFlags flags = 0;
-
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::TopOfPipe))       flags |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::VertexShader))    flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::FragmentShader))  flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::ComputeShader))   flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::Transfer))        flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::ColorAttachment)) flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::DepthStencil))    flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                                                                            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    if (EnumHasAnyFlags(stage, ERHIPipelineStage::BottomOfPipe))    flags |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-
+    VkPipelineStageFlags2 flags = 0;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::TopOfPipe))       flags |= VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::VertexShader))    flags |= VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::FragmentShader))  flags |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::ComputeShader))   flags |= VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::Transfer))        flags |= VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::ColorAttachment)) flags |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::DepthStencil))    flags |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::BottomOfPipe))    flags |= VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
     return flags;
 }
 
@@ -224,15 +218,15 @@ VkImageAspectFlags VulkanRHI::GetVkAspect(ERHITextureAspect Aspect)
     }
 }
 
-VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(ERHIBufferUsage Usage)
+VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(RHIBufferUsage Usage)
 {
     VkBufferUsageFlags Flags = 0;
 
-    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Vertex)) Flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Index)) Flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferSrc)) Flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::TransferDst)) Flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    if (EnumHasAnyFlags(Usage, ERHIBufferUsage::Storage)) Flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    if (EnumHasAnyFlags(Usage, RHIBufferUsage::Vertex)) Flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    if (EnumHasAnyFlags(Usage, RHIBufferUsage::Index)) Flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    if (EnumHasAnyFlags(Usage, RHIBufferUsage::TransferSrc)) Flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    if (EnumHasAnyFlags(Usage, RHIBufferUsage::TransferDst)) Flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (EnumHasAnyFlags(Usage, RHIBufferUsage::Storage)) Flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
     return Flags;
 }
@@ -253,6 +247,22 @@ VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
     case ERHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
     case ERHIFormat::UNorm8x4:             return VK_FORMAT_R8G8B8A8_UNORM;
     default:                             return VK_FORMAT_UNDEFINED;
+    }
+}
+
+VkImageAspectFlags VulkanRHI::GetVkAspectFromFormat(ERHITextureFormat format)
+{
+    switch (format)
+    {
+        case ERHITextureFormat::B8G8R8A8_SRGB:
+        case ERHITextureFormat::R8G8B8A8_UNORM:
+            return VK_IMAGE_ASPECT_COLOR_BIT;
+        case ERHITextureFormat::D32_SFLOAT:
+            return VK_IMAGE_ASPECT_DEPTH_BIT;
+        case ERHITextureFormat::D32_SFLOAT_S8_UINT:
+            return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        default:
+            return VK_IMAGE_ASPECT_NONE;
     }
 }
 
@@ -292,12 +302,12 @@ VkPolygonMode VulkanRHI::ToVkPolygonMode(ERHIPolygonMode Mode)
     default: return VK_POLYGON_MODE_FILL;
     }
 }
-VmaMemoryUsage VulkanRHI::ToVmaMemoryUsage(ERHIResourceMemory Memory)
+VmaMemoryUsage VulkanRHI::ToVmaMemoryUsage(RHIResourceMemory Memory)
 {
     switch (Memory)
     {
-    case ERHIResourceMemory::DeviceLocal: return VMA_MEMORY_USAGE_GPU_ONLY;
-    case ERHIResourceMemory::HostVisible: return VMA_MEMORY_USAGE_CPU_TO_GPU;
+    case RHIResourceMemory::DeviceLocal: return VMA_MEMORY_USAGE_GPU_ONLY;
+    case RHIResourceMemory::HostVisible: return VMA_MEMORY_USAGE_CPU_TO_GPU;
     default: return VMA_MEMORY_USAGE_UNKNOWN;
     }
 }

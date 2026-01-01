@@ -2,12 +2,12 @@
 #include "Assertion.h"
 #include "VulkanPipeline.h"
 #include "Vulkan/VulkanRHIMinimal.h"
-#include "VulkanCommandList.h"
 #include "VulkanDescriptorManager.h"
 #include "VulkanLoader.h"
 #include "VulkanQueue.h"
 #include "VulkanTexture.h"
 #include "VulkanCommandBuffer.h"
+#include "VulkanCommandListContext.h"
 
 #define MB(x) x / 1024 / 1024
 
@@ -39,10 +39,10 @@ void FTransientResourceAllocator::Init()
     AllocInfo.allocationSize = Size;
     AllocInfo.memoryTypeIndex = TypeIndex;
 
-    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
+    Result = VulkanRHI::vkAllocateMemory(Device.get_vk_device(), &AllocInfo, nullptr, &PhysicalMemory);
     ensure(Result == VK_SUCCESS, "Failed to allocate memory.");
 
-    Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
+    Result = VulkanRHI::vkMapMemory(Device.get_vk_device(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
     ensure(Result == VK_SUCCESS, "Failed to map transient memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
@@ -57,7 +57,7 @@ void FTransientResourceAllocator::Init()
 
 void FTransientResourceAllocator::Shutdown()
 {
-    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
+    VulkanRHI::vkFreeMemory(get_vulkan_rhi_minimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
     vmaClearVirtualBlock(VirtualMemory);
     vmaDestroyVirtualBlock(VirtualMemory);
 }
@@ -68,10 +68,10 @@ void FTransientResourceAllocator::Reset()
     Offset = 0;
 }
 
-void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
+void FTransientResourceAllocator::alloc_image(VkImage Image, uint64_t& OutOffset)
 {
     VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetImageMemoryRequirements(Device.GetVkDevice(), Image, &MemoryRequirements);
+    VulkanRHI::vkGetImageMemoryRequirements(Device.get_vk_device(), Image, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -82,17 +82,17 @@ void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
     ensure(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
-    VulkanRHI::vkBindImageMemory(Device.GetVkDevice(), Image, PhysicalMemory, OutOffset);
+    VulkanRHI::vkBindImageMemory(Device.get_vk_device(), Image, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
     Offset += MemoryRequirements.size;
 }
 
-void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset)
+void FTransientResourceAllocator::alloc_buffer(VkBuffer Buffer, uint64_t& OutOffset)
 {
     VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetBufferMemoryRequirements(Device.GetVkDevice(), Buffer, &MemoryRequirements);
+    VulkanRHI::vkGetBufferMemoryRequirements(Device.get_vk_device(), Buffer, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -103,7 +103,7 @@ void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffs
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
     ensure(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
-    VulkanRHI::vkBindBufferMemory(Device.GetVkDevice(), Buffer, PhysicalMemory, OutOffset);
+    VulkanRHI::vkBindBufferMemory(Device.get_vk_device(), Buffer, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
@@ -115,7 +115,7 @@ void *FTransientResourceAllocator::GetMappedBasePtr() const
     return MappedBasePtr;
 }
 
-FDeferredDeletionQueue::FDeferredDeletionQueue(FVulkanDevice &InDevice) : Device(InDevice)
+FDeferredDeletionQueue::FDeferredDeletionQueue(VulkanDevice &InDevice) : Device(InDevice)
 {
 }
 
@@ -124,13 +124,13 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, RDescriptorHandle BindingIndex, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, Descriptor BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;
     Entry.Handle = Handle;
     Entry.Allocation = Allocation;
-    Entry.FrameNumber = GetRHI()->GetFrameCounter();
+    Entry.FrameNumber = GetRHI()->rhi_get_frame_counter();
     Entry.m_DescriptorHandle = BindingIndex;
 
     Entries.push_back(Entry);
@@ -149,60 +149,60 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
 
         switch (It->StructureType)
         {
-        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
+        case EType::Image: VulkanRHI::vkDestroyImage(Device.get_vk_device(), (VkImage)It->Handle, nullptr); break;
         case EType::ImageView:
-            VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampledImage(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyImageView(Device.get_vk_device(), (VkImageView)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveSampledImage(It->m_DescriptorHandle); }
             break;
         case EType::Buffer:
-            VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveStorageBuffer(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyBuffer(Device.get_vk_device(), (VkBuffer)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveStorageBuffer(It->m_DescriptorHandle); }
             break;
         case EType::Sampler:
-            VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetDescriptorManager()->RemoveSampler(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroySampler(Device.get_vk_device(), (VkSampler)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveSampler(It->m_DescriptorHandle); }
             break;
         default: break;
         }
 
         if (It->Allocation != nullptr)
         {
-            vmaFreeMemory(Device.GetVmaAllocator(), It->Allocation);
+            vmaFreeMemory(Device.get_vma_allocator(), It->Allocation);
         }
 
         It = Entries.erase(It);
     }
 }
 
-FVulkanDevice::FVulkanDevice(VkPhysicalDevice InPhysicalDevice)
+VulkanDevice::VulkanDevice(VkPhysicalDevice InPhysicalDevice)
     : PhysicalDevice(InPhysicalDevice)
 {
     Initialize();
 }
 
-FVulkanDevice::~FVulkanDevice()
+VulkanDevice::~VulkanDevice()
 {
     Shutdown();
 }
 
-void FVulkanDevice::WaitUntilIdle() const
+void VulkanDevice::WaitUntilIdle() const
 {
     VulkanRHI::vkDeviceWaitIdle(Device);
 }
 
-VulkanCommandListContext *FVulkanDevice::GetImmediateCommandListContext() const
+VulkanCommandListContext *VulkanDevice::GetImmediateCommandListContext() const
 {
     return ImmediateCommandListContext;
 }
 
-void FVulkanDevice::GC()
+void VulkanDevice::GC()
 {
     TransientResourceAllocator->Reset();
 
-    DeferredDeletionQueue->ReleaseExpiredResources(GetRHI()->GetFrameCounter());
+    DeferredDeletionQueue->ReleaseExpiredResources(GetRHI()->rhi_get_frame_counter());
 }
 
-void FVulkanDevice::Initialize()
+void VulkanDevice::Initialize()
 {
     uint32_t QueueFamilyCount = 0;
     VulkanRHI::vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, nullptr);
@@ -256,21 +256,21 @@ void FVulkanDevice::Initialize()
     DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
     DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
     DeviceCreateInfo.pNext = &Features_1_3;
-    DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetVulkanRHIMinimal()->GetPhysicalDeviceExtensions().size());
-    DeviceCreateInfo.ppEnabledExtensionNames = GetVulkanRHIMinimal()->GetPhysicalDeviceExtensions().data();
-    DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetVulkanRHIMinimal()->GetValidationExtensions().size());
-    DeviceCreateInfo.ppEnabledLayerNames = GetVulkanRHIMinimal()->GetValidationExtensions().data();
+    DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(get_vulkan_rhi_minimal()->GetPhysicalDeviceExtensions().size());
+    DeviceCreateInfo.ppEnabledExtensionNames = get_vulkan_rhi_minimal()->GetPhysicalDeviceExtensions().data();
+    DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(get_vulkan_rhi_minimal()->GetValidationExtensions().size());
+    DeviceCreateInfo.ppEnabledLayerNames = get_vulkan_rhi_minimal()->GetValidationExtensions().data();
 
     VkResult Result = VulkanRHI::vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
     ensure(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
-    LoadVulkanDeviceFunc(GetVkDevice());
+    LoadVulkanDeviceFunc(get_vk_device());
 
     VmaVulkanFunctions VmaFuncs = CreateVmaFuncTable();
     VmaAllocatorCreateInfo AllocatorCreateInfo = {};
     AllocatorCreateInfo.physicalDevice = PhysicalDevice;
     AllocatorCreateInfo.device = Device;
-    AllocatorCreateInfo.instance = GetVulkanRHIMinimal()->RHIGetVkInstance();
+    AllocatorCreateInfo.instance = get_vulkan_rhi_minimal()->RHIGetVkInstance();
     AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     AllocatorCreateInfo.pVulkanFunctions = &VmaFuncs;
 
@@ -294,16 +294,12 @@ void FVulkanDevice::Initialize()
     TransientResourceAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024);
 }
 
-void FVulkanDevice::Shutdown()
+void VulkanDevice::Shutdown()
 {
     delete PipelineManager;
-
     delete DescriptorManager;
-
     delete DeferredDeletionQueue;
-
     delete CommandListContext;
-
     delete TransientResourceAllocator;
 
     for (auto& Queue : Queues)
@@ -315,7 +311,7 @@ void FVulkanDevice::Shutdown()
     VulkanRHI::vkDestroyDevice(Device, nullptr);
 }
 
-FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const
+FVulkanQueue* VulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const
 {
     for (const auto& Queue : Queues)
     {
@@ -327,22 +323,22 @@ FVulkanQueue* FVulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude
     return nullptr;
 }
 
-FVulkanQueue* FVulkanDevice::GetGraphicsQueue() const
+FVulkanQueue* VulkanDevice::GetGraphicsQueue() const
 {
     return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }
 
-FVulkanQueue* FVulkanDevice::GetComputeQueue() const
+FVulkanQueue* VulkanDevice::GetComputeQueue() const
 {
     return GetQueue(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
-FVulkanQueue* FVulkanDevice::GetTransferQueue() const
+FVulkanQueue* VulkanDevice::GetTransferQueue() const
 {
     return GetQueue(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
-FVulkanQueue* FVulkanDevice::GetPresentQueue() const
+FVulkanQueue* VulkanDevice::GetPresentQueue() const
 {
     return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }
