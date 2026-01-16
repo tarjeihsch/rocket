@@ -14,7 +14,7 @@
 
 struct ShaderAsset;
 
-enum class ERHIFormat : uint8_t
+enum class RHIFormat : uint8_t
 {
     Unknown,
 
@@ -40,7 +40,7 @@ enum class ERHIFormat : uint8_t
     // Add more as needed
 };
 
-enum class ERHIPrimitiveTopology : uint8_t
+enum class RHIPrimitiveTopology : uint8_t
 {
     TriangleList,
     TriangleStrip,
@@ -50,7 +50,7 @@ enum class ERHIPrimitiveTopology : uint8_t
     PatchList, // For tessellation
 };
 
-enum class ERHICullMode : uint8_t
+enum class RHICullMode : uint8_t
 {
     None,
     Front,
@@ -58,34 +58,39 @@ enum class ERHICullMode : uint8_t
     FrontAndBack,
 };
 
-enum class ERHIPolygonMode : uint8_t
+enum class RHIPolygonMode : uint8_t
 {
     Fill,
     Line,
     Point,
 };
 
-struct FRHIVertexBinding
+struct RHIVertexBinding
 {
-    uint32_t Binding = 0;
-    uint32_t Stride = 0;
-    uint8_t bPerInstance : 1 = { false };
+    RHIVertexBinding(uint32_t in_binding, uint32_t in_stride, bool in_instance)
+        : binding(in_binding), stride(in_stride), instance(in_instance)
+    {
+    }
+
+    uint32_t binding;
+    uint32_t stride;
+    bool instance;
 };
 
-struct FRHIVertexAttribute
+struct RHIVertexAttribute
 {
-    FRHIVertexAttribute(uint32_t InLocation, uint32_t InBinding, ERHIFormat InFormat, uint32_t InOffset)
+    RHIVertexAttribute(uint32_t InLocation, uint32_t InBinding, RHIFormat InFormat, uint32_t InOffset)
         : Location(InLocation), Binding(InBinding), Format(InFormat), Offset(InOffset)
     {
     }
 
-    uint32_t Location = 0;
-    uint32_t Binding = 0;
-    ERHIFormat Format = ERHIFormat::Unknown;
-    uint32_t Offset = 0;
+    uint32_t Location;
+    uint32_t Binding;
+    RHIFormat Format;
+    uint32_t Offset;
 };
 
-enum class ERHIBlendFactor : uint8_t
+enum class RHIBlendFactor : uint8_t
 {
     Zero,
     One,
@@ -108,7 +113,7 @@ enum class ERHIBlendFactor : uint8_t
     OneMinusSrc1Alpha,
 };
 
-enum class ERHIBlendOp : uint8_t
+enum class RHIBlendOp : uint8_t
 {
     Add,
     Subtract,
@@ -117,50 +122,58 @@ enum class ERHIBlendOp : uint8_t
     Max,
 };
 
-struct FRHIBlendAttachment
+struct RHIBlendAttachment
 {
     uint32_t bEnableBlend = false;
 
     // Color blending
-    ERHIBlendFactor SrcColorFactor = ERHIBlendFactor::One;
-    ERHIBlendFactor DstColorFactor = ERHIBlendFactor::Zero;
-    ERHIBlendOp ColorOp = ERHIBlendOp::Add;
+    RHIBlendFactor SrcColorFactor = RHIBlendFactor::One;
+    RHIBlendFactor DstColorFactor = RHIBlendFactor::Zero;
+    RHIBlendOp ColorOp = RHIBlendOp::Add;
 
     // Alpha blending
-    ERHIBlendFactor SrcAlphaFactor = ERHIBlendFactor::One;
-    ERHIBlendFactor DstAlphaFactor = ERHIBlendFactor::Zero;
-    ERHIBlendOp AlphaOp = ERHIBlendOp::Add;
+    RHIBlendFactor SrcAlphaFactor = RHIBlendFactor::One;
+    RHIBlendFactor DstAlphaFactor = RHIBlendFactor::Zero;
+    RHIBlendOp AlphaOp = RHIBlendOp::Add;
 
     // Write mask
     uint8_t ColorWriteMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3);
 };
 
-struct FRHIVertex
+struct RHIVertex
 {
-    alignas(16) glm::vec3 m_Position;
-    alignas(16) glm::vec3 m_Normal;
-    alignas(16) glm::vec2 m_TexCoord;
+    alignas(16) glm::vec3 position;
+    alignas(16) glm::vec3 normal;
+    alignas(16) glm::vec2 tex_coord;
+};
+
+enum class RHIPipelineType
+{
+    Vertex, Pixel, Compute,
 };
 
 struct RHIPipelineDesc
 {
-    std::vector<ERHIFormat> ColorAttachmentFormats;
-    std::vector<FRHIVertexBinding> VertexBindings;
-    std::vector<FRHIVertexAttribute> VertexAttributes;
-    std::vector<FRHIBlendAttachment> BlendAttachments;
+    RHIPipelineType Type;
 
-    const char* VertexShaderPath;
-    const char* PixelShaderPath;
+    std::vector<RHIFormat> color_attachment_formats;
+    std::vector<RHIVertexBinding> VertexBindings;
+    std::vector<RHIVertexAttribute> VertexAttributes;
+    std::vector<RHIBlendAttachment> BlendAttachments;
 
-    ERHIFormat DepthFormat = ERHIFormat::Unknown;
-    ERHIFormat StencilFormat = ERHIFormat::Unknown;
+    const char* vertex_shader_path;
+    const char* pixel_shader_path;
+    const char* compute_shader_path;
 
-    ERHIPrimitiveTopology Topology = ERHIPrimitiveTopology::TriangleList;
-    ERHICullMode CullMode = ERHICullMode::None;
-    ERHIPolygonMode PolygonMode = ERHIPolygonMode::Fill;
+    RHIFormat depth_format = RHIFormat::Unknown;
+    RHIFormat stencil_format = RHIFormat::Unknown;
 
-    uint8_t bDepthTestEnable : 1;
-    uint8_t bDepthWriteEnable : 1;
+    RHIPrimitiveTopology topology = RHIPrimitiveTopology::TriangleList;
+    RHICullMode cull_mode = RHICullMode::None;
+    RHIPolygonMode polygon_mode = RHIPolygonMode::Fill;
+
+    uint8_t depth_test_enable : 1;
+    uint8_t depth_write_enable : 1;
 };
 
 struct RHIPipeline

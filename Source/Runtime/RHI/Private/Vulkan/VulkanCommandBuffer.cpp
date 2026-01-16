@@ -6,22 +6,22 @@
 #include "VulkanLoader.h"
 #include "Assertion.h"
 
-FVulkanCommandBuffer::FVulkanCommandBuffer(FVulkanCommandBufferPool& InPool)
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandBufferPool& InPool)
     : Pool(InPool),
-    State(EVulkanCommandBufferState::NotAllocated),
+    State(VulkanCommandBufferState::NotAllocated),
     PoolID(UINT32_MAX)
 {
     Alloc();
 }
 
-FVulkanCommandBuffer::~FVulkanCommandBuffer()
+VulkanCommandBuffer::~VulkanCommandBuffer()
 {
     Free();
 }
 
-void FVulkanCommandBuffer::Alloc()
+void VulkanCommandBuffer::Alloc()
 {
-    ensure(State == EVulkanCommandBufferState::NotAllocated);
+    ensure(State == VulkanCommandBufferState::NotAllocated);
 
     VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
     CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -29,26 +29,26 @@ void FVulkanCommandBuffer::Alloc()
     CommandBufferAllocateInfo.commandBufferCount = 1;
     CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkResult Result = VulkanRHI::vkAllocateCommandBuffers(get_vulkan_rhi_minimal()->RHIGetVkDevice(), &CommandBufferAllocateInfo, &Handle);
+    VkResult Result = VulkanRHI::vkAllocateCommandBuffers(GetVulkanRHIMinimal()->RHIGetVkDevice(), &CommandBufferAllocateInfo, &Handle);
     ensure(Result == VK_SUCCESS, "Failed to allocate command buffers.");
 
-    State = EVulkanCommandBufferState::ReadyForBegin;
+    State = VulkanCommandBufferState::ReadyForBegin;
 }
 
-void FVulkanCommandBuffer::Free()
+void VulkanCommandBuffer::Free()
 {
-    ensure(State != EVulkanCommandBufferState::NotAllocated);
+    ensure(State != VulkanCommandBufferState::NotAllocated);
 
-    VulkanRHI::vkFreeCommandBuffers(get_vulkan_rhi_minimal()->RHIGetVkDevice(), Pool.GetHandle(), 1, &Handle);
+    VulkanRHI::vkFreeCommandBuffers(GetVulkanRHIMinimal()->RHIGetVkDevice(), Pool.GetHandle(), 1, &Handle);
 
-    State = EVulkanCommandBufferState::NotAllocated;
+    State = VulkanCommandBufferState::NotAllocated;
 }
 
-void FVulkanCommandBuffer::Begin()
+void VulkanCommandBuffer::Begin()
 {
-    ensure(State == EVulkanCommandBufferState::ReadyForBegin || State == EVulkanCommandBufferState::NeedReset);
+    ensure(State == VulkanCommandBufferState::ReadyForBegin || State == VulkanCommandBufferState::NeedReset);
 
-    if (State == EVulkanCommandBufferState::NeedReset)
+    if (State == VulkanCommandBufferState::NeedReset)
     {
         Reset();
     }
@@ -62,66 +62,66 @@ void FVulkanCommandBuffer::Begin()
     VkResult Result = VulkanRHI::vkBeginCommandBuffer(Handle, &CommandBufferBeginInfo);
     ensure(Result == VK_SUCCESS, "Failed to begin recording command buffer.");
 
-    State = EVulkanCommandBufferState::IsInsideBegin;
+    State = VulkanCommandBufferState::IsInsideBegin;
 }
 
-void FVulkanCommandBuffer::End()
+void VulkanCommandBuffer::End()
 {
-    ensure(State == EVulkanCommandBufferState::IsInsideBegin);
+    ensure(State == VulkanCommandBufferState::IsInsideBegin);
 
     VulkanRHI::vkEndCommandBuffer(Handle);
 
-    State = EVulkanCommandBufferState::HasEnded;
+    State = VulkanCommandBufferState::HasEnded;
 }
 
-void FVulkanCommandBuffer::Submit()
+void VulkanCommandBuffer::Submit()
 {
-    ensure(State == EVulkanCommandBufferState::HasEnded);
+    ensure(State == VulkanCommandBufferState::HasEnded);
 
     static const auto Start = std::chrono::steady_clock::now();
     const auto Now = std::chrono::steady_clock::now();
     SubmissionTime = std::chrono::duration<double>(Now - Start).count();
 
-    State = EVulkanCommandBufferState::Submitted;
+    State = VulkanCommandBufferState::Submitted;
 }
 
-void FVulkanCommandBuffer::Finish()
+void VulkanCommandBuffer::Finish()
 {
-    ensure(State == EVulkanCommandBufferState::Submitted);
+    ensure(State == VulkanCommandBufferState::Submitted);
 
     // todo: calculate submission time
 
-    State = EVulkanCommandBufferState::NeedReset;
+    State = VulkanCommandBufferState::NeedReset;
 }
 
-void FVulkanCommandBuffer::Reset()
+void VulkanCommandBuffer::Reset()
 {
     //ensure(State == EVulkanCommandBufferState::NeedReset);
 
     VulkanRHI::vkResetCommandBuffer(Handle, 0);
 
-    State = EVulkanCommandBufferState::ReadyForBegin;
+    State = VulkanCommandBufferState::ReadyForBegin;
 }
 
-FVulkanCommandBufferPool::FVulkanCommandBufferPool(VulkanDevice& InDevice, FVulkanQueue& InQueue)
+VulkanCommandBufferPool::VulkanCommandBufferPool(VulkanDevice& InDevice, VulkanQueue& InQueue)
     : Device(InDevice),
     Queue(InQueue)
 {
     Initialize();
 }
 
-FVulkanCommandBufferPool::~FVulkanCommandBufferPool()
+VulkanCommandBufferPool::~VulkanCommandBufferPool()
 {
     Shutdown();
 }
 
-FVulkanCommandBuffer* FVulkanCommandBufferPool::Acquire()
+VulkanCommandBuffer* VulkanCommandBufferPool::Acquire()
 {
-    FVulkanCommandBuffer* CommandBuffer = nullptr;
+    VulkanCommandBuffer* CommandBuffer = nullptr;
 
     if (FreeCommandBuffers.empty())
     {
-        CommandBuffer = new FVulkanCommandBuffer(*this);
+        CommandBuffer = new VulkanCommandBuffer(*this);
     }
     else 
     {
@@ -134,13 +134,13 @@ FVulkanCommandBuffer* FVulkanCommandBufferPool::Acquire()
     return CommandBuffer;
 }
 
-void FVulkanCommandBufferPool::Recycle(FVulkanCommandBuffer* CommandBuffer)
+void VulkanCommandBufferPool::Recycle(VulkanCommandBuffer* CommandBuffer)
 {
     CommandBuffer->Reset();
 
     if (CommandBuffer->GetPoolID() != UsedCommandBuffers.size() - 1)
     {
-        FVulkanCommandBuffer* Temp = UsedCommandBuffers[UsedCommandBuffers.size() - 1];
+        VulkanCommandBuffer* Temp = UsedCommandBuffers[UsedCommandBuffers.size() - 1];
         UsedCommandBuffers[CommandBuffer->GetPoolID()] = Temp;
         Temp->SetPoolID(CommandBuffer->GetPoolID());
     }
@@ -149,7 +149,7 @@ void FVulkanCommandBufferPool::Recycle(FVulkanCommandBuffer* CommandBuffer)
     FreeCommandBuffers.push_back(CommandBuffer);
 }
 
-void FVulkanCommandBufferPool::Initialize()
+void VulkanCommandBufferPool::Initialize()
 {
     VkCommandPoolCreateInfo CommandPoolCreateInfo = {};
     CommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -157,22 +157,22 @@ void FVulkanCommandBufferPool::Initialize()
     CommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     CommandPoolCreateInfo.queueFamilyIndex = Queue.GetQueueFamilyIndex();
 
-    VkResult Result = VulkanRHI::vkCreateCommandPool(Device.get_vk_device(), &CommandPoolCreateInfo, nullptr, &Handle);
+    VkResult Result = VulkanRHI::vkCreateCommandPool(Device.GetVkDevice(), &CommandPoolCreateInfo, nullptr, &Handle);
     ensure(Result == VK_SUCCESS, "Failed to create command pool.");
 }
 
-void FVulkanCommandBufferPool::Shutdown()
+void VulkanCommandBufferPool::Shutdown()
 {
-    for (FVulkanCommandBuffer* UsedCommandBuffer : UsedCommandBuffers)
+    for (VulkanCommandBuffer* UsedCommandBuffer : UsedCommandBuffers)
     {
         delete UsedCommandBuffer;
     }
 
-    for (FVulkanCommandBuffer* FreeCommandBuffer : FreeCommandBuffers)
+    for (VulkanCommandBuffer* FreeCommandBuffer : FreeCommandBuffers)
     {
         delete FreeCommandBuffer;
     }
 
-    VulkanRHI::vkDestroyCommandPool(Device.get_vk_device(), Handle, nullptr); 
+    VulkanRHI::vkDestroyCommandPool(Device.GetVkDevice(), Handle, nullptr); 
     Handle = nullptr;
 }

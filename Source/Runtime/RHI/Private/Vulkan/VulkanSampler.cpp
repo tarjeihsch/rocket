@@ -60,10 +60,10 @@ void VulkanSampler::Alloc()
         SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     }
 
-    VkResult Result = VulkanRHI::vkCreateSampler(Device.get_vk_device(), &SamplerCreateInfo, nullptr, &Sampler);
+    VkResult Result = VulkanRHI::vkCreateSampler(Device.GetVkDevice(), &SamplerCreateInfo, nullptr, &Sampler);
     ensure(Result == VK_SUCCESS, "Failed to create sampler");
 
-    DescriptorHandle = Device.get_descriptor_manager()->AddSampler(Sampler);
+    DescriptorHandle = Device.GetBindlessDescriptorManager()->GetHeap().RegisterSampler(Sampler);
 }
 
 void VulkanSampler::Free()

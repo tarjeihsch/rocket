@@ -7,15 +7,15 @@
 
 Viewport::Viewport()
 {
-	init();
+	Init();
 }
 
 Viewport::~Viewport()
 {
-	shutdown();
+	Shutdown();
 }
 
-void Viewport::init()
+void Viewport::Init()
 {
 	WindowCreateInfo window_create_info = {};
 	window_create_info.title = "Rocket Engine";
@@ -24,16 +24,16 @@ void Viewport::init()
 	window_create_info.visible = true;
 	window_create_info.hdpi = true;
 	window_create_info.resizable = true;
-	window = Application::get().init_window(window_create_info);
+	window = Application::Get().InitWindow(window_create_info);
 
 	RHISurfaceDesc surface_desc = {};
 	surface_desc.Backend = window->GetNativeBackend();
 	surface_desc.NativeWindowHandle = window->GetNativeWindowHandle();
 	surface_desc.NativeInstanceHandle = window->GetNativeWindowSystemHandle();
-	surface = GetRHI()->create_surface(surface_desc);
+	surface = GetRHI()->CreateSurface(surface_desc);
 }
 
-void Viewport::shutdown()
+void Viewport::Shutdown()
 {
 	delete surface;
 }

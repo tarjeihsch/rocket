@@ -1,125 +1,141 @@
 #pragma once
 
 #include <vector>
-#include <cstdint>
+#include <queue>
+#include <mutex>
 #include <vulkan/vulkan_core.h>
-
-struct Descriptor
-{
-    uint32_t Index = UINT32_MAX;
-    uint32_t Generation = UINT32_MAX;
-
-    inline bool IsValid() const
-    {
-        return Index != UINT32_MAX && Generation != UINT32_MAX;
-    }
-};
-
-enum class DescriptorBinding : uint32_t
-{
-    SampledImage = 0,
-    Sampler = 1,
-    StorageImage = 2,
-    StorageBuffer = 3,
-    Count
-};
-
-struct PushConstantConfig
-{
-    VkPushConstantRange Range = {};
-    uint32_t Size = 0;
-    VkShaderStageFlags Stages = 0;
-};
 
 class VulkanDevice;
 
+// -----------------------------------------------------------------------------
+// Core Types
+// -----------------------------------------------------------------------------
+
+struct BindlessHandle
+{
+	uint32_t Index = 0xFFFFFFFF;
+	uint32_t Generation = 0;
+
+	bool IsValid() const { return Index != 0xFFFFFFFF; }
+};
+
+// -----------------------------------------------------------------------------
+// Component 1: Dynamic Ring Buffer
+// Uses a "Linear Allocator" strategy for uploading frame parameters.
+// -----------------------------------------------------------------------------
+class VulkanDynamicRingBuffer
+{
+public:
+	void Initialize(VulkanDevice& Device, uint32_t TotalSize);
+	void Shutdown();
+
+	void BeginFrame();
+
+	// Allocates memory in the ring buffer and copies data to it.
+	// Returns the Byte Offset within the GPU buffer.
+	uint32_t Allocate(const void* Data, uint32_t Size);
+
+	VkDescriptorSet GetDescriptorSet() const { return DescriptorSet; }
+	VkDescriptorSetLayout GetLayout() const { return DescriptorSetLayout; }
+
+private:
+	VulkanDevice* Device = nullptr;
+	VkBuffer Buffer = VK_NULL_HANDLE;
+	VkDeviceMemory Memory = VK_NULL_HANDLE;
+	void* MappedData = nullptr;
+
+	uint32_t Capacity = 0;
+	uint32_t CurrentOffset = 0;
+	uint32_t FrameSize = 0;
+	uint32_t CurrentFrameIndex = 0;
+	static constexpr uint32_t MaxFramesInFlight = 3;
+	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
+	VkDescriptorSet DescriptorSet = VK_NULL_HANDLE;
+};
+
+// -----------------------------------------------------------------------------
+// Component 2: Bindless Descriptor Heap
+// Manages the unbounded arrays of Textures, Buffers, and Samplers.
+// -----------------------------------------------------------------------------
+class VulkanBindlessHeap
+{
+public:
+	struct Config
+	{
+		uint32_t MaxTextures = 16384;
+		uint32_t MaxBuffers = 4096;
+		uint32_t MaxSamplers = 1024;
+		uint32_t MaxStorageImages = 4096;
+	};
+
+	void Initialize(VulkanDevice& Device, const Config& Config);
+	void Shutdown();
+
+	// Resource Registration
+	BindlessHandle RegisterTexture(VkImageView View, VkImageLayout Layout);
+	BindlessHandle RegisterBuffer(VkBuffer Buffer, VkDeviceSize Range = VK_WHOLE_SIZE);
+	BindlessHandle RegisterSampler(VkSampler Sampler);
+	BindlessHandle RegisterStorageImage(VkImageView View, VkImageLayout Layout);
+
+	// Resource Unregistration (Caller must ensure GPU is done using index!)
+	void UnregisterTexture(BindlessHandle Handle);
+	void UnregisterBuffer(BindlessHandle Handle);
+	void UnregisterSampler(BindlessHandle Handle);
+	void UnregisterStorageImage(BindlessHandle Handle);
+
+	VkDescriptorSet GetDescriptorSet() const { return DescriptorSet; }
+	VkDescriptorSetLayout GetLayout() const { return DescriptorSetLayout; }
+
+private:
+	// Internal Helper for Free List Management
+	struct ResourcePool
+	{
+		std::queue<uint32_t> FreeIndices;
+		std::vector<uint32_t> Generations;
+		uint32_t MaxCapacity = 0;
+		uint32_t BindingIndex = 0;
+
+		void Init(uint32_t Count, uint32_t Binding);
+		uint32_t Allocate();
+		void Free(uint32_t Index);
+	};
+
+	VulkanDevice* Device = nullptr;
+	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
+	VkDescriptorSet DescriptorSet = VK_NULL_HANDLE;
+
+	ResourcePool TexturePool; // Binding 0
+	ResourcePool BufferPool;  // Binding 1
+	ResourcePool SamplerPool; // Binding 2
+	ResourcePool StorageImagePool; // Binding 3
+};
+
+
+// -----------------------------------------------------------------------------
+// Component 3: The Manager
+// Coordinates the Sets and Layouts.
+// -----------------------------------------------------------------------------
 class VulkanDescriptorManager
 {
 public:
-    explicit VulkanDescriptorManager(VulkanDevice& p_Device, uint32_t p_MaxSampledImages = 16384, uint32_t p_MaxSamplers = 1024, uint32_t p_MaxStorageImages = 2048, uint32_t p_MaxStorageBuffers = 4096);
-    ~VulkanDescriptorManager();
+	explicit VulkanDescriptorManager(VulkanDevice& Device);
+	~VulkanDescriptorManager();
 
-    Descriptor add_sampled_image(VkImageView View, VkImageLayout Layout);
-    Descriptor AddSampler(VkSampler Sampler);
-    Descriptor add_storage_image(VkImageView View, VkImageLayout Layout);
-    Descriptor add_storage_buffer(VkBuffer Buffer, VkDeviceSize Size);
+	// Accessors for sub-systems
+	VulkanBindlessHeap& GetHeap() { return BindlessHeap; }
+	VulkanDynamicRingBuffer& GetParameterBuffer() { return ParameterBuffer; }
 
-    void RemoveSampledImage(Descriptor Handle);
-    void RemoveSampler(Descriptor Handle);
-    void RemoveStorageImage(Descriptor Handle);
-    void RemoveStorageBuffer(Descriptor Handle);
+	// The Global Pipeline Layout used by all Bindless Shaders
+	VkPipelineLayout GetGlobalPipelineLayout() const { return GlobalPipelineLayout; }
 
-    void Update();
-
-    inline VkDescriptorSetLayout GetDescriptorSetLayout() const;
-    inline VkDescriptorSet GetDescriptorSet() const;
-    inline VkDescriptorPool GetDescriptorPool() const;
-    inline VkPipelineLayout GetPipelineLayout() const;
+	// Called at the start of a new frame to reset the ring buffer cursor
+	void BeginFrame();
 
 private:
-    void Init();
-    void Shutdown();
-
-private:
-    struct SlotBase
-    {
-        std::vector<uint32_t> Generation;
-        std::vector<uint8_t> Dirty;
-        std::vector<uint32_t> FreeList;
-    };
-
-    struct ImageSlotArray : SlotBase
-    {
-        std::vector<VkDescriptorImageInfo> Infos;
-    };
-
-    struct RSamplerSlotArray : SlotBase
-    {
-        std::vector<VkDescriptorImageInfo> Infos;
-    };
-
-    struct BufferSlotArray : SlotBase
-    {
-        std::vector<VkDescriptorBufferInfo> Infos;
-    };
-
-private:
-    Descriptor AllocSlot(SlotBase& Slot);
-    void FreeSlot(SlotBase& Slot, Descriptor Handle);
-    void MarkDirty(SlotBase& Slot, uint32_t Index);
-
-private:
-    VulkanDevice& Device;
-
-    VkDescriptorSetLayout DescriptorSetLayout;
-    VkDescriptorSet DescriptorSet;
-    VkDescriptorPool DescriptorPool;
-    VkPipelineLayout PipelineLayout;
-
-    ImageSlotArray SampledImages;
-    RSamplerSlotArray Samplers;
-    ImageSlotArray StorageImages;
-    BufferSlotArray StorageBuffers;
-
-    PushConstantConfig m_PushConstantConfig;
+	VulkanDevice& Device;
+	VulkanBindlessHeap BindlessHeap;
+	VulkanDynamicRingBuffer ParameterBuffer;
+	VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
 };
-
-VkDescriptorSet VulkanDescriptorManager::GetDescriptorSet() const
-{
-    return DescriptorSet;
-}
-
-VkDescriptorSetLayout VulkanDescriptorManager::GetDescriptorSetLayout() const
-{
-    return DescriptorSetLayout;
-}
-
-VkDescriptorPool VulkanDescriptorManager::GetDescriptorPool() const
-{
-    return DescriptorPool;
-}
-
-VkPipelineLayout VulkanDescriptorManager::GetPipelineLayout() const
-{
-    return PipelineLayout;
-}

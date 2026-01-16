@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-class Window;
+class OSWindow;
 class MessageController;
 
 struct Event;
@@ -20,31 +20,31 @@ public:
     Application& operator=(const Application&) = delete;
 
     /* Access Host by singleton instance */
-    static Application& get();
+    static Application& Get();
 
     /* Initializes GLFW and platform services. Safe to call multiple times. */
-    bool initialize();
+    bool Initialize();
 
     /* Shuts down GLFW and platform services. Safe to call multiple times. */
-    void shutdown();
+    void Shutdown();
 
     /* Traverse event queue and dispatch corresponding events */
-    void pump_message_queue();
+    void PumpMessageQueue();
 
     void process_deferred_message(const Event& event);
 
-    void set_message_controller(MessageController* messageController);
+    void SetMessageController(MessageController* messageController);
 
     /* Creates a new window with set flags */
-    Window* init_window(WindowCreateInfo windowCreateInfo);
+    OSWindow* InitWindow(WindowCreateInfo windowCreateInfo);
 
     /* Fetch window object by window handle */
-    Window* FindWindowByHandle(uint64_t WindowHandleID);
+    OSWindow* FindWindowByHandle(uint64_t WindowHandleID);
 
     std::vector<const char*> GetSurfaceExtensions() const;
 
 private:
-    std::vector<std::unique_ptr<Window>> M_Windows;
+    std::vector<std::unique_ptr<OSWindow>> M_Windows;
 
     MessageController* M_MessageController;
 

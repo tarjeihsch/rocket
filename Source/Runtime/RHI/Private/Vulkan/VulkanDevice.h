@@ -8,8 +8,8 @@
 class VulkanCommandListContext;
 class VulkanDevice;
 struct VulkanTexture;
-class FVulkanQueue;
-class FVulkanPipelineManager;
+class VulkanQueue;
+class VulkanPipelineManager;
 class VulkanDescriptorManager;
 class VulkanResourceManager;
 
@@ -28,8 +28,8 @@ struct FTransientResourceAllocator
 
     void Reset();
 
-    void alloc_image(VkImage Image, uint64_t& OutOffset);
-    void alloc_buffer(VkBuffer Buffer, uint64_t& OutOffset);
+    void AllocImage(VkImage Image, uint64_t& OutOffset);
+    void AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset);
 
     void* GetMappedBasePtr() const;
 
@@ -84,20 +84,20 @@ public:
     };
 
     template <typename T>
-    inline void enqueue_resource(EType Type, T Handle, Descriptor BindingIndex)
+    inline void enqueue_resource(EType Type, T Handle, BindlessHandle BindingIndex)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, nullptr);
     }
 
     template <typename T>
-    inline void enqueue_resource_with_allocation(EType Type, T Handle, Descriptor BindingIndex, VmaAllocation Allocation)
+    inline void enqueue_resource_with_allocation(EType Type, T Handle, BindlessHandle BindingIndex, VmaAllocation Allocation)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, Allocation);
     }
 
-    void EnqueueGenericResource(EType Type, uint64_t Handle, Descriptor BindingIndex, VmaAllocation Allocation);
+    void EnqueueGenericResource(EType Type, uint64_t Handle, BindlessHandle BindingIndex, VmaAllocation Allocation);
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
 private:
@@ -106,7 +106,7 @@ private:
         EType StructureType;
         uint64_t FrameNumber;
         uint64_t Handle;
-        Descriptor m_DescriptorHandle;
+        BindlessHandle m_DescriptorHandle;
         VmaAllocation Allocation;
     };
 
@@ -123,23 +123,22 @@ public:
 
     void WaitUntilIdle() const;
 
-    FVulkanQueue* GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const;
-    FVulkanQueue* GetGraphicsQueue() const;
-    FVulkanQueue* GetComputeQueue() const;
-    FVulkanQueue* GetTransferQueue() const;
-    FVulkanQueue* GetPresentQueue() const;
+    uint32_t FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
-    inline VkDevice get_vk_device() const;
+    VulkanQueue* GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const;
+    VulkanQueue* GetGraphicsQueue() const;
+    VulkanQueue* GetComputeQueue() const;
+    VulkanQueue* GetTransferQueue() const;
+    VulkanQueue* GetPresentQueue() const;
+
+    inline VkDevice GetVkDevice() const;
     inline VkPhysicalDevice GetVkPhysicalDevice() const;
     inline VmaAllocator get_vma_allocator() const;
     inline VkDebugUtilsMessengerEXT GetVkDebugUtilsMessenger() const;
 
-    inline FVulkanPipelineManager* get_pipeline_manager() const;
-    inline VulkanDescriptorManager* get_descriptor_manager() const;
-
-    inline FTransientResourceAllocator* get_transient_resource_allocator() const;
-    inline VulkanCommandListContext* GetCommandListContext() const;
-    inline VulkanCommandListContext* GetImmediateCommandListContext() const;
+    inline VulkanPipelineManager* GetPipelineManager() const;
+    inline VulkanDescriptorManager* GetBindlessDescriptorManager() const;
+    inline FTransientResourceAllocator* GetTransientMemoryAllocator() const;
     inline FDeferredDeletionQueue* get_deferred_deletion_queue() const;
 
     void GC();
@@ -153,9 +152,9 @@ private:
     VmaAllocator Allocator;
     VkDebugUtilsMessengerEXT DebugUtilsMessenger;
 
-    std::vector<FVulkanQueue*> Queues;
+    std::vector<VulkanQueue*> Queues;
 
-    FVulkanPipelineManager* PipelineManager;
+    VulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
     FDeferredDeletionQueue* DeferredDeletionQueue;
     VulkanCommandListContext* CommandListContext;
@@ -166,7 +165,7 @@ private:
     VkPhysicalDevice PhysicalDevice;
 };
 
-inline VkDevice VulkanDevice::get_vk_device() const
+inline VkDevice VulkanDevice::GetVkDevice() const
 {
     return Device;
 }
@@ -186,24 +185,19 @@ inline VkDebugUtilsMessengerEXT VulkanDevice::GetVkDebugUtilsMessenger() const
     return DebugUtilsMessenger;
 }
 
-inline FVulkanPipelineManager* VulkanDevice::get_pipeline_manager() const
+inline VulkanPipelineManager* VulkanDevice::GetPipelineManager() const
 {
     return PipelineManager;
 }
 
-inline VulkanDescriptorManager* VulkanDevice::get_descriptor_manager() const
+inline VulkanDescriptorManager* VulkanDevice::GetBindlessDescriptorManager() const
 {
     return DescriptorManager;
 }
 
-inline FTransientResourceAllocator *VulkanDevice::get_transient_resource_allocator() const
+inline FTransientResourceAllocator *VulkanDevice::GetTransientMemoryAllocator() const
 {
     return TransientResourceAllocator;
-}
-
-inline VulkanCommandListContext *VulkanDevice::GetCommandListContext() const
-{
-    return CommandListContext;
 }
 
 inline FDeferredDeletionQueue *VulkanDevice::get_deferred_deletion_queue() const

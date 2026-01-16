@@ -24,15 +24,12 @@ public:
     virtual uint32_t RHIGetComputeQueueFamilyIndex() const = 0;
     virtual uint32_t RHIGetTransferQueueFamilyIndex() const = 0;
     virtual uint32_t RHIGetPresentQueueFamilyIndex() const = 0;
-    virtual VkPipelineLayout GetBindlessPipelineLayout() const = 0;
-    virtual VkDescriptorSet GetBindlessDescriptorSet() const = 0;
-    virtual VkDescriptorSetLayout GetBindlessDesciptorSetLayout() const = 0;
     virtual std::span<const char*> GetValidationExtensions() = 0;
     virtual std::span<const char*> GetInstanceExtensions() = 0;
     virtual std::span<const char *> GetPhysicalDeviceExtensions() = 0;
 };
 
-inline IVulkanRHIMinimal* get_vulkan_rhi_minimal()
+inline IVulkanRHIMinimal* GetVulkanRHIMinimal()
 {
     ensure(g_rhi->get_interface_type() == IVulkanRHIMinimal::StaticType);
     return GetRHI<IVulkanRHIMinimal>();

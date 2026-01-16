@@ -54,6 +54,8 @@ enum class RHIResourceAccess : uint16_t
     // CPU Access
     HostRead = 1 << 8,
     HostWrite = 1 << 9,
+
+    IndirectCommandRead = 1 << 10,
 };
 
 enum class RHIPipelineStage : uint16_t
@@ -67,13 +69,15 @@ enum class RHIPipelineStage : uint16_t
     ColorAttachment = 1 << 5,
     DepthStencil = 1 << 6,
     BottomOfPipe = 1 << 7,
+    DrawIndirect = 1 << 8,
+    AllCommands = 1 << 9
 };
 
-inline RHIResourceAccess operator|(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline RHIResourceAccess operator&(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+inline RHIResourceAccess operator|(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint16_t>(Lhs) | static_cast<uint16_t>(Rhs)); }
+inline RHIResourceAccess operator&(RHIResourceAccess Lhs, RHIResourceAccess Rhs) { return static_cast<RHIResourceAccess>(static_cast<uint16_t>(Lhs) & static_cast<uint16_t>(Rhs)); }
 
-inline RHIPipelineStage operator|(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint8_t>(Lhs) | static_cast<uint8_t>(Rhs)); }
-inline RHIPipelineStage operator&(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint8_t>(Lhs) & static_cast<uint8_t>(Rhs)); }
+inline RHIPipelineStage operator|(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint16_t>(Lhs) | static_cast<uint16_t>(Rhs)); }
+inline RHIPipelineStage operator&(RHIPipelineStage Lhs, RHIPipelineStage Rhs) { return static_cast<RHIPipelineStage>(static_cast<uint16_t>(Lhs) & static_cast<uint16_t>(Rhs)); }
 
 enum class RHIResourceLifetime : uint8_t
 {
@@ -96,7 +100,7 @@ enum class RHIResourceMemory
     // GPU-only memory; fastest access by the GPU; CPU can't map it
     DeviceLocal,
 
-    // CPU can map this memory
+    // GPU-memory; CPU can map this memory - slower access
     HostVisible
 };
 
@@ -118,10 +122,10 @@ class RHI
 public:
     virtual ~RHI() = default;
 
-    virtual void init() = 0;
-    virtual void shutdown() = 0;
-    virtual void submit(const RHICommandList&) = 0;
-    virtual void reset() = 0;
+    virtual void Init() = 0;
+    virtual void Shutdown() = 0;
+    virtual void Submit(RHICommandList&) = 0;
+    virtual void Reset() = 0;
 
     [[nodiscard]] virtual const char* get_name() const  = 0;
     [[nodiscard]] virtual const char* get_version() const  = 0;
@@ -130,12 +134,12 @@ public:
 
     virtual void rhi_wait_until_idle() const = 0;
     virtual uint64_t rhi_get_frame_counter() const noexcept = 0;
-    virtual RHISurface* create_surface(RHISurfaceDesc desc) = 0;
-    virtual RHITexture* rhi_create_texture(RHITextureDesc Desc) const = 0;
-    virtual RHITextureView* rhi_create_texture_view(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const = 0;
-    virtual RHIBuffer* rhi_create_buffer(RHIBufferDesc Desc) const = 0;
-    virtual RHISampler* rhi_create_sampler(RHISamplerDesc Desc) const = 0;
-    virtual RHIPipeline* rhi_create_pipeline(RHIPipelineDesc Desc) = 0;
+    virtual RHISurface* CreateSurface(RHISurfaceDesc desc) = 0;
+    virtual RHITexture* RHICreateTexture(RHITextureDesc Desc) const = 0;
+    virtual RHITextureView* RHICreateTextureView(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const = 0;
+    virtual RHIBuffer* RHICreateBuffer(RHIBufferDesc Desc) const = 0;
+    virtual RHISampler* RHICreateSampler(RHISamplerDesc Desc) const = 0;
+    virtual RHIPipeline* RHICreatePipeline(RHIPipelineDesc Desc) = 0;
 };
 
 class RHIModule
@@ -149,7 +153,7 @@ public:
 extern RHI* g_rhi;
 extern RHIModule* g_rhi_module;
 
-void set_rhi_module(RHIInterfaceType InInterfaceType);
+void SetRHIModule(RHIInterfaceType InInterfaceType);
 
 RHIModule* create_vulkan_rhi_module();
 

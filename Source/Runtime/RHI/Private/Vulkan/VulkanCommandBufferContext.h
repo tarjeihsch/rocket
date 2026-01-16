@@ -4,14 +4,16 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "VulkanBuffer.h"
+#include "VulkanTexture.h"
 #include "Events/Delegate.h"
 
 class RHISwapchain;
 class VulkanSwapchain;
 struct RHISemaphore;
 class VulkanDevice;
-struct FVulkanCommandBuffer;
-struct FVulkanCommandBufferPool;
+struct VulkanCommandBuffer;
+struct VulkanCommandBufferPool;
 
 struct VulkanCommandBufferPayload
 {
@@ -19,7 +21,7 @@ struct VulkanCommandBufferPayload
     std::vector<VkSemaphore> SignalSemaphores;
     std::vector<VkPipelineStageFlags2> WaitStageMasks;
     std::vector<VkPipelineStageFlags2> SignalStageMasks;
-    std::vector<FVulkanCommandBuffer*> CommandBuffers;
+    std::vector<VulkanCommandBuffer*> CommandBuffers;
     uint64_t TimelineSemaphoreValue;
 
     TDelegate<> PreSubmitCallback;
@@ -35,31 +37,31 @@ enum class VulkanCommandBufferContextState
     Signal 
 };
 
-inline bool operator<(VulkanCommandBufferContextState a, VulkanCommandBufferContextState b)
+inline bool operator<(VulkanCommandBufferContextState lhs, VulkanCommandBufferContextState rhs)
 {
-    return static_cast<int>(a) < static_cast<int>(b);   
+    return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
 }
 
 class VulkanCommandBufferContext
 {
 private:
-    FVulkanCommandBufferPool& command_buffer_pool;
+    VulkanCommandBufferPool& command_buffer_pool;
 
 public:
-    explicit VulkanCommandBufferContext(FVulkanCommandBufferPool& in_command_buffer_pool);
+    explicit VulkanCommandBufferContext(VulkanCommandBufferPool& in_command_buffer_pool);
 
-    FVulkanCommandBuffer* get_current_command_buffer();
-    VulkanCommandBufferPayload& get_payload(VulkanCommandBufferContextState state);
+    VulkanCommandBuffer* GetCurrentCommandBuffer();
+    VulkanCommandBufferPayload& GetPayload(VulkanCommandBufferContextState state);
 
-    void new_payload();
-    void end_payload();
+    void NewPayload();
+    void EndPayload();
 
-    void finalize(std::vector<VulkanCommandBufferPayload*>& payloads);
+    void Finalize(std::vector<VulkanCommandBufferPayload*>& payloads);
 
-    void add_wait_semaphore(VkSemaphore wait_semaphore, VkPipelineStageFlags2 wait_stage_mask);
-    void add_wait_semaphore(std::span<VkSemaphore> wait_semaphores, std::span<VkPipelineStageFlags2> wait_stage_masks);
-    void add_signal_semaphore(VkSemaphore ready_semaphore, VkPipelineStageFlags2 signal_stage_mask);
-    void add_signal_semaphore(std::span<VkSemaphore> ready_semaphores, std::span<VkPipelineStageFlags2> signal_stage_masks);
+    void AddWaitSemaphore(VkSemaphore wait_semaphore, VkPipelineStageFlags2 wait_stage_mask);
+    void AddWaitSemaphore(std::span<VkSemaphore> wait_semaphores, std::span<VkPipelineStageFlags2> wait_stage_masks);
+    void AddSignalSemaphore(VkSemaphore ready_semaphore, VkPipelineStageFlags2 signal_stage_mask);
+    void AddSignalSemaphore(std::span<VkSemaphore> ready_semaphores, std::span<VkPipelineStageFlags2> signal_stage_masks);
 
 private:
     std::vector<VulkanCommandBufferPayload*> m_payloads;

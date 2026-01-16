@@ -2,37 +2,46 @@
 #include "MessageController.h"
 #include "Logger.h"
 #include "Renderer.h"
+#include "RenderTarget.h"
+#include "Attachment.h"
+#include "Buffer.h"
+#include "Pipeline.h"
+#include "Viewport.h"
 
 bool g_window_should_close = false;
 
 class EngineMessageController : public MessageController
 {
-	void OnWindowClose(Window* Window) override
+	void OnWindowClose(OSWindow* Window) override
 	{
 		g_window_should_close = true;
 	}
 };
 
-static EngineMessageController G_MessageController;
+static EngineMessageController g_message_controller;
+static Viewport* game_viewport;
 
 int main()
 {
-	Application::get().initialize();
-	Application::get().set_message_controller(&G_MessageController);
+	Application::Get().Initialize();
+	Application::Get().SetMessageController(&g_message_controller);
+
+	Renderer::Get().Initialize();
+
+	game_viewport = new Viewport();
 
 	Logger::GBufferLog.SetMinLevel(ELogLevel::Trace);
 
 	while (!g_window_should_close)
 	{
-		Logger::DumpGBufferLogger();
+		Logger::DumpGBuffer();
 
-		Application::get().pump_message_queue();
+		Application::Get().PumpMessageQueue();
 
-		Renderer::get().BeginFrame();
+		Renderer::Get().BeginFrame(game_viewport);
 
-		//Renderer::get().end_frame();
+		Renderer::Get().EndFrame();
 	}
 
-	//Renderer::get().shutdown();
-	Application::get().shutdown();
+	Application::Get().Shutdown();
 }

@@ -32,7 +32,7 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
     Extent = InExtent;
 
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(get_vulkan_rhi_minimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
+    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
     Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
     Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
@@ -63,9 +63,9 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
     SwapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     SwapchainCreateInfo.clipped = VK_TRUE;
 
-    if (get_vulkan_rhi_minimal()->RHIGetGraphicsQueueFamilyIndex() != get_vulkan_rhi_minimal()->RHIGetPresentQueueFamilyIndex())
+    if (GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex() != GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex())
     {
-        std::vector<uint32_t> QueueFamilyIndices = { get_vulkan_rhi_minimal()->RHIGetGraphicsQueueFamilyIndex(), get_vulkan_rhi_minimal()->RHIGetPresentQueueFamilyIndex() };
+        std::vector<uint32_t> QueueFamilyIndices = { GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex(), GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex() };
 
         // Images can be used across multiple queue families without explicit ownership transfers.
         SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -79,21 +79,20 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
         SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.get_vk_device(), &SwapchainCreateInfo, nullptr, &Swapchain);
+    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
     ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
 
     RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
 
     std::vector<VkImage> Images;
 
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.get_vk_device(), Swapchain, &ImageCount, nullptr);
+    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
     Images.resize(ImageCount);
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.get_vk_device(), Swapchain, &ImageCount, Images.data());
+    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
 
     for (uint32_t Index = 0; Index < ImageCount; ++Index)
     {
-        RHITextureDesc Desc = RHITextureDesc::Create2D(Extent.width, Extent.height, RHIResourceLifetime::Unmanaged, ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureUsage::Color | ERHITextureUsage::CopyDst | ERHITextureUsage::Present, RHITextureLayout::None, 0, 0, 1);
-        RHITextureViewDesc ViewDesc = RHITextureViewDesc::Create2D(ERHITextureFormat::B8G8R8A8_SRGB, ERHITextureAspect::Color, RHIResourceLifetime::Persistent);
+        RHITextureDesc Desc = RHITextureDesc::Create2D(Extent.width, Extent.height, RHIResourceLifetime::Unmanaged, RHITextureFormat::B8G8R8A8_SRGB, RHITextureUsage::Color | RHITextureUsage::CopyDst | RHITextureUsage::Present, RHITextureLayout::None, 0, 0, 1);
         BackBuffers.push_back(std::make_unique<VulkanTexture>(Device, Desc, Images[Index]));
     }
 
@@ -106,17 +105,17 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
     for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
     {
         VkSemaphore Semaphore;
-        VulkanRHI::vkCreateSemaphore(Device.get_vk_device(), &SemaphoreCreateInfo, nullptr, &Semaphore);
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
 
-        ImageAcquiredSemaphores[Index] = std::make_shared<FVulkanSemaphore>(Semaphore);
+        ImageAcquiredSemaphores[Index] = std::make_shared<VulkanSemaphore>(Semaphore);
     }
 
     for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
     {
         VkSemaphore Semaphore;
-        VulkanRHI::vkCreateSemaphore(Device.get_vk_device(), &SemaphoreCreateInfo, nullptr, &Semaphore);
+        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
 
-        RenderFinishedSemaphores[Index] = std::make_shared<FVulkanSemaphore>(Semaphore);
+        RenderFinishedSemaphores[Index] = std::make_shared<VulkanSemaphore>(Semaphore);
     }
 
     ensure(ImageAcquiredSemaphores.size() > 0, "Swapchain has no acquire semaphores (image count too low?)");
@@ -128,20 +127,20 @@ void VulkanSwapchain::DestroySwapchain()
 
     if (Swapchain != VK_NULL_HANDLE)
     {
-        VulkanRHI::vkDestroySwapchainKHR(Device.get_vk_device(), Swapchain, nullptr);
+        VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
         Swapchain = VK_NULL_HANDLE;
     }
 
     // TODO: Use DTOR to release/destroy
     for (auto& Semaphore : ImageAcquiredSemaphores)
     {
-        VulkanRHI::vkDestroySemaphore(Device.get_vk_device(), Semaphore->Handle, nullptr);
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
     }
 
     // TODO: Use DTOR to release/destroy
     for (auto& Semaphore : RenderFinishedSemaphores)
     {
-        VulkanRHI::vkDestroySemaphore(Device.get_vk_device(), Semaphore->Handle, nullptr);
+        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
     }
 
     BackBuffers.clear();
@@ -154,11 +153,11 @@ void VulkanSwapchain::DestroySwapchain()
     NumPresentCalls = 0;
 }
 
-bool VulkanSwapchain::acquire_back_buffer_image(VulkanCommandListContext& ctx)
+bool VulkanSwapchain::AcquireBackBufferImage()
 {
     SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
 
-    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(get_vulkan_rhi_minimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex]->Handle, VK_NULL_HANDLE, &CurrentImageIndex);
+    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex]->Handle, VK_NULL_HANDLE, &CurrentImageIndex);
 
     if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
     {
@@ -166,15 +165,13 @@ bool VulkanSwapchain::acquire_back_buffer_image(VulkanCommandListContext& ctx)
         return false;
     }
 
-    //ctx.add_wait_semaphore(get_image_acquired_semaphore()->Handle, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT);
-
     ++NumAcquireCalls;
     return true;
 }
 
-void VulkanSwapchain::present_back_buffer_image(VulkanCommandListContext& ctx)
+void VulkanSwapchain::PresentBackBufferImage()
 {
-    //ctx.add_signal_semaphore(get_render_finished_semaphore()->Handle, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
+    ++NumPresentCalls;
 }
 
 RHITexture* VulkanSwapchain::GetBackBufferTexture() const

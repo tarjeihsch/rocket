@@ -23,5 +23,5 @@ private:
     VkSampler Sampler;
 
     VulkanDevice& Device;
-    Descriptor DescriptorHandle;
+    BindlessHandle DescriptorHandle;
 };

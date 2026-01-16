@@ -5,6 +5,7 @@
 #include "Common/RHISurface.h"
 #include "vulkan/vulkan_core.h"
 
+class VulkanCommandBufferContext;
 class RHICommandListContext;
 class VulkanDevice;
 class VulkanSwapchain;
@@ -17,17 +18,15 @@ public:
     VulkanSurface(VulkanDevice& Device, RHISurfaceDesc& InDesc);
     ~VulkanSurface();
 
-    RHITexture* get_back_buffer_texture() override;
-
-    void acquire(RHICommandListContext& ctx) override;
-    void present(RHICommandListContext& ctx) override;
+    void AcquireBackBuffer() override;
+	void PresentBackBuffer() override;
+    virtual RHITexture* GetBackBufferTexture() override;
+    virtual std::shared_ptr<RHISemaphore> GetImageAvailableSemaphore() const override;
+    virtual std::shared_ptr<RHISemaphore> GetRenderFinishedSemaphore() const override;
 
     inline VkSurfaceKHR GetVkSurface() const;
     inline VkPresentModeKHR GetPresentMode() const;
     inline VkSurfaceFormatKHR GetSurfaceFormat() const;
-
-    virtual std::shared_ptr<RHISemaphore> GetImageAvailableSemaphore() const override;
-    virtual std::shared_ptr<RHISemaphore> GetRenderFinishedSemaphore() const override;
 
 private:
     VulkanDevice& Device;

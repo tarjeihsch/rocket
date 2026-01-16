@@ -32,7 +32,7 @@ CVulkanRHI::CVulkanRHI()
 {
 }
 
-void CVulkanRHI::init()
+void CVulkanRHI::Init()
 {
     bool bDebug = true;
 
@@ -48,10 +48,10 @@ void CVulkanRHI::init()
     {
         switch(Severity)
         {
-            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:   RK_LOG_DEBUG    ("[{}] {}", get_vulkan_rhi_minimal()->get_name(), Data->pMessage); break;
-            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:      RK_LOG_INFO     ("[{}] {}", get_vulkan_rhi_minimal()->get_name(), Data->pMessage); break;
-            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:   RK_LOG_WARN     ("[{}] {}", get_vulkan_rhi_minimal()->get_name(), Data->pMessage); break;
-            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:     RK_LOG_ERROR    ("[{}] {}", get_vulkan_rhi_minimal()->get_name(), Data->pMessage); break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:   RK_LOG_DEBUG    ("[{}] {}", GetVulkanRHIMinimal()->get_name(), Data->pMessage); break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:      RK_LOG_INFO     ("[{}] {}", GetVulkanRHIMinimal()->get_name(), Data->pMessage); break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:   RK_LOG_WARN     ("[{}] {}", GetVulkanRHIMinimal()->get_name(), Data->pMessage); break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:     RK_LOG_ERROR    ("[{}] {}", GetVulkanRHIMinimal()->get_name(), Data->pMessage); break;
             default: break;
         }
     });
@@ -150,7 +150,7 @@ void CVulkanRHI::init()
     FrameCounter = 0;
 }
 
-void CVulkanRHI::shutdown()
+void CVulkanRHI::Shutdown()
 {
     rhi_wait_until_idle();
 
@@ -358,20 +358,20 @@ void CVulkanRHI::shutdown()
 //    //Viewports[0]->Present();
 //}
 
-void CVulkanRHI::submit(const RHICommandList& cmd_list)
+void CVulkanRHI::Submit(RHICommandList& cmd_list)
 {
-    Device->get_descriptor_manager()->Update();
-
-//    Device->GetPresentQueue()->Submit();
+    Device->GetPresentQueue()->Submit(cmd_list);
 }
 
-void CVulkanRHI::reset()
+void CVulkanRHI::Reset()
 {
     Device->GetPresentQueue()->Wait();
 
     FrameCounter++;
 
     Device->GC();
+
+	Device->GetBindlessDescriptorManager()->BeginFrame();
 }
 
 const char* CVulkanRHI::get_name() const
@@ -404,34 +404,34 @@ uint64_t CVulkanRHI::rhi_get_frame_counter() const noexcept
     return FrameCounter;
 }
 
-RHISurface* CVulkanRHI::create_surface(RHISurfaceDesc desc)
+RHISurface* CVulkanRHI::CreateSurface(RHISurfaceDesc desc)
 {
     return new VulkanSurface(*Device, desc);
 }
 
-RHITexture *CVulkanRHI::rhi_create_texture(RHITextureDesc Desc) const
+RHITexture *CVulkanRHI::RHICreateTexture(RHITextureDesc Desc) const
 {
     return new VulkanTexture(*Device, Desc);
 }
 
-RHITextureView *CVulkanRHI::rhi_create_texture_view(RHITextureViewDesc TextureViewDesc, RHITexture *Texture) const
+RHITextureView *CVulkanRHI::RHICreateTextureView(RHITextureViewDesc TextureViewDesc, RHITexture *Texture) const
 {
     return new VulkanTextureView(*Device, TextureViewDesc, Texture);
 }
 
-RHIBuffer *CVulkanRHI::rhi_create_buffer(RHIBufferDesc Desc) const
+RHIBuffer *CVulkanRHI::RHICreateBuffer(RHIBufferDesc Desc) const
 {
     return new VulkanBuffer(*Device, Desc);
 }
 
-RHISampler *CVulkanRHI::rhi_create_sampler(RHISamplerDesc Desc) const
+RHISampler *CVulkanRHI::RHICreateSampler(RHISamplerDesc Desc) const
 {
     return new VulkanSampler(*Device, Desc);
 }
 
-RHIPipeline *CVulkanRHI::rhi_create_pipeline(RHIPipelineDesc Desc)
+RHIPipeline *CVulkanRHI::RHICreatePipeline(RHIPipelineDesc Desc)
 {
-    return Device->get_pipeline_manager()->get_pipeline(Desc);
+    return Device->GetPipelineManager()->GetOrCreatePipeline(Desc);
 }
 
 VkInstance CVulkanRHI::RHIGetVkInstance() const
@@ -441,7 +441,7 @@ VkInstance CVulkanRHI::RHIGetVkInstance() const
 
 VkDevice CVulkanRHI::RHIGetVkDevice() const
 {
-    return GetDevice()->get_vk_device();
+    return GetDevice()->GetVkDevice();
 }
 
 VkPhysicalDevice CVulkanRHI::RHIGetVkPhysicalDevice() const
@@ -507,21 +507,6 @@ std::span<const char*> CVulkanRHI::GetInstanceExtensions()
 std::span<const char *> CVulkanRHI::GetPhysicalDeviceExtensions()
 {
     return std::span(PhysicalDeviceExtensions);
-}
-
-VkPipelineLayout CVulkanRHI::GetBindlessPipelineLayout() const
-{
-    return Device->get_descriptor_manager()->GetPipelineLayout();
-}
-
-VkDescriptorSet CVulkanRHI::GetBindlessDescriptorSet() const
-{
-    return Device->get_descriptor_manager()->GetDescriptorSet();
-}
-
-VkDescriptorSetLayout CVulkanRHI::GetBindlessDesciptorSetLayout() const
-{
-    return Device->get_descriptor_manager()->GetDescriptorSetLayout();
 }
 
 VulkanDevice * CVulkanRHI::GetDevice() const

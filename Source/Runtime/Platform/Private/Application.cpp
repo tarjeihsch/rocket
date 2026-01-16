@@ -56,13 +56,13 @@ Application::Application()
     M_IsValid = false;
 }
 
-Application& Application::get()
+Application& Application::Get()
 {
     static Application platform;
     return platform;
 }
 
-bool Application::initialize()
+bool Application::Initialize()
 {
     if (M_IsValid)
     {
@@ -78,7 +78,7 @@ bool Application::initialize()
     return true;
 }
 
-void Application::shutdown()
+void Application::Shutdown()
 {
     if (!M_IsValid)
     {
@@ -93,7 +93,7 @@ void Application::shutdown()
     glfwTerminate();
 }
 
-void Application::pump_message_queue()
+void Application::PumpMessageQueue()
 {
     glfwPollEvents();
 
@@ -106,7 +106,7 @@ void Application::pump_message_queue()
 
 void Application::process_deferred_message(const Event& event)
 {
-    Window* window = FindWindowByHandle(event.WindowHandleID);
+    OSWindow* window = FindWindowByHandle(event.WindowHandleID);
     
     switch (event.type)
     {
@@ -247,14 +247,14 @@ void Application::process_deferred_message(const Event& event)
     }
 }
 
-void Application::set_message_controller(MessageController* messageController)
+void Application::SetMessageController(MessageController* messageController)
 {
     M_MessageController = messageController;
 }
 
-Window* Application::init_window(WindowCreateInfo windowCreateInfo)
+OSWindow* Application::InitWindow(WindowCreateInfo windowCreateInfo)
 {
-    std::unique_ptr<Window> window = std::make_unique<Window>();
+    std::unique_ptr<OSWindow> window = std::make_unique<OSWindow>();
     if (!window->Create(windowCreateInfo))
     {
         return nullptr;
@@ -267,9 +267,9 @@ Window* Application::init_window(WindowCreateInfo windowCreateInfo)
     return M_Windows.back().get();
 }
 
-Window* Application::FindWindowByHandle(uint64_t WindowHandleID)
+OSWindow* Application::FindWindowByHandle(uint64_t WindowHandleID)
 {
-    for (const std::unique_ptr<Window>& window : M_Windows)
+    for (const std::unique_ptr<OSWindow>& window : M_Windows)
     {
         if (window && window->GetWindowHandleID() == WindowHandleID)
         {

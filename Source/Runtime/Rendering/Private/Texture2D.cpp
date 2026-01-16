@@ -11,24 +11,24 @@ Texture2D::Texture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight)
     switch (Type)
     {
     case ETextureType::SRGB:
-		TextureDesc.Format = ERHITextureFormat::R8G8B8A8_SRGB;
+		TextureDesc.format = RHITextureFormat::R8G8B8A8_SRGB;
 		break;
 	case ETextureType::Linear:
-		TextureDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
+		TextureDesc.format = RHITextureFormat::R8G8B8A8_UNORM;
 		break;
     }
 
-	TextureDesc.Format = ERHITextureFormat::R8G8B8A8_UNORM;
+	TextureDesc.format = RHITextureFormat::R8G8B8A8_UNORM;
 	TextureDesc.LayerCount = 1;
-	TextureDesc.MipLevel = 1;
+	TextureDesc.NumMips = 1;
 	TextureDesc.SampleCount = 1;
-	TextureDesc.Lifetime = RHIResourceLifetime::Persistent;
+	TextureDesc.lifetime = RHIResourceLifetime::Persistent;
 	TextureDesc.extent[0] = Width;
 	TextureDesc.extent[1] = Height;
-	TextureDesc.Usage = ERHITextureUsage::SRV | ERHITextureUsage::CopyDst;
+	TextureDesc.usage = RHITextureUsage::SRV | RHITextureUsage::CopyDst;
 	TextureDesc.initial_layout = RHITextureLayout::ShaderReadOnly;
 
-    Handle = GetRHI()->rhi_create_texture(TextureDesc);
+    Handle = GetRHI()->RHICreateTexture(TextureDesc);
 }
 
 Texture2D::~Texture2D()

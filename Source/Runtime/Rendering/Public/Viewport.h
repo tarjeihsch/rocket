@@ -6,7 +6,7 @@
 
 struct RHITexture;
 class RHISurface;
-class Window;
+class OSWindow;
 
 struct ViewportDesc
 {
@@ -20,25 +20,24 @@ public:
 	Viewport();
 	~Viewport();
 
-	inline Window* get_window() const;
-	inline RHISurface* get_surface() const;
+	inline OSWindow* GetWindow() const;
+	inline RHISurface* GetSurface() const;
 
 private:
-	void init();
-	void shutdown();
+	void Init();
+	void Shutdown();
 
 private:
-	Window* window;
-
+	OSWindow* window;
 	RHISurface* surface;
 };
 
-inline Window* Viewport::get_window() const
+inline OSWindow* Viewport::GetWindow() const
 {
 	return window;
 }
 
-RHISurface* Viewport::get_surface() const
+RHISurface* Viewport::GetSurface() const
 {
 	return surface;
 }

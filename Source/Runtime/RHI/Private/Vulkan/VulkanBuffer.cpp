@@ -31,7 +31,7 @@ VulkanBuffer::~VulkanBuffer()
     Free();
 }
 
-void *VulkanBuffer::get_handle() const
+void *VulkanBuffer::GetNativeBuffer() const
 {
     return buffer_handle;
 }
@@ -41,18 +41,18 @@ uint32_t VulkanBuffer::GetBindingIndex() const
     return descriptor.Index;
 }
 
-void VulkanBuffer::map(const void *Data, uint64_t Size, uint64_t DstOffset)
+void VulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
 {
-    ensure(Size <= desc.size, "Trying to map beyond buffer size.");
+    ensure(Size <= GetBufferDesc().size, "Trying to map beyond buffer size.");
 
-    if (desc.Lifetime == RHIResourceLifetime::Transient)
+    if (GetBufferDesc().Lifetime == RHIResourceLifetime::Transient)
     {
-        void* BasePtr = device.get_transient_resource_allocator()->GetMappedBasePtr();
+        void* BasePtr = device.GetTransientMemoryAllocator()->GetMappedBasePtr();
         void* DestPtr = static_cast<uint8_t*>(BasePtr) + allocation_offset + DstOffset;
 
         memcpy(DestPtr, Data, Size);
     }
-    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
+    else if (GetBufferDesc().Lifetime == RHIResourceLifetime::Persistent)
     {
         void* DataPtr = nullptr;
 
@@ -67,39 +67,39 @@ void VulkanBuffer::map(const void *Data, uint64_t Size, uint64_t DstOffset)
 
 void VulkanBuffer::Alloc()
 {
-    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(desc.size, VulkanRHI::GetVkBufferUsage(desc.Usage));
+    VkBufferCreateInfo CreateInfo = VulkanRHI::GetVkBufferCreateInfo(GetBufferDesc().size, VulkanRHI::GetVkBufferUsage(GetBufferDesc().Usage));
 
-    if (desc.Lifetime == RHIResourceLifetime::Transient)
+    if (GetBufferDesc().Lifetime == RHIResourceLifetime::Transient)
     {
-        VkResult Result = VulkanRHI::vkCreateBuffer(device.get_vk_device(), &CreateInfo, nullptr, &buffer_handle);
+        VkResult Result = VulkanRHI::vkCreateBuffer(device.GetVkDevice(), &CreateInfo, nullptr, &buffer_handle);
         ensure(Result == VK_SUCCESS);
 
-        device.get_transient_resource_allocator()->alloc_buffer(buffer_handle, allocation_offset);
+        device.GetTransientMemoryAllocator()->AllocBuffer(buffer_handle, allocation_offset);
     }
-    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
+    else if (GetBufferDesc().Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, allocate a persistent buffer
         VmaAllocationCreateInfo AllocationCreateInfo = {};
-        AllocationCreateInfo.usage = VulkanRHI::ToVmaMemoryUsage(desc.Memory);
+        AllocationCreateInfo.usage = VulkanRHI::ToVmaMemoryUsage(GetBufferDesc().Memory);
 
         VkResult Result = vmaCreateBuffer(device.get_vma_allocator(), &CreateInfo, &AllocationCreateInfo, &buffer_handle, &allocation_handle, nullptr);
         ensure(Result == VK_SUCCESS);
     }
 
-    if ((desc.Usage & RHIBufferUsage::Uniform) == RHIBufferUsage::Uniform || (desc.Usage & RHIBufferUsage::Storage) == RHIBufferUsage::Storage)
+    if ((GetBufferDesc().Usage & RHIBufferUsage::Uniform) == RHIBufferUsage::Uniform || (GetBufferDesc().Usage & RHIBufferUsage::Storage) == RHIBufferUsage::Storage)
     {
-        descriptor = device.get_descriptor_manager()->add_storage_buffer(buffer_handle, desc.size);
+        descriptor = device.GetBindlessDescriptorManager()->GetHeap().RegisterBuffer(buffer_handle, GetBufferDesc().size);
     }
 }
 
 void VulkanBuffer::Free()
 {
-    if (desc.Lifetime == RHIResourceLifetime::Transient)
+    if (GetBufferDesc().Lifetime == RHIResourceLifetime::Transient)
     {
         // Only destroy handle, memory will be freed externally
         device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::Buffer, buffer_handle, descriptor);
     }
-    else if (desc.Lifetime == RHIResourceLifetime::Persistent)
+    else if (GetBufferDesc().Lifetime == RHIResourceLifetime::Persistent)
     {
         // We own the allocation, free memory
         device.get_deferred_deletion_queue()->enqueue_resource_with_allocation(FDeferredDeletionQueue::EType::Buffer, buffer_handle, descriptor, allocation_handle);

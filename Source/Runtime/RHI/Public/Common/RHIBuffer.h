@@ -122,22 +122,58 @@ struct RHIBufferAccessState
         state.queue_family_index = UINT32_MAX;
         return state;
     }
+
+    static RHIBufferAccessState IndirectRead()
+    {
+        RHIBufferAccessState state = {};
+        state.resource_access = RHIResourceAccess::IndirectCommandRead;
+        state.pipeline_stage = RHIPipelineStage::DrawIndirect;
+        state.queue_family_index = UINT32_MAX;
+        return state;
+    }
+
+	bool operator==(const RHIBufferAccessState& other) const noexcept
+	{
+		if (this->pipeline_stage == other.pipeline_stage
+			&& this->resource_access == other.resource_access
+			&& this->queue_family_index == other.queue_family_index)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	bool operator!=(const RHIBufferAccessState& other) const noexcept
+	{
+		return !(*this == other);
+	}
 };
 
 struct RHIBuffer : public IBindable
 {
-    RHIBuffer(const RHIBufferDesc& in_desc, const RHIBufferAccessState& in_state)
-        : desc(in_desc), state(in_state)
+    RHIBuffer(const RHIBufferDesc& in_buffer_desc, const RHIBufferAccessState& in_buffer_access_state)
+        : buffer_desc(in_buffer_desc), buffer_access_state(in_buffer_access_state)
     {
     }
 
     virtual ~RHIBuffer() = default;
 
-    virtual void* get_handle() const = 0;
-    virtual void map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+    virtual void* GetNativeBuffer() const = 0;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
 
-    RHIBufferDesc desc;
-    RHIBufferAccessState state;
+    __inline const RHIBufferDesc& GetBufferDesc() const
+    {
+        return buffer_desc;
+    }
+
+    __inline const RHIBufferAccessState& GetBufferAccessState() const
+    {
+        return buffer_access_state;
+    }
+
+private:
+    RHIBufferDesc buffer_desc;
+    RHIBufferAccessState buffer_access_state;
 };
 
 enum class RHIBufferMemoryPackerAlignmentLayout
@@ -175,7 +211,8 @@ public:
     template<typename T>
     void Write(const T* P_Objects, uint32_t P_Count);
 
-    uint8_t* GetData();
+    std::vector<uint8_t> Copy();
+    uint8_t* GetBasePtr();
     uint64_t GetSize() const;
 
 private:
@@ -186,7 +223,7 @@ private:
     uint64_t M_Offset = 0;
 };
 
-inline uint8_t* RHIBufferMemoryPacker::GetData()
+inline uint8_t* RHIBufferMemoryPacker::GetBasePtr()
 {
     return M_Data.data();
 }
@@ -194,6 +231,11 @@ inline uint8_t* RHIBufferMemoryPacker::GetData()
 inline uint64_t RHIBufferMemoryPacker::GetSize() const
 {
     return M_Offset;
+}
+
+inline std::vector<uint8_t> RHIBufferMemoryPacker::Copy()
+{
+	return M_Data;
 }
 
 inline void RHIBufferMemoryPacker::Align(uint64_t P_Alignment)
@@ -219,9 +261,15 @@ constexpr RHIBufferMemoryPackerTypeLayout GetLayout<float>(RHIBufferMemoryPacker
 }
 
 template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<int>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<uint32_t>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
-    return {4, 4};
+	return { 4, 4 };
+}
+
+template<>
+constexpr RHIBufferMemoryPackerTypeLayout GetLayout<int32_t>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
+{
+	return { 4, 4 };
 }
 
 template<>

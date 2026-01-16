@@ -1,8 +1,6 @@
 #include "StaticMesh.h"
 
 #include "Common/RHIBuffer.h"
-#include "Common/RHI.h"
-#include "Common/RHIDrawCommand.h"
 
 RStaticMesh::RStaticMesh(const char* InFilePath)
     : M_VertexBuffer(nullptr),

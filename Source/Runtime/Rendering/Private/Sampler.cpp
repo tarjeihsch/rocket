@@ -3,7 +3,7 @@
 #include "Common/RHI.h"
 #include "Common/RHISampler.h"
 
-RSampler::RSampler()
+Sampler::Sampler()
 {
     RHISamplerDesc SamplerDesc = {};
     SamplerDesc.MinFilter = ERHIFilterMode::Linear;
@@ -15,15 +15,15 @@ RSampler::RSampler()
     SamplerDesc.MinLod = 0.0f;
     SamplerDesc.MaxLod = 0.0f;
 
-    Sampler = GetRHI()->rhi_create_sampler(SamplerDesc);
+    sampler = GetRHI()->RHICreateSampler(SamplerDesc);
 }
 
-RSampler::~RSampler()
+Sampler::~Sampler()
 {
-    delete Sampler;
+    delete sampler;
 }
 
-uint32_t RSampler::GetBindingIndex() const
+uint32_t Sampler::GetBindingIndex() const
 {
-    return Sampler->GetBindingIndex();
+    return sampler->GetBindingIndex();
 }

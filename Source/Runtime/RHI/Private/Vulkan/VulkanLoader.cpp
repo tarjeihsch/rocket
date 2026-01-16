@@ -136,84 +136,85 @@ VkPipelineStageFlags2 VulkanRHI::GetVkPipelineStage(RHIPipelineStage stage)
     if (EnumHasAnyFlags(stage, RHIPipelineStage::ColorAttachment)) flags |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
     if (EnumHasAnyFlags(stage, RHIPipelineStage::DepthStencil))    flags |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
     if (EnumHasAnyFlags(stage, RHIPipelineStage::BottomOfPipe))    flags |= VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    if (EnumHasAnyFlags(stage, RHIPipelineStage::AllCommands))    flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     return flags;
 }
 
-VkImageUsageFlags VulkanRHI::GetVulkanUsage(ERHITextureUsage usage)
+VkImageUsageFlags VulkanRHI::GetVulkanUsage(RHITextureUsage usage)
 {
     VkImageUsageFlags flags = 0;
 
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::Present))  flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Used indirectly
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::Color))    flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::Depth))    flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::Stencil))  flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::CopySrc))  flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::CopyDst))  flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::SRV))      flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    if (EnumHasAnyFlags(usage, ERHITextureUsage::UAV))      flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::Present))  flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Used indirectly
+    if (EnumHasAnyFlags(usage, RHITextureUsage::Color))    flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::Depth))    flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::Stencil))  flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::CopySrc))  flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::CopyDst))  flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::SRV))      flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (EnumHasAnyFlags(usage, RHITextureUsage::UAV))      flags |= VK_IMAGE_USAGE_STORAGE_BIT;
 
     return flags;
 }
 
-VkBlendFactor VulkanRHI::GetVkBlendFactor(ERHIBlendFactor Factor)
+VkBlendFactor VulkanRHI::GetVkBlendFactor(RHIBlendFactor Factor)
 {
     switch (Factor)
     {
-    case ERHIBlendFactor::Zero:                  return VK_BLEND_FACTOR_ZERO;
-    case ERHIBlendFactor::One:                   return VK_BLEND_FACTOR_ONE;
-    case ERHIBlendFactor::SrcColor:              return VK_BLEND_FACTOR_SRC_COLOR;
-    case ERHIBlendFactor::OneMinusSrcColor:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-    case ERHIBlendFactor::DstColor:              return VK_BLEND_FACTOR_DST_COLOR;
-    case ERHIBlendFactor::OneMinusDstColor:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-    case ERHIBlendFactor::SrcAlpha:              return VK_BLEND_FACTOR_SRC_ALPHA;
-    case ERHIBlendFactor::OneMinusSrcAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    case ERHIBlendFactor::DstAlpha:              return VK_BLEND_FACTOR_DST_ALPHA;
-    case ERHIBlendFactor::OneMinusDstAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-    case ERHIBlendFactor::ConstantColor:         return VK_BLEND_FACTOR_CONSTANT_COLOR;
-    case ERHIBlendFactor::OneMinusConstantColor: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
-    case ERHIBlendFactor::ConstantAlpha:         return VK_BLEND_FACTOR_CONSTANT_ALPHA;
-    case ERHIBlendFactor::OneMinusConstantAlpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
-    case ERHIBlendFactor::SrcAlphaSaturate:      return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-    case ERHIBlendFactor::Src1Color:             return VK_BLEND_FACTOR_SRC1_COLOR;
-    case ERHIBlendFactor::OneMinusSrc1Color:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-    case ERHIBlendFactor::Src1Alpha:             return VK_BLEND_FACTOR_SRC1_ALPHA;
-    case ERHIBlendFactor::OneMinusSrc1Alpha:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+    case RHIBlendFactor::Zero:                  return VK_BLEND_FACTOR_ZERO;
+    case RHIBlendFactor::One:                   return VK_BLEND_FACTOR_ONE;
+    case RHIBlendFactor::SrcColor:              return VK_BLEND_FACTOR_SRC_COLOR;
+    case RHIBlendFactor::OneMinusSrcColor:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+    case RHIBlendFactor::DstColor:              return VK_BLEND_FACTOR_DST_COLOR;
+    case RHIBlendFactor::OneMinusDstColor:      return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+    case RHIBlendFactor::SrcAlpha:              return VK_BLEND_FACTOR_SRC_ALPHA;
+    case RHIBlendFactor::OneMinusSrcAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    case RHIBlendFactor::DstAlpha:              return VK_BLEND_FACTOR_DST_ALPHA;
+    case RHIBlendFactor::OneMinusDstAlpha:      return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    case RHIBlendFactor::ConstantColor:         return VK_BLEND_FACTOR_CONSTANT_COLOR;
+    case RHIBlendFactor::OneMinusConstantColor: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+    case RHIBlendFactor::ConstantAlpha:         return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+    case RHIBlendFactor::OneMinusConstantAlpha: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+    case RHIBlendFactor::SrcAlphaSaturate:      return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+    case RHIBlendFactor::Src1Color:             return VK_BLEND_FACTOR_SRC1_COLOR;
+    case RHIBlendFactor::OneMinusSrc1Color:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+    case RHIBlendFactor::Src1Alpha:             return VK_BLEND_FACTOR_SRC1_ALPHA;
+    case RHIBlendFactor::OneMinusSrc1Alpha:     return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
     default:                                     return VK_BLEND_FACTOR_ONE;
     }
 }
 
-VkBlendOp VulkanRHI::GetVkBlendOp(ERHIBlendOp Op)
+VkBlendOp VulkanRHI::GetVkBlendOp(RHIBlendOp Op)
 {
     switch (Op)
     {
-    case ERHIBlendOp::Add:             return VK_BLEND_OP_ADD;
-    case ERHIBlendOp::Subtract:        return VK_BLEND_OP_SUBTRACT;
-    case ERHIBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
-    case ERHIBlendOp::Min:             return VK_BLEND_OP_MIN;
-    case ERHIBlendOp::Max:             return VK_BLEND_OP_MAX;
+    case RHIBlendOp::Add:             return VK_BLEND_OP_ADD;
+    case RHIBlendOp::Subtract:        return VK_BLEND_OP_SUBTRACT;
+    case RHIBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+    case RHIBlendOp::Min:             return VK_BLEND_OP_MIN;
+    case RHIBlendOp::Max:             return VK_BLEND_OP_MAX;
     default:                           return VK_BLEND_OP_ADD;
     }
 }
 
-VkFormat VulkanRHI::GetVkFormat(ERHITextureFormat Format)
+VkFormat VulkanRHI::GetVkFormat(RHITextureFormat Format)
 {
     // TODO: use a switch
-    if (Format == ERHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
-    if (Format == ERHITextureFormat::R8G8B8A8_UNORM) { return VK_FORMAT_R8G8B8A8_UNORM; }
-    if (Format == ERHITextureFormat::D32_SFLOAT) { return VK_FORMAT_D32_SFLOAT; }
-    if (Format == ERHITextureFormat::D32_SFLOAT_S8_UINT) { return VK_FORMAT_D32_SFLOAT_S8_UINT; }
+    if (Format == RHITextureFormat::B8G8R8A8_SRGB) { return VK_FORMAT_B8G8R8A8_SRGB; }
+    if (Format == RHITextureFormat::R8G8B8A8_UNORM) { return VK_FORMAT_R8G8B8A8_UNORM; }
+    if (Format == RHITextureFormat::D32_SFLOAT) { return VK_FORMAT_D32_SFLOAT; }
+    if (Format == RHITextureFormat::D32_SFLOAT_S8_UINT) { return VK_FORMAT_D32_SFLOAT_S8_UINT; }
 
     return VK_FORMAT_UNDEFINED;
 }
 
-VkImageAspectFlags VulkanRHI::GetVkAspect(ERHITextureAspect Aspect)
+VkImageAspectFlags VulkanRHI::GetVkAspect(RHITextureAspect Aspect)
 {
     switch (Aspect)
     {
-    case ERHITextureAspect::Color: return VK_IMAGE_ASPECT_COLOR_BIT;
-    case ERHITextureAspect::Depth: return VK_IMAGE_ASPECT_DEPTH_BIT;
-    case ERHITextureAspect::Stencil: return VK_IMAGE_ASPECT_STENCIL_BIT;
-    case ERHITextureAspect::DepthStencil: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    case RHITextureAspect::Color: return VK_IMAGE_ASPECT_COLOR_BIT;
+    case RHITextureAspect::Depth: return VK_IMAGE_ASPECT_DEPTH_BIT;
+    case RHITextureAspect::Stencil: return VK_IMAGE_ASPECT_STENCIL_BIT;
+    case RHITextureAspect::DepthStencil: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
     default: return VK_IMAGE_ASPECT_NONE;
     }
 }
@@ -231,74 +232,74 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsage(RHIBufferUsage Usage)
     return Flags;
 }
 
-VkFormat VulkanRHI::ToVkFormat(ERHIFormat Format)
+VkFormat VulkanRHI::ToVkFormat(RHIFormat Format)
 {
     switch (Format)
     {
-    case ERHIFormat::BGRA8_SRGB:        return VK_FORMAT_B8G8R8A8_SRGB;
-    case ERHIFormat::RGBA8_UNorm:        return VK_FORMAT_R8G8B8A8_UNORM;
-    case ERHIFormat::BGRA8_UNorm:        return VK_FORMAT_B8G8R8A8_UNORM;
-    case ERHIFormat::RGBA16_Float:       return VK_FORMAT_R16G16B16A16_SFLOAT;
-    case ERHIFormat::RGBA32_Float:       return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case ERHIFormat::D24S8:              return VK_FORMAT_D24_UNORM_S8_UINT;
-    case ERHIFormat::D32_Float:          return VK_FORMAT_D32_SFLOAT;
-    case ERHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
-    case ERHIFormat::Float2:             return VK_FORMAT_R32G32_SFLOAT;
-    case ERHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
-    case ERHIFormat::UNorm8x4:             return VK_FORMAT_R8G8B8A8_UNORM;
+    case RHIFormat::BGRA8_SRGB:        return VK_FORMAT_B8G8R8A8_SRGB;
+    case RHIFormat::RGBA8_UNorm:        return VK_FORMAT_R8G8B8A8_UNORM;
+    case RHIFormat::BGRA8_UNorm:        return VK_FORMAT_B8G8R8A8_UNORM;
+    case RHIFormat::RGBA16_Float:       return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case RHIFormat::RGBA32_Float:       return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case RHIFormat::D24S8:              return VK_FORMAT_D24_UNORM_S8_UINT;
+    case RHIFormat::D32_Float:          return VK_FORMAT_D32_SFLOAT;
+    case RHIFormat::D32_Float_S8X24:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    case RHIFormat::Float2:             return VK_FORMAT_R32G32_SFLOAT;
+    case RHIFormat::Float3:             return VK_FORMAT_R32G32B32_SFLOAT;
+    case RHIFormat::UNorm8x4:             return VK_FORMAT_R8G8B8A8_UNORM;
     default:                             return VK_FORMAT_UNDEFINED;
     }
 }
 
-VkImageAspectFlags VulkanRHI::GetVkAspectFromFormat(ERHITextureFormat format)
+VkImageAspectFlags VulkanRHI::GetVkAspectFromFormat(RHITextureFormat format)
 {
     switch (format)
     {
-        case ERHITextureFormat::B8G8R8A8_SRGB:
-        case ERHITextureFormat::R8G8B8A8_UNORM:
+        case RHITextureFormat::B8G8R8A8_SRGB:
+        case RHITextureFormat::R8G8B8A8_UNORM:
             return VK_IMAGE_ASPECT_COLOR_BIT;
-        case ERHITextureFormat::D32_SFLOAT:
+        case RHITextureFormat::D32_SFLOAT:
             return VK_IMAGE_ASPECT_DEPTH_BIT;
-        case ERHITextureFormat::D32_SFLOAT_S8_UINT:
+        case RHITextureFormat::D32_SFLOAT_S8_UINT:
             return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
         default:
             return VK_IMAGE_ASPECT_NONE;
     }
 }
 
-VkPrimitiveTopology VulkanRHI::ToVkTopology(ERHIPrimitiveTopology Topology)
+VkPrimitiveTopology VulkanRHI::ToVkTopology(RHIPrimitiveTopology Topology)
 {
     switch (Topology)
     {
-    case ERHIPrimitiveTopology::TriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    case ERHIPrimitiveTopology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-    case ERHIPrimitiveTopology::LineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-    case ERHIPrimitiveTopology::LineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-    case ERHIPrimitiveTopology::PointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-    case ERHIPrimitiveTopology::PatchList: return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    case RHIPrimitiveTopology::TriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    case RHIPrimitiveTopology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    case RHIPrimitiveTopology::LineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    case RHIPrimitiveTopology::LineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    case RHIPrimitiveTopology::PointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    case RHIPrimitiveTopology::PatchList: return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
     default: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Fallback
     }
 }
 
-VkCullModeFlags VulkanRHI::ToVkCullMode(ERHICullMode Mode)
+VkCullModeFlags VulkanRHI::ToVkCullMode(RHICullMode Mode)
 {
     switch (Mode)
     {
-    case ERHICullMode::None:           return VK_CULL_MODE_NONE;
-    case ERHICullMode::Front:          return VK_CULL_MODE_FRONT_BIT;
-    case ERHICullMode::Back:           return VK_CULL_MODE_BACK_BIT;
-    case ERHICullMode::FrontAndBack:   return VK_CULL_MODE_FRONT_AND_BACK;
+    case RHICullMode::None:           return VK_CULL_MODE_NONE;
+    case RHICullMode::Front:          return VK_CULL_MODE_FRONT_BIT;
+    case RHICullMode::Back:           return VK_CULL_MODE_BACK_BIT;
+    case RHICullMode::FrontAndBack:   return VK_CULL_MODE_FRONT_AND_BACK;
     default:                           return VK_CULL_MODE_NONE;
     }
 }
 
-VkPolygonMode VulkanRHI::ToVkPolygonMode(ERHIPolygonMode Mode)
+VkPolygonMode VulkanRHI::ToVkPolygonMode(RHIPolygonMode Mode)
 {
     switch (Mode)
     {
-    case ERHIPolygonMode::Fill: return VK_POLYGON_MODE_FILL;
-    case ERHIPolygonMode::Line: return VK_POLYGON_MODE_LINE;
-    case ERHIPolygonMode::Point: return VK_POLYGON_MODE_POINT;
+    case RHIPolygonMode::Fill: return VK_POLYGON_MODE_FILL;
+    case RHIPolygonMode::Line: return VK_POLYGON_MODE_LINE;
+    case RHIPolygonMode::Point: return VK_POLYGON_MODE_POINT;
     default: return VK_POLYGON_MODE_FILL;
     }
 }
@@ -364,13 +365,13 @@ VkCompareOp VulkanRHI::ToVkCompareOp(ERHICompareOp op)
     return VK_COMPARE_OP_ALWAYS;
 }
 
-VkPipelineStageFlags2 VulkanRHI::ToVkStage2(ERHIQueueSyncStage Stage)
+VkPipelineStageFlags2 VulkanRHI::ToVkStage2(RHISyncStage Stage)
 {
     switch (Stage)
     {
-        case ERHIQueueSyncStage::TopOfPipe:                 return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-        case ERHIQueueSyncStage::ColorAttachmentOutput:     return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-        case ERHIQueueSyncStage::AllCommands:               return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        case RHISyncStage::TopOfPipe:                 return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+        case RHISyncStage::ColorAttachmentOutput:     return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        case RHISyncStage::AllCommands:               return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         default:                                            return VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     }
 }

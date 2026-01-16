@@ -7,12 +7,25 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 
-#include <cstring>
+#include <fstream>
 
 #ifdef RK_PLATFORM_LINUX
     #include <dlfcn.h>
     #include <dxc/dxcapi.h>
 #endif
+
+static std::vector<uint32_t> LoadFile(const ANSICHAR* file_path)
+{
+    std::ifstream file(file_path, std::ios::binary | std::ios::ate);
+
+    size_t file_size = file.tellg();
+    std::vector<uint32_t> data(file_size / sizeof(uint32_t));
+
+    file.seekg(0, std::ios::beg);
+    file.read(reinterpret_cast<char*>(data.data()), file_size);
+
+    return data;
+}
 
 static constexpr uint64_t FNV_OFFSET = 1469598103934665603ull;
 static constexpr uint64_t FNV_PRIME  = 1099511628211ull;
@@ -46,12 +59,12 @@ inline void HashObject(uint64_t& pHash, const char* StringLiteral)
     HashBytes(pHash, StringLiteral, std::strlen(StringLiteral));
 }
 
-FVulkanShader::FVulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
+VulkanShader::VulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage)
     : Device(pDevice), Stage(pStage), Module(VK_NULL_HANDLE), Version(0)
 {
 }
 
-void FVulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
+void VulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
 {
     if (Module)
     {
@@ -70,7 +83,7 @@ void FVulkanShader::Create(const uint32_t *pData, const size_t pWordCount)
     Version += 1;
 }
 
-void FVulkanShader::Destroy()
+void VulkanShader::Destroy()
 {
     if (Module)
     {
@@ -81,32 +94,46 @@ void FVulkanShader::Destroy()
     Version = 0;
 }
 
-FVulkanShaderRef FVulkanShaderRef::Capture(FVulkanShader *pShader)
+VulkanShaderRef VulkanShaderRef::Capture(VulkanShader *pShader)
 {
-    FVulkanShaderRef Ref;
+    VulkanShaderRef Ref;
     Ref.Shader = pShader;
     Ref.SnapshotVersion = pShader->Version;
     return Ref;
 }
 
-FVulkanPipelineManager::FVulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache)
+VulkanPipelineManager::VulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache)
     : Device(pDevice), DriverCache(pDriverCache)
 {
 }
 
-FVulkanPipelineManager::~FVulkanPipelineManager()
+VulkanPipelineManager::~VulkanPipelineManager()
 {
     Invalidate();
 }
 
-FVulkanPipeline* FVulkanPipelineManager::get_pipeline(const RHIPipelineDesc &Desc)
+VulkanPipeline* VulkanPipelineManager::GetOrCreatePipeline(const RHIPipelineDesc &pipeline_desc)
 {
-    //const uint64_t Key = Hash(Desc);
-    //if (auto It = Data.find(Key); It != Data.end())
-    //{
-    //    return It->second;
-    //}
-    //
+    const uint64_t key = Hash(pipeline_desc);
+    if (auto It = pipeline_cache.find(key); It != pipeline_cache.end())
+    {
+        return It->second;
+    }
+
+    std::vector<uint32_t> vertex_shader_blob = LoadFile(pipeline_desc.vertex_shader_path);
+    std::vector<uint32_t> pixel_shader_blob = LoadFile(pipeline_desc.pixel_shader_path);
+
+    VulkanShaderRef vertex_shader_handle = VulkanShaderRef::Capture(new VulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_VERTEX_BIT));
+    VulkanShaderRef pixel_shader_handle = VulkanShaderRef::Capture(new VulkanShader(Device.GetVkDevice(), VK_SHADER_STAGE_FRAGMENT_BIT));
+
+    vertex_shader_handle.Shader->Create(vertex_shader_blob.data(), vertex_shader_blob.size());
+    pixel_shader_handle.Shader->Create(pixel_shader_blob.data(), pixel_shader_blob.size());
+
+    VkPipeline pipeline_handle = Compile(pipeline_desc, vertex_shader_handle, pixel_shader_handle);
+    VulkanPipeline* pipeline = new VulkanPipeline(vertex_shader_handle, pixel_shader_handle, pipeline_handle);
+    pipeline_cache.emplace(key, pipeline);
+    return pipeline;
+
     //FAssetLoaderRequest VSRequest = { Desc.VertexShaderPath };
     //ShaderAssetOptions VSOptions = { "main", "vs_6_6" };
     //FAssetHandle<ShaderAsset> VertexShader = FAssetManager::Get().Load<ShaderAsset>(VSRequest, VSOptions);
@@ -133,13 +160,13 @@ FVulkanPipeline* FVulkanPipelineManager::get_pipeline(const RHIPipelineDesc &Des
     return nullptr;
 }
 
-void FVulkanPipelineManager::GC()
+void VulkanPipelineManager::GC()
 {
-    for (auto It = Data.begin(); It != Data.end(); )
+    for (auto It = pipeline_cache.begin(); It != pipeline_cache.end(); )
     {
         bool Stale = false;
 
-        const FVulkanPipeline& PSO = *It->second;
+        const VulkanPipeline& PSO = *It->second;
 
         if (PSO.VertexShaderRef.SnapshotVersion != PSO.VertexShaderRef.Shader->Version)
         {
@@ -153,8 +180,8 @@ void FVulkanPipelineManager::GC()
 
         if (Stale)
         {
-            VulkanRHI::vkDestroyPipeline(Device.get_vk_device(), It->second->Pipeline, nullptr);
-            It = Data.erase(It);
+            VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), It->second->Pipeline, nullptr);
+            It = pipeline_cache.erase(It);
         }
         else
         {
@@ -163,18 +190,18 @@ void FVulkanPipelineManager::GC()
     }
 }
 
-void FVulkanPipelineManager::Invalidate()
+void VulkanPipelineManager::Invalidate()
 {
-    for (auto& KV : Data)
+    for (auto& KV : pipeline_cache)
     {
-        VulkanRHI::vkDestroyPipeline(Device.get_vk_device(), KV.second->Pipeline, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.get_vk_device(), KV.second->VertexShaderRef.Shader->Module, nullptr);
-        VulkanRHI::vkDestroyShaderModule(Device.get_vk_device(), KV.second->FragmentShaderRef.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyPipeline(Device.GetVkDevice(), KV.second->Pipeline, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->VertexShaderRef.Shader->Module, nullptr);
+        VulkanRHI::vkDestroyShaderModule(Device.GetVkDevice(), KV.second->FragmentShaderRef.Shader->Module, nullptr);
     }
-    Data.clear();
+    pipeline_cache.clear();
 }
 
-VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef)
+VkPipeline VulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, VulkanShaderRef VertexShaderRef, VulkanShaderRef PixelShaderRef)
 {
     std::vector<VkPipelineShaderStageCreateInfo> ShaderStages = {};
 
@@ -193,16 +220,16 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
     ShaderStages.push_back(FSElement);
 
     std::vector<VkVertexInputBindingDescription> VertexBindingsDescriptions;
-    for (const FRHIVertexBinding& Binding : Desc.VertexBindings)
+    for (const RHIVertexBinding& Binding : Desc.VertexBindings)
     {
         VkVertexInputBindingDescription& VkBinding = VertexBindingsDescriptions.emplace_back();
-        VkBinding.binding = Binding.Binding;
-        VkBinding.stride = Binding.Stride;
-        VkBinding.inputRate = Binding.bPerInstance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
+        VkBinding.binding = Binding.binding;
+        VkBinding.stride = Binding.stride;
+        VkBinding.inputRate = Binding.instance ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
     }
 
     std::vector<VkVertexInputAttributeDescription> VertexAttributeDescriptions;
-    for (const FRHIVertexAttribute& Attr : Desc.VertexAttributes)
+    for (const RHIVertexAttribute& Attr : Desc.VertexAttributes)
     {
         VkVertexInputAttributeDescription& VkAttr = VertexAttributeDescriptions.emplace_back();
         VkAttr.location = Attr.Location;
@@ -212,7 +239,7 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
     }
 
     std::vector<VkPipelineColorBlendAttachmentState> BlendAttachments;
-    for (const FRHIBlendAttachment& BlendAttachment : Desc.BlendAttachments)
+    for (const RHIBlendAttachment& BlendAttachment : Desc.BlendAttachments)
     {
         VkPipelineColorBlendAttachmentState& VkBlendAttachment = BlendAttachments.emplace_back();
         VkBlendAttachment.blendEnable = static_cast<VkBool32>(BlendAttachment.bEnableBlend);
@@ -245,12 +272,12 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCreateInfo = {};
     InputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    InputAssemblyCreateInfo.topology = VulkanRHI::ToVkTopology(Desc.Topology);
+    InputAssemblyCreateInfo.topology = VulkanRHI::ToVkTopology(Desc.topology);
 
     VkPipelineRasterizationStateCreateInfo RasterizerCreateInfo = {};
     RasterizerCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    RasterizerCreateInfo.polygonMode = VulkanRHI::ToVkPolygonMode(Desc.PolygonMode);
-    RasterizerCreateInfo.cullMode = VulkanRHI::ToVkCullMode(Desc.CullMode);
+    RasterizerCreateInfo.polygonMode = VulkanRHI::ToVkPolygonMode(Desc.polygon_mode);
+    RasterizerCreateInfo.cullMode = VulkanRHI::ToVkCullMode(Desc.cull_mode);
     RasterizerCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     RasterizerCreateInfo.lineWidth = 1.0f;
 
@@ -266,12 +293,12 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
 
     VkPipelineDepthStencilStateCreateInfo DepthStencilCreateInfo = {};
     DepthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    DepthStencilCreateInfo.depthTestEnable = Desc.bDepthTestEnable ? VK_TRUE : VK_FALSE;
-    DepthStencilCreateInfo.depthWriteEnable = Desc.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+    DepthStencilCreateInfo.depthTestEnable = Desc.depth_test_enable ? VK_TRUE : VK_FALSE;
+    DepthStencilCreateInfo.depthWriteEnable = Desc.depth_write_enable ? VK_TRUE : VK_FALSE;
     DepthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
 
     std::vector<VkFormat> ColorAttachmentFormats;
-    for (ERHIFormat Format : Desc.ColorAttachmentFormats)
+    for (RHIFormat Format : Desc.color_attachment_formats)
     {
         ColorAttachmentFormats.push_back(VulkanRHI::ToVkFormat(Format));
     }
@@ -280,8 +307,8 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
     RenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
     RenderingCreateInfo.pColorAttachmentFormats = ColorAttachmentFormats.data();
     RenderingCreateInfo.colorAttachmentCount = static_cast<uint32_t>(ColorAttachmentFormats.size());
-    RenderingCreateInfo.depthAttachmentFormat = VulkanRHI::ToVkFormat(Desc.DepthFormat);
-    RenderingCreateInfo.stencilAttachmentFormat = VulkanRHI::ToVkFormat(Desc.StencilFormat);
+    RenderingCreateInfo.depthAttachmentFormat = VulkanRHI::ToVkFormat(Desc.depth_format);
+    RenderingCreateInfo.stencilAttachmentFormat = VulkanRHI::ToVkFormat(Desc.stencil_format);
 
     std::vector<VkDynamicState> DynamicStates = {};
     DynamicStates.emplace_back(VK_DYNAMIC_STATE_VIEWPORT);
@@ -305,28 +332,28 @@ VkPipeline FVulkanPipelineManager::Compile(const RHIPipelineDesc &Desc, FVulkanS
     PipelineCreateInfo.pColorBlendState = &ColorBlendCreateInfo;
     PipelineCreateInfo.pDepthStencilState = &DepthStencilCreateInfo;
     PipelineCreateInfo.pDynamicState = &DynamicStateCreateInfo;
-    PipelineCreateInfo.layout = Device.get_descriptor_manager()->GetPipelineLayout();
+    PipelineCreateInfo.layout = Device.GetBindlessDescriptorManager()->GetGlobalPipelineLayout();
 
     VkPipeline Pipeline = VK_NULL_HANDLE;
-    VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.get_vk_device(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
+    VkResult Result = VulkanRHI::vkCreateGraphicsPipelines(Device.GetVkDevice(), DriverCache, 1, &PipelineCreateInfo, nullptr, &Pipeline);
     ensure(Result == VK_SUCCESS, "Failed to create graphics pipeline");
 
     return Pipeline;
 }
 
-uint64_t FVulkanPipelineManager::Hash(const RHIPipelineDesc &P_Spec)
+uint64_t VulkanPipelineManager::Hash(const RHIPipelineDesc &P_Spec)
 {
     uint64_t Hash = FNV_OFFSET;
 
-    HashObject(Hash, P_Spec.VertexShaderPath);
-    HashObject(Hash, P_Spec.PixelShaderPath);
-    HashObject(Hash, P_Spec.DepthFormat);
-    HashObject(Hash, P_Spec.StencilFormat);
-    HashObject(Hash, P_Spec.Topology);
-    HashObject(Hash, P_Spec.CullMode);
-    HashObject(Hash, P_Spec.PolygonMode);
-    HashObject(Hash, P_Spec.bDepthTestEnable);
-    HashObject(Hash, P_Spec.bDepthWriteEnable);
+    HashObject(Hash, P_Spec.vertex_shader_path);
+    HashObject(Hash, P_Spec.pixel_shader_path);
+    HashObject(Hash, P_Spec.depth_format);
+    HashObject(Hash, P_Spec.stencil_format);
+    HashObject(Hash, P_Spec.topology);
+    HashObject(Hash, P_Spec.cull_mode);
+    HashObject(Hash, P_Spec.polygon_mode);
+    HashObject(Hash, P_Spec.depth_test_enable);
+    HashObject(Hash, P_Spec.depth_write_enable);
     //HashBytes(Hash, P_Spec.ColorAttachmentFormats.data(), P_Spec.ColorAttachmentFormats.size() * sizeof(ERHIFormat));
     //HashBytes(Hash, P_Spec.VertexBindings.data(), P_Spec.VertexBindings.size() * sizeof(FRHIVertexBinding));
     //HashBytes(Hash, P_Spec.VertexAttributes.data(), P_Spec.VertexAttributes.size() * sizeof(FRHIVertexAttribute));

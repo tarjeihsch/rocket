@@ -8,51 +8,51 @@ RMaterial::RMaterial(EMaterialPass InPass, EMaterialBlendMode InBlendMode, const
     : Pipeline(nullptr), VertexShaderPath(InVertexShaderPath), PixelShaderPath(InPixelShaderPath), Pass(InPass), BlendMode(InBlendMode)
 {
     RHIPipelineDesc Desc = {};
-    Desc.VertexShaderPath = InVertexShaderPath;
-    Desc.PixelShaderPath = InPixelShaderPath;
-    Desc.ColorAttachmentFormats.push_back(ERHIFormat::BGRA8_SRGB);
+    Desc.vertex_shader_path = InVertexShaderPath;
+    Desc.pixel_shader_path = InPixelShaderPath;
+    Desc.color_attachment_formats.push_back(RHIFormat::BGRA8_SRGB);
 	
-    FRHIBlendAttachment& BlendAttachment = Desc.BlendAttachments.emplace_back();
+    RHIBlendAttachment& BlendAttachment = Desc.BlendAttachments.emplace_back();
 
     switch (InPass)
     {
     case EMaterialPass::Lit:
-        Desc.CullMode = ERHICullMode::Back;
-        Desc.bDepthWriteEnable = true;
-        Desc.bDepthTestEnable = (InBlendMode == EMaterialBlendMode::Opaque || InBlendMode == EMaterialBlendMode::Masked);
-		Desc.VertexBindings.push_back(FRHIVertexBinding(0, sizeof(FRHIVertex), 0));
-		Desc.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float3, 0);
-		Desc.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float3, 12);
-		Desc.VertexAttributes.emplace_back(2, 0, ERHIFormat::Float2, 24);
+        Desc.cull_mode = RHICullMode::Back;
+        Desc.depth_write_enable = true;
+        Desc.depth_test_enable = (InBlendMode == EMaterialBlendMode::Opaque || InBlendMode == EMaterialBlendMode::Masked);
+		Desc.VertexBindings.push_back(RHIVertexBinding(0, sizeof(RHIVertex), 0));
+		Desc.VertexAttributes.emplace_back(0, 0, RHIFormat::Float3, 0);
+		Desc.VertexAttributes.emplace_back(1, 0, RHIFormat::Float3, 12);
+		Desc.VertexAttributes.emplace_back(2, 0, RHIFormat::Float2, 24);
 
         break;
 	
     case EMaterialPass::DepthOnly:
-		Desc.CullMode = ERHICullMode::Back;
-		Desc.bDepthTestEnable = true;
-		Desc.bDepthWriteEnable = true;
-		Desc.VertexBindings.push_back(FRHIVertexBinding(0, sizeof(FRHIVertex), 0));
-		Desc.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float3, 0);
+		Desc.cull_mode = RHICullMode::Back;
+		Desc.depth_test_enable = true;
+		Desc.depth_write_enable = true;
+		Desc.VertexBindings.push_back(RHIVertexBinding(0, sizeof(RHIVertex), 0));
+		Desc.VertexAttributes.emplace_back(0, 0, RHIFormat::Float3, 0);
 
         break;
     
     case EMaterialPass::Shadow:
-        Desc.CullMode = ERHICullMode::Front;
-		Desc.bDepthTestEnable = true;
-		Desc.bDepthWriteEnable = true;
-		Desc.VertexBindings.push_back(FRHIVertexBinding(0, sizeof(FRHIVertex), 0));
-		Desc.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float3, 0);
+        Desc.cull_mode = RHICullMode::Front;
+		Desc.depth_test_enable = true;
+		Desc.depth_write_enable = true;
+		Desc.VertexBindings.push_back(RHIVertexBinding(0, sizeof(RHIVertex), 0));
+		Desc.VertexAttributes.emplace_back(0, 0, RHIFormat::Float3, 0);
 
         break;
     
     case EMaterialPass::UI:
-        Desc.CullMode = ERHICullMode::None;
-        Desc.bDepthTestEnable = false;
-        Desc.bDepthWriteEnable = false;
-		Desc.VertexBindings.push_back(FRHIVertexBinding(0, 20, 0));
-		Desc.VertexAttributes.emplace_back(0, 0, ERHIFormat::Float2, 0);
-		Desc.VertexAttributes.emplace_back(1, 0, ERHIFormat::Float2, 8);
-		Desc.VertexAttributes.emplace_back(2, 0, ERHIFormat::UNorm8x4, 16);
+        Desc.cull_mode = RHICullMode::None;
+        Desc.depth_test_enable = false;
+        Desc.depth_write_enable = false;
+		Desc.VertexBindings.push_back(RHIVertexBinding(0, 20, 0));
+		Desc.VertexAttributes.emplace_back(0, 0, RHIFormat::Float2, 0);
+		Desc.VertexAttributes.emplace_back(1, 0, RHIFormat::Float2, 8);
+		Desc.VertexAttributes.emplace_back(2, 0, RHIFormat::UNorm8x4, 16);
 
         break;
     }
@@ -66,26 +66,26 @@ RMaterial::RMaterial(EMaterialPass InPass, EMaterialBlendMode InBlendMode, const
         
     case EMaterialBlendMode::Additive:
         BlendAttachment.bEnableBlend = true;
-        BlendAttachment.SrcColorFactor = ERHIBlendFactor::SrcAlpha;
-        BlendAttachment.DstColorFactor = ERHIBlendFactor::One;
-        BlendAttachment.ColorOp = ERHIBlendOp::Add;
-        BlendAttachment.SrcAlphaFactor = ERHIBlendFactor::One;
-        BlendAttachment.DstAlphaFactor = ERHIBlendFactor::One;
-        BlendAttachment.AlphaOp = ERHIBlendOp::Add;
+        BlendAttachment.SrcColorFactor = RHIBlendFactor::SrcAlpha;
+        BlendAttachment.DstColorFactor = RHIBlendFactor::One;
+        BlendAttachment.ColorOp = RHIBlendOp::Add;
+        BlendAttachment.SrcAlphaFactor = RHIBlendFactor::One;
+        BlendAttachment.DstAlphaFactor = RHIBlendFactor::One;
+        BlendAttachment.AlphaOp = RHIBlendOp::Add;
         break;
    
     case EMaterialBlendMode::Transparent:
         BlendAttachment.bEnableBlend = true;
-        BlendAttachment.SrcColorFactor = ERHIBlendFactor::SrcAlpha;
-        BlendAttachment.DstColorFactor = ERHIBlendFactor::OneMinusSrcAlpha;
-        BlendAttachment.ColorOp = ERHIBlendOp::Add;
-        BlendAttachment.SrcAlphaFactor = ERHIBlendFactor::One;
-        BlendAttachment.DstAlphaFactor = ERHIBlendFactor::OneMinusSrcAlpha;
-        BlendAttachment.AlphaOp = ERHIBlendOp::Add;
+        BlendAttachment.SrcColorFactor = RHIBlendFactor::SrcAlpha;
+        BlendAttachment.DstColorFactor = RHIBlendFactor::OneMinusSrcAlpha;
+        BlendAttachment.ColorOp = RHIBlendOp::Add;
+        BlendAttachment.SrcAlphaFactor = RHIBlendFactor::One;
+        BlendAttachment.DstAlphaFactor = RHIBlendFactor::OneMinusSrcAlpha;
+        BlendAttachment.AlphaOp = RHIBlendOp::Add;
 		break;
     }
 
-    Pipeline = GetRHI()->rhi_create_pipeline(Desc);
+    Pipeline = GetRHI()->RHICreatePipeline(Desc);
 }
 
 RMaterial::~RMaterial()

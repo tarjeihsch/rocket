@@ -197,7 +197,7 @@ namespace Logger
     inline TBufferLogger<512, 512> GBufferLog;
     inline uint64_t GFlushCursor = 0;
 
-    inline void DumpGBufferLogger()
+    inline void DumpGBuffer()
     {
         const auto DrainResult = GBufferLog.Drain(
             [](const auto& R, uint64_t Seq)
@@ -248,10 +248,10 @@ namespace Logger
 #endif
 
 #if defined(_WIN32)
-    #define RK_LOG_TRACE(...)    Logger::GBufferLog.Log(ELogLevel::Trace,    __VA_ARGS__)
-    #define RK_LOG_DEBUG(...)    Logger::GBufferLog.Log(ELogLevel::Debug,    __VA_ARGS__)
-    #define RK_LOG_INFO(...)     Logger::GBufferLog.Log(ELogLevel::Info,     __VA_ARGS__)
-    #define RK_LOG_WARN(...)     Logger::GBufferLog.Log(ELogLevel::Warn,     __VA_ARGS__)
-    #define RK_LOG_ERROR(...)    Logger::GBufferLog.Log(ELogLevel::Error,    __VA_ARGS__)
-    #define RK_LOG_CRITICAL(...) Logger::GBufferLog.Log(ELogLevel::Critical, __VA_ARGS__)
+    #define RK_LOG_TRACE(...)    Logger::GBufferLog.Log(ELogLevel::Trace,    __VA_ARGS__);
+    #define RK_LOG_DEBUG(...)    Logger::GBufferLog.Log(ELogLevel::Debug,    __VA_ARGS__);
+    #define RK_LOG_INFO(...)     Logger::GBufferLog.Log(ELogLevel::Info,     __VA_ARGS__);
+    #define RK_LOG_WARN(...)     Logger::GBufferLog.Log(ELogLevel::Warn,     __VA_ARGS__);
+    #define RK_LOG_ERROR(...)    Logger::GBufferLog.Log(ELogLevel::Error,    __VA_ARGS__);
+    #define RK_LOG_CRITICAL(...) Logger::GBufferLog.Log(ELogLevel::Critical, __VA_ARGS__);
 #endif

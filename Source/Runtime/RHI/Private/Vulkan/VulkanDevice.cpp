@@ -39,10 +39,10 @@ void FTransientResourceAllocator::Init()
     AllocInfo.allocationSize = Size;
     AllocInfo.memoryTypeIndex = TypeIndex;
 
-    Result = VulkanRHI::vkAllocateMemory(Device.get_vk_device(), &AllocInfo, nullptr, &PhysicalMemory);
+    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
     ensure(Result == VK_SUCCESS, "Failed to allocate memory.");
 
-    Result = VulkanRHI::vkMapMemory(Device.get_vk_device(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
+    Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
     ensure(Result == VK_SUCCESS, "Failed to map transient memory.");
 
     VmaVirtualBlockCreateInfo BlockCreateInfo = {};
@@ -57,7 +57,7 @@ void FTransientResourceAllocator::Init()
 
 void FTransientResourceAllocator::Shutdown()
 {
-    VulkanRHI::vkFreeMemory(get_vulkan_rhi_minimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
+    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
     vmaClearVirtualBlock(VirtualMemory);
     vmaDestroyVirtualBlock(VirtualMemory);
 }
@@ -68,10 +68,10 @@ void FTransientResourceAllocator::Reset()
     Offset = 0;
 }
 
-void FTransientResourceAllocator::alloc_image(VkImage Image, uint64_t& OutOffset)
+void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
 {
     VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetImageMemoryRequirements(Device.get_vk_device(), Image, &MemoryRequirements);
+    VulkanRHI::vkGetImageMemoryRequirements(Device.GetVkDevice(), Image, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -82,17 +82,17 @@ void FTransientResourceAllocator::alloc_image(VkImage Image, uint64_t& OutOffset
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
     ensure(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
-    VulkanRHI::vkBindImageMemory(Device.get_vk_device(), Image, PhysicalMemory, OutOffset);
+    VulkanRHI::vkBindImageMemory(Device.GetVkDevice(), Image, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
     Offset += MemoryRequirements.size;
 }
 
-void FTransientResourceAllocator::alloc_buffer(VkBuffer Buffer, uint64_t& OutOffset)
+void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset)
 {
     VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetBufferMemoryRequirements(Device.get_vk_device(), Buffer, &MemoryRequirements);
+    VulkanRHI::vkGetBufferMemoryRequirements(Device.GetVkDevice(), Buffer, &MemoryRequirements);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
     AllocInfo.size = MemoryRequirements.size;
@@ -103,7 +103,7 @@ void FTransientResourceAllocator::alloc_buffer(VkBuffer Buffer, uint64_t& OutOff
 
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
     ensure(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
-    VulkanRHI::vkBindBufferMemory(Device.get_vk_device(), Buffer, PhysicalMemory, OutOffset);
+    VulkanRHI::vkBindBufferMemory(Device.GetVkDevice(), Buffer, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
@@ -124,7 +124,7 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, Descriptor BindingIndex, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, BindlessHandle BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;
@@ -149,18 +149,18 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
 
         switch (It->StructureType)
         {
-        case EType::Image: VulkanRHI::vkDestroyImage(Device.get_vk_device(), (VkImage)It->Handle, nullptr); break;
+        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
         case EType::ImageView:
-            VulkanRHI::vkDestroyImageView(Device.get_vk_device(), (VkImageView)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveSampledImage(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterTexture(It->m_DescriptorHandle); }
             break;
         case EType::Buffer:
-            VulkanRHI::vkDestroyBuffer(Device.get_vk_device(), (VkBuffer)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveStorageBuffer(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterBuffer(It->m_DescriptorHandle); }
             break;
         case EType::Sampler:
-            VulkanRHI::vkDestroySampler(Device.get_vk_device(), (VkSampler)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.get_descriptor_manager()->RemoveSampler(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
+            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterSampler(It->m_DescriptorHandle); }
             break;
         default: break;
         }
@@ -188,11 +188,6 @@ VulkanDevice::~VulkanDevice()
 void VulkanDevice::WaitUntilIdle() const
 {
     VulkanRHI::vkDeviceWaitIdle(Device);
-}
-
-VulkanCommandListContext *VulkanDevice::GetImmediateCommandListContext() const
-{
-    return ImmediateCommandListContext;
 }
 
 void VulkanDevice::GC()
@@ -239,6 +234,7 @@ void VulkanDevice::Initialize()
     Features_1_2.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
     Features_1_2.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
     Features_1_2.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    Features_1_2.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     Features_1_2.timelineSemaphore = VK_TRUE;
     Features_1_2.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
 
@@ -256,21 +252,21 @@ void VulkanDevice::Initialize()
     DeviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(QueueCreateInfos.size());
     DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
     DeviceCreateInfo.pNext = &Features_1_3;
-    DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(get_vulkan_rhi_minimal()->GetPhysicalDeviceExtensions().size());
-    DeviceCreateInfo.ppEnabledExtensionNames = get_vulkan_rhi_minimal()->GetPhysicalDeviceExtensions().data();
-    DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(get_vulkan_rhi_minimal()->GetValidationExtensions().size());
-    DeviceCreateInfo.ppEnabledLayerNames = get_vulkan_rhi_minimal()->GetValidationExtensions().data();
+    DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(GetVulkanRHIMinimal()->GetPhysicalDeviceExtensions().size());
+    DeviceCreateInfo.ppEnabledExtensionNames = GetVulkanRHIMinimal()->GetPhysicalDeviceExtensions().data();
+    DeviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(GetVulkanRHIMinimal()->GetValidationExtensions().size());
+    DeviceCreateInfo.ppEnabledLayerNames = GetVulkanRHIMinimal()->GetValidationExtensions().data();
 
     VkResult Result = VulkanRHI::vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device);
     ensure(Result == VK_SUCCESS, "Failed to initialize logical device.");
 
-    LoadVulkanDeviceFunc(get_vk_device());
+    LoadVulkanDeviceFunc(GetVkDevice());
 
     VmaVulkanFunctions VmaFuncs = CreateVmaFuncTable();
     VmaAllocatorCreateInfo AllocatorCreateInfo = {};
     AllocatorCreateInfo.physicalDevice = PhysicalDevice;
     AllocatorCreateInfo.device = Device;
-    AllocatorCreateInfo.instance = get_vulkan_rhi_minimal()->RHIGetVkInstance();
+    AllocatorCreateInfo.instance = GetVulkanRHIMinimal()->RHIGetVkInstance();
     AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     AllocatorCreateInfo.pVulkanFunctions = &VmaFuncs;
 
@@ -284,10 +280,10 @@ void VulkanDevice::Initialize()
             continue;
         }
 
-        Queues.push_back(new FVulkanQueue(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
+        Queues.push_back(new VulkanQueue(*this, QueueFamiliesProperties[Index].queueFlags, false, Index, 1));
     }
 
-    PipelineManager = new FVulkanPipelineManager(*this);
+    PipelineManager = new VulkanPipelineManager(*this);
     DescriptorManager = new VulkanDescriptorManager(*this);
     DeferredDeletionQueue = new FDeferredDeletionQueue(*this);
     CommandListContext = new VulkanCommandListContext(*this);
@@ -311,7 +307,34 @@ void VulkanDevice::Shutdown()
     VulkanRHI::vkDestroyDevice(Device, nullptr);
 }
 
-FVulkanQueue* VulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const
+uint32_t VulkanDevice::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties)
+{
+	// It is recommended to cache this in VulkanDevice::Initialize, 
+	// but querying it here is fine for initialization logic.
+	VkPhysicalDeviceMemoryProperties mem_properties;
+	VulkanRHI::vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &mem_properties);
+
+	for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
+	{
+		// Check 1: Is the "i-th" bit set in type_filter? 
+		// (Does the resource support this memory type?)
+		bool supports_type = (type_filter & (1 << i)) != 0;
+
+		// Check 2: Does this memory type have ALL the properties we asked for?
+		// (e.g. HostVisible AND HostCoherent)
+		bool has_properties = (mem_properties.memoryTypes[i].propertyFlags & properties) == properties;
+
+		if (supports_type && has_properties)
+		{
+			return i;
+		}
+	}
+
+	ensure(false, "Failed to find suitable memory type!");
+	return UINT32_MAX;
+}
+
+VulkanQueue* VulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude) const
 {
     for (const auto& Queue : Queues)
     {
@@ -323,22 +346,22 @@ FVulkanQueue* VulkanDevice::GetQueue(VkQueueFlags Include, VkQueueFlags Exclude)
     return nullptr;
 }
 
-FVulkanQueue* VulkanDevice::GetGraphicsQueue() const
+VulkanQueue* VulkanDevice::GetGraphicsQueue() const
 {
     return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }
 
-FVulkanQueue* VulkanDevice::GetComputeQueue() const
+VulkanQueue* VulkanDevice::GetComputeQueue() const
 {
     return GetQueue(VK_QUEUE_COMPUTE_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
-FVulkanQueue* VulkanDevice::GetTransferQueue() const
+VulkanQueue* VulkanDevice::GetTransferQueue() const
 {
     return GetQueue(VK_QUEUE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT);
 }
 
-FVulkanQueue* VulkanDevice::GetPresentQueue() const
+VulkanQueue* VulkanDevice::GetPresentQueue() const
 {
     return GetQueue(VK_QUEUE_GRAPHICS_BIT, 0);
 }

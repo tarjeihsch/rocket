@@ -16,11 +16,11 @@ public:
     CVulkanRHI();
 
     // IRHI interface
-    virtual void init() override;
-    virtual void shutdown() override;
+    virtual void Init() override;
+    virtual void Shutdown() override;
 
-    virtual void submit(const RHICommandList& cmd_list) override;
-    virtual void reset() override;
+    virtual void Submit(RHICommandList& cmd_list) override;
+    virtual void Reset() override;
 
     [[nodiscard]] virtual const char* get_name() const override;
     [[nodiscard]] virtual const char* get_version() const override;
@@ -29,12 +29,12 @@ public:
 
     virtual void rhi_wait_until_idle() const override;
     virtual uint64_t rhi_get_frame_counter() const noexcept override;
-    virtual RHISurface* create_surface(RHISurfaceDesc desc) override;
-    virtual RHITexture* rhi_create_texture(RHITextureDesc Desc) const override;
-    virtual RHITextureView* rhi_create_texture_view(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const override;
-    virtual RHIBuffer* rhi_create_buffer(RHIBufferDesc Desc) const override;
-    virtual RHISampler* rhi_create_sampler(RHISamplerDesc Desc) const override;
-    virtual RHIPipeline* rhi_create_pipeline(RHIPipelineDesc Desc) override;
+    virtual RHISurface* CreateSurface(RHISurfaceDesc desc) override;
+    virtual RHITexture* RHICreateTexture(RHITextureDesc Desc) const override;
+    virtual RHITextureView* RHICreateTextureView(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const override;
+    virtual RHIBuffer* RHICreateBuffer(RHIBufferDesc Desc) const override;
+    virtual RHISampler* RHICreateSampler(RHISamplerDesc Desc) const override;
+    virtual RHIPipeline* RHICreatePipeline(RHIPipelineDesc Desc) override;
 
     // IVulkanRHIMinimal interface
     virtual VkInstance RHIGetVkInstance() const override;
@@ -52,9 +52,6 @@ public:
     virtual std::span<const char*> GetValidationExtensions() override;
     virtual std::span<const char*> GetInstanceExtensions() override;
     virtual std::span<const char*> GetPhysicalDeviceExtensions() override;
-    virtual VkPipelineLayout GetBindlessPipelineLayout() const override;
-    virtual VkDescriptorSet GetBindlessDescriptorSet() const override;
-    virtual VkDescriptorSetLayout GetBindlessDesciptorSetLayout() const override;
     // ~IVulkanRHIMinimal interface
 
     // CVulkanRHI interface

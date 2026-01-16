@@ -5,11 +5,11 @@
 RHI* g_rhi = nullptr;
 RHIModule* g_rhi_module = nullptr;
 
-void set_rhi_module(RHIInterfaceType InInterfaceType)
+void SetRHIModule(RHIInterfaceType InInterfaceType)
 {
     if (g_rhi)
     {
-        g_rhi->shutdown();
+        g_rhi->Shutdown();
         delete g_rhi;
         g_rhi = nullptr;
     }

@@ -7,24 +7,23 @@
 class RHICommandListContext;
 class RHICommandList;
 class VulkanDevice;
-class FVulkanCommandBufferPool;
+class VulkanCommandBufferPool;
 class VulkanCommandBufferContext;
-class FVulkanCommandBuffer;
+class VulkanCommandBuffer;
 struct VulkanCommandBufferPayload;
 
-class FVulkanQueue
+class VulkanQueue
 {
 private:
     VulkanDevice& Device;
     VkQueueFlags QueueFlags;
 
 public:
-    FVulkanQueue(VulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
-     ~FVulkanQueue();
+    VulkanQueue(VulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
+     ~VulkanQueue();
 
     void Wait();
-    void Submit(const RHICommandList& CmdList);
-    void ImmediateSubmit(std::function<void(RHICommandList& CmdList)> InCallback);
+    void Submit(RHICommandList& CmdList);
 
     inline VkQueue GetHandle() const;
     inline VkQueueFlags GetQueueFlags() const;
@@ -35,7 +34,7 @@ public:
     inline VkSemaphore GetTimelineSemaphore() const;
     inline uint64_t GetTimelineSemaphoreValue() const;
 
-    FVulkanCommandBufferPool* GetCommandBufferPool() const;
+    VulkanCommandBufferPool* GetCommandBufferPool() const;
 
 private:
     void Init();
@@ -49,42 +48,44 @@ private:
 
     VkSemaphore TimelineSemaphore;
     uint64_t NextTimelineSemaphoreValue;
+	uint64_t LastSubmittedTimelineValue = 0;
+	uint64_t LastCompletedTimelineValue = 0;
 
-    FVulkanCommandBufferPool* CommandBufferPool;
+    VulkanCommandBufferPool* CommandBufferPool;
     std::queue<VulkanCommandBufferPayload*> SubmissionQueue;
 };
 
-inline VkQueue FVulkanQueue::GetHandle() const
+inline VkQueue VulkanQueue::GetHandle() const
 {
     return Handle;
 }
 
-inline VkQueueFlags FVulkanQueue::GetQueueFlags() const
+inline VkQueueFlags VulkanQueue::GetQueueFlags() const
 {
     return QueueFlags;
 }
 
-inline bool FVulkanQueue::HasPresent() const
+inline bool VulkanQueue::HasPresent() const
 {
     return Present;
 }
 
-inline uint32_t FVulkanQueue::GetQueueFamilyIndex() const
+inline uint32_t VulkanQueue::GetQueueFamilyIndex() const
 {
     return QueueFamilyIndex;
 }
 
-inline uint32_t FVulkanQueue::GetQueueIndex() const
+inline uint32_t VulkanQueue::GetQueueIndex() const
 {
     return QueueIndex;
 }
 
-uint64_t FVulkanQueue::GetTimelineSemaphoreValue() const
+uint64_t VulkanQueue::GetTimelineSemaphoreValue() const
 {
     return NextTimelineSemaphoreValue;
 }
 
-VkSemaphore FVulkanQueue::GetTimelineSemaphore() const
+VkSemaphore VulkanQueue::GetTimelineSemaphore() const
 {
     return TimelineSemaphore;
 }

@@ -23,18 +23,18 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
     return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(glfwWindow));
 }
 
-Window::Window()
+OSWindow::OSWindow()
     : WindowHandle(nullptr), 
     WindowHandleID(0)
 {
 }
 
-Window::~Window()
+OSWindow::~OSWindow()
 {
     Destroy();
 }
 
-bool Window::Create(const WindowCreateInfo& createInfo)
+bool OSWindow::Create(const WindowCreateInfo& createInfo)
 {
     Destroy();
 
@@ -90,7 +90,7 @@ bool Window::Create(const WindowCreateInfo& createInfo)
     return true;
 }
 
-void Window::Destroy()
+void OSWindow::Destroy()
 {
     if (!IsValid())
     {
@@ -105,7 +105,7 @@ void Window::Destroy()
     WindowHandleID = 0;
 }
 
-void Window::Show()
+void OSWindow::Show()
 {
     if (!IsValid())
     {
@@ -115,7 +115,7 @@ void Window::Show()
     glfwShowWindow(static_cast<GLFWwindow*>(WindowHandle));
 }
 
-void Window::Hide()
+void OSWindow::Hide()
 {
     if (!IsValid())
     {
@@ -125,7 +125,7 @@ void Window::Hide()
     glfwHideWindow(static_cast<GLFWwindow*>(WindowHandle));
 }
 
-void Window::SetTitle(const ANSICHAR* title)
+void OSWindow::SetTitle(const ANSICHAR* title)
 {
     if (!IsValid())
     {
@@ -135,7 +135,7 @@ void Window::SetTitle(const ANSICHAR* title)
     glfwSetWindowTitle(static_cast<GLFWwindow*>(WindowHandle), title);
 }
 
-Vector2i Window::GetSize() const
+Vector2i OSWindow::GetSize() const
 {
     if (!IsValid())
     {
@@ -147,7 +147,7 @@ Vector2i Window::GetSize() const
     return result;
 }
 
-Vector2i Window::GetPosition() const
+Vector2i OSWindow::GetPosition() const
 {
     if (!IsValid())
     {
@@ -159,27 +159,27 @@ Vector2i Window::GetPosition() const
     return result;
 }
 
-uint64_t Window::GetWindowHandleID() const
+uint64_t OSWindow::GetWindowHandleID() const
 {
     return WindowHandleID;
 }
 
-ENativePlatformBackend Window::GetNativeBackend() const
+ENativePlatformBackend OSWindow::GetNativeBackend() const
 {
     return NativeBackend;
 }
 
-RNativeWindowSystemHandle Window::GetNativeWindowSystemHandle() const
+RNativeWindowSystemHandle OSWindow::GetNativeWindowSystemHandle() const
 {
     return NativeWindowSystemHandle;
 }
 
-RNativeWindowHandle Window::GetNativeWindowHandle() const
+RNativeWindowHandle OSWindow::GetNativeWindowHandle() const
 {
     return NativeWindowHandle;
 }
 
-bool Window::IsValid() const
+bool OSWindow::IsValid() const
 {
     return WindowHandle != nullptr;
 }

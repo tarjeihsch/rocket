@@ -4,14 +4,14 @@
 
 class RHISampler;
 
-class RSampler
+class Sampler
 {
 public:
-    RSampler();
-    ~RSampler();
+    Sampler();
+    ~Sampler();
 
     uint32_t GetBindingIndex() const;
 
 private:
-    RHISampler* Sampler;
+    RHISampler* sampler;
 };

@@ -5,10 +5,10 @@
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
 
-class FVulkanShader
+class VulkanShader
 {
 public:
-    FVulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage);
+    VulkanShader(VkDevice pDevice, VkShaderStageFlagBits pStage);
 
     void Create(const uint32_t *pData, const size_t pWordCount);
     void Destroy();
@@ -19,21 +19,21 @@ private:
     VkShaderModule Module;
     uint32_t Version;
 
-    friend class FVulkanShaderRef;
-    friend class FVulkanPipelineManager;
+    friend class VulkanShaderRef;
+    friend class VulkanPipelineManager;
 };
 
-struct FVulkanShaderRef
+struct VulkanShaderRef
 {
-    FVulkanShader *Shader; // this is a memory-leak
+    VulkanShader *Shader; // this is a memory-leak
     uint32_t SnapshotVersion = 0;
 
-    static FVulkanShaderRef Capture(FVulkanShader *pShader);
+    static VulkanShaderRef Capture(VulkanShader *pShader);
 };
 
-struct FVulkanPipeline : RHIPipeline
+struct VulkanPipeline : RHIPipeline
 {
-    FVulkanPipeline(FVulkanShaderRef InVS, FVulkanShaderRef InFS, VkPipeline InPipeline)
+    VulkanPipeline(VulkanShaderRef InVS, VulkanShaderRef InFS, VkPipeline InPipeline)
         : VertexShaderRef(std::move(InVS)), FragmentShaderRef(std::move(InFS)), Pipeline(InPipeline)
     {
     }
@@ -43,30 +43,30 @@ struct FVulkanPipeline : RHIPipeline
         return Pipeline;;
     }
 
-    FVulkanShaderRef VertexShaderRef;
-    FVulkanShaderRef FragmentShaderRef;
+    VulkanShaderRef VertexShaderRef;
+    VulkanShaderRef FragmentShaderRef;
     VkPipeline Pipeline;
 };
 
 class VulkanDevice;
 
-class FVulkanPipelineManager
+class VulkanPipelineManager
 {
 public:
-    explicit FVulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
-    ~FVulkanPipelineManager();
+    explicit VulkanPipelineManager(VulkanDevice& pDevice, VkPipelineCache pDriverCache = VK_NULL_HANDLE);
+    ~VulkanPipelineManager();
 
-    FVulkanPipeline* get_pipeline(const RHIPipelineDesc &Desc);
+    VulkanPipeline* GetOrCreatePipeline(const RHIPipelineDesc &pipeline_desc);
 
     void GC();
     void Invalidate();
 
 private:
-    VkPipeline Compile(const RHIPipelineDesc &Desc, FVulkanShaderRef VertexShaderRef, FVulkanShaderRef PixelShaderRef);
+    VkPipeline Compile(const RHIPipelineDesc &Desc, VulkanShaderRef VertexShaderRef, VulkanShaderRef PixelShaderRef);
     uint64_t Hash(const RHIPipelineDesc &Desc);
 
 private:
     VulkanDevice& Device;
     VkPipelineCache DriverCache;
-    std::unordered_map<uint64_t, FVulkanPipeline*> Data;
+    std::unordered_map<uint64_t, VulkanPipeline*> pipeline_cache;
 };

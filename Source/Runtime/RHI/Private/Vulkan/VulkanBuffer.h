@@ -19,9 +19,9 @@ public:
     VulkanBuffer(VulkanDevice& in_device, const RHIBufferDesc& in_buffer_desc, VkBuffer in_buffer_handle);
     ~VulkanBuffer();
 
-    virtual void* get_handle() const override;
+    virtual void* GetNativeBuffer() const override;
     virtual uint32_t GetBindingIndex() const override;
-    virtual void map(const void *Data, uint64_t Size, uint64_t DstOffset) override;
+    virtual void Map(const void *Data, uint64_t Size, uint64_t DstOffset) override;
 
 private:
     void Alloc();
@@ -31,5 +31,5 @@ private:
     VkBuffer buffer_handle;
     VmaAllocation allocation_handle;
     VkDeviceSize allocation_offset;
-    Descriptor descriptor;
+    BindlessHandle descriptor;
 };

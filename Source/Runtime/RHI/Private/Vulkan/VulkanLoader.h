@@ -1,20 +1,20 @@
 #pragma once
 
-enum class ERHIQueueSyncStage : uint8_t;
+enum class RHISyncStage : uint8_t;
 enum class RHITextureLayout : uint8_t;
 enum class ERHIBorderColor : uint8_t;
-enum class ERHITextureUsage : uint8_t;
-enum class ERHITextureFormat;
-enum class ERHITextureAspect;
+enum class RHITextureUsage : uint8_t;
+enum class RHITextureFormat;
+enum class RHITextureAspect;
 enum class ERHIFilterMode : uint8_t;
-enum class ERHIFormat : uint8_t;
+enum class RHIFormat : uint8_t;
 enum class ERHIAddressMode : uint8_t;
 enum class ERHICompareOp : uint8_t;
-enum class ERHIBlendFactor : uint8_t;
-enum class ERHIBlendOp : uint8_t;
-enum class ERHIPrimitiveTopology : uint8_t;
-enum class ERHICullMode : uint8_t;
-enum class ERHIPolygonMode : uint8_t;
+enum class RHIBlendFactor : uint8_t;
+enum class RHIBlendOp : uint8_t;
+enum class RHIPrimitiveTopology : uint8_t;
+enum class RHICullMode : uint8_t;
+enum class RHIPolygonMode : uint8_t;
 enum class RHIResourceAccess : uint16_t;
 enum class RHIPipelineStage : uint16_t;
 
@@ -132,6 +132,8 @@ enum class RHIPipelineStage : uint16_t;
     X(vkCmdDraw) \
     X(vkCmdBlitImage) \
     X(vkCmdDrawIndexed) \
+    X(vkCmdDrawIndirectCount) \
+    X(vkCmdDrawIndexedIndirectCount) \
     X(vkDestroyDescriptorPool) \
     X(vkDestroyDescriptorSetLayout)\
     X(vkCreatePipelineLayout) \
@@ -146,7 +148,9 @@ enum class RHIPipelineStage : uint16_t;
     X(vkCmdPushConstants) \
     X(vkCmdCopyBufferToImage) \
     X(vkCreateSampler) \
-    X(vkDestroySampler)
+    X(vkDestroySampler) \
+    X(vkCmdPipelineBarrier2KHR) \
+    X(vkGetSemaphoreCounterValue) \
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \
@@ -167,7 +171,7 @@ enum class RHIPipelineStage : uint16_t;
     X(vkDestroyBuffer) \
     X(vkCreateImage) \
     X(vkDestroyImage) \
-    X(vkCmdCopyBuffer)
+    X(vkCmdCopyBuffer) \
 
 #define VULKAN_ALL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
     VULKAN_GLOBAL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
@@ -193,14 +197,14 @@ namespace VulkanRHI
     VkImageLayout GetVulkanLayout(RHITextureLayout layout);
     VkAccessFlags2 GetVkAccess(RHIResourceAccess access);
     VkPipelineStageFlags2 GetVkPipelineStage(RHIPipelineStage stage);
-    VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
-    VkFormat GetVkFormat(ERHITextureFormat Format);
-    VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
-    VkFormat ToVkFormat(ERHIFormat Format);
-    VkImageAspectFlags GetVkAspectFromFormat(ERHITextureFormat format);
-    VkPrimitiveTopology ToVkTopology(ERHIPrimitiveTopology Topology);
-    VkCullModeFlags ToVkCullMode(ERHICullMode Mode);
-    VkPolygonMode ToVkPolygonMode(ERHIPolygonMode Mode);
+    VkImageUsageFlags GetVulkanUsage(RHITextureUsage usage);
+    VkFormat GetVkFormat(RHITextureFormat Format);
+    VkImageAspectFlags GetVkAspect(RHITextureAspect Aspect);
+    VkFormat ToVkFormat(RHIFormat Format);
+    VkImageAspectFlags GetVkAspectFromFormat(RHITextureFormat format);
+    VkPrimitiveTopology ToVkTopology(RHIPrimitiveTopology Topology);
+    VkCullModeFlags ToVkCullMode(RHICullMode Mode);
+    VkPolygonMode ToVkPolygonMode(RHIPolygonMode Mode);
     VmaMemoryUsage ToVmaMemoryUsage(RHIResourceMemory Memory);
 
     VkBufferUsageFlags GetVkBufferUsage(RHIBufferUsage usage);
@@ -210,10 +214,10 @@ namespace VulkanRHI
     VkBorderColor ToVkBorderColor(ERHIBorderColor color);
     VkCompareOp ToVkCompareOp(ERHICompareOp op);
 
-    VkBlendFactor GetVkBlendFactor(ERHIBlendFactor Factor);
-    VkBlendOp GetVkBlendOp(ERHIBlendOp Op);
+    VkBlendFactor GetVkBlendFactor(RHIBlendFactor Factor);
+    VkBlendOp GetVkBlendOp(RHIBlendOp Op);
 
-    VkPipelineStageFlags2 ToVkStage2(ERHIQueueSyncStage Stage);
+    VkPipelineStageFlags2 ToVkStage2(RHISyncStage Stage);
 }
 
 void LoadVulkanLibrary();

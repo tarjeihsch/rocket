@@ -4,8 +4,8 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-class FVulkanCommandBufferPool;
-class FVulkanQueue;
+class VulkanCommandBufferPool;
+class VulkanQueue;
 class VulkanDevice;
 
 enum class EVulkanCommandBufferType : uint8_t
@@ -14,7 +14,7 @@ enum class EVulkanCommandBufferType : uint8_t
     Secondary,
 };
 
-enum class EVulkanCommandBufferState : uint8_t
+enum class VulkanCommandBufferState : uint8_t
 {
     NotAllocated,
     ReadyForBegin,
@@ -24,14 +24,14 @@ enum class EVulkanCommandBufferState : uint8_t
     NeedReset
 };
 
-class FVulkanCommandBuffer
+class VulkanCommandBuffer
 {
 private:
-    FVulkanCommandBufferPool& Pool;
+    VulkanCommandBufferPool& Pool;
 
 public:
-    FVulkanCommandBuffer(FVulkanCommandBufferPool& InPool);
-    ~FVulkanCommandBuffer();
+    VulkanCommandBuffer(VulkanCommandBufferPool& InPool);
+    ~VulkanCommandBuffer();
 
     void Begin();
     void End();
@@ -40,8 +40,8 @@ public:
     void Finish();
     void Reset();
 
-    inline EVulkanCommandBufferState GetState() const;
-    inline VkCommandBuffer get_handle() const;
+    inline VulkanCommandBufferState GetState() const;
+    inline VkCommandBuffer GetVkCommandBuffer() const;
     inline double GetSubmissionTime() const;
 
 private:
@@ -52,26 +52,26 @@ private:
     inline void SetPoolID(const uint32_t InPoolID);
 
 private:
-    EVulkanCommandBufferState State;
+    VulkanCommandBufferState State;
     VkCommandBuffer Handle;
     double SubmissionTime;
     uint32_t PoolID;
 
-    friend class FVulkanCommandBufferPool;
+    friend class VulkanCommandBufferPool;
 };
 
-class FVulkanCommandBufferPool
+class VulkanCommandBufferPool
 {
 private:
     VulkanDevice& Device;
-    FVulkanQueue& Queue;
+    VulkanQueue& Queue;
 
 public:
-    FVulkanCommandBufferPool(VulkanDevice& InDevice, FVulkanQueue& InQueue);
-    ~FVulkanCommandBufferPool();
+    VulkanCommandBufferPool(VulkanDevice& InDevice, VulkanQueue& InQueue);
+    ~VulkanCommandBufferPool();
 
-    FVulkanCommandBuffer* Acquire();
-    void Recycle(FVulkanCommandBuffer* CommandBuffer);
+    VulkanCommandBuffer* Acquire();
+    void Recycle(VulkanCommandBuffer* CommandBuffer);
 
     inline VkCommandPool GetHandle() const;
 
@@ -82,36 +82,36 @@ private:
 private:
     VkCommandPool Handle;
 
-    std::vector<FVulkanCommandBuffer*> FreeCommandBuffers;
-    std::vector<FVulkanCommandBuffer*> UsedCommandBuffers;
+    std::vector<VulkanCommandBuffer*> FreeCommandBuffers;
+    std::vector<VulkanCommandBuffer*> UsedCommandBuffers;
 };
 
-EVulkanCommandBufferState FVulkanCommandBuffer::GetState() const
+VulkanCommandBufferState VulkanCommandBuffer::GetState() const
 {
     return State;
 }
 
-VkCommandBuffer FVulkanCommandBuffer::get_handle() const
+VkCommandBuffer VulkanCommandBuffer::GetVkCommandBuffer() const
 {
     return Handle;
 }
 
-double FVulkanCommandBuffer::GetSubmissionTime() const
+double VulkanCommandBuffer::GetSubmissionTime() const
 {
     return SubmissionTime;
 }
 
-inline uint32_t FVulkanCommandBuffer::GetPoolID() const
+inline uint32_t VulkanCommandBuffer::GetPoolID() const
 {
     return PoolID;
 }
 
-inline void FVulkanCommandBuffer::SetPoolID(const uint32_t InPoolID)
+inline void VulkanCommandBuffer::SetPoolID(const uint32_t InPoolID)
 {
     PoolID = InPoolID;
 }
 
-VkCommandPool FVulkanCommandBufferPool::GetHandle() const
+VkCommandPool VulkanCommandBufferPool::GetHandle() const
 {
     return Handle;
 }

@@ -10,6 +10,7 @@
 #include "RHITexture.h"
 #include "Math/Vector2.h"
 
+enum class RHISyncStage : uint8_t;
 class RHISwapchain;
 struct RHISemaphore;
 struct RHIBuffer;
@@ -27,14 +28,25 @@ public:
 
     virtual RHICommandListContext& get_lowest_level_context() { return *this; }
 
-    virtual void rhi_bind_pipeline(RHIPipeline *pipeline) = 0;
-    virtual void rhi_set_scissor_rect(Vector2i position, Vector2i extent) = 0;
-    virtual void rhi_pipeline_barrier_texture(RHITexture *texture, const RHITextureAccessState& from_texture_access_state, const RHITextureAccessState& to_texture_access_state) = 0;
-    virtual void rhi_pipeline_barrier_buffer(RHIBuffer *buffer, const RHIBufferAccessState& from_buffer_access_state, const RHIBufferAccessState& to_buffer_access_state) = 0;
-    virtual void rhi_copy_buffer(RHIBuffer* src, RHIBuffer* dst, uint32_t src_offset, uint32_t dst_offset, uint32_t size) = 0;
-    virtual void rhi_copy_image(RHITexture* src, RHITexture* dst) = 0;
-    virtual void rhi_begin_rendering(std::span<RHITextureView*> color_attachment_view, RHITextureView* depth_stencil_attachment, bool bClearColor) = 0;
-    virtual void rhi_end_rendering() = 0;
+    virtual void RHIBindGlobalHeap() = 0;
+    virtual void RHIBindPipeline(RHIPipeline *pipeline) = 0;
+	virtual void RHISetScissorRect(Vector2i position, Vector2i extent) = 0;
+	virtual void RHISetViewport(Vector2i position, Vector2i extent) = 0;
+    virtual void RHIPipelineBarrierTexture(RHITexture *texture, const RHITextureAccessState& from_texture_access_state, const RHITextureAccessState& to_texture_access_state) = 0;
+    virtual void RHIPipelineBarrierBuffer(RHIBuffer *buffer, const RHIBufferAccessState& from_buffer_access_state, const RHIBufferAccessState& to_buffer_access_state) = 0;
+    virtual void RHICopyBuffer(RHIBuffer* src, RHIBuffer* dst, uint32_t src_offset, uint32_t dst_offset, uint32_t size) = 0;
+    virtual void RHICopyImage(RHITexture* src, RHITexture* dst) = 0;
+    virtual void RHIDraw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance) = 0;
+    virtual void RHIDrawIndexed(uint32_t uint32) = 0;
+    virtual void RHIDrawIndirectCount(RHIBuffer *indirect_draw_command_buffer, size_t offset, RHIBuffer *count_buffer, size_t count_offset, uint32_t max_draw_count, uint32_t stride) = 0;
+    virtual void RHIDrawIndexedIndirectCount(RHIBuffer* indirect_draw_command_buffer, size_t offset, RHIBuffer* count_buffer, size_t count_offset, uint32_t max_draw_count, uint32_t stride) = 0;
+    virtual void RHIBeginRendering(const RHIRenderPassInfo& Info) = 0;
+    virtual void RHIEndRendering() = 0;
+    virtual void RHIAddWaitSemaphore(RHISemaphore*, RHIPipelineStage) = 0;
+    virtual void RHIAddSignalSemaphore(RHISemaphore*, RHIPipelineStage) = 0;
+    virtual void RHIBindVertexBuffer(RHIBuffer * rhi_buffer) = 0;
+    virtual void RHIBindIndexBuffer(RHIBuffer * rhi_buffer) = 0;
+    virtual void RHISetShaderParameters(const void* Data, uint32_t Size) = 0;
 };
 
 struct RHICommandBase
@@ -69,7 +81,7 @@ class RHICommandList
 {
 public:
     template<typename Command, typename... Args>
-    void enqueue(Args&&... args)
+    void Enqueue(Args&&... args)
     {
         static_assert(std::is_base_of_v<RHICommandBase, Command>);
         size_t Offset = buffer.size();
@@ -124,15 +136,25 @@ public:
     }
 };
 
+struct RHICommandBindGlobalHeap : RHICommand<RHICommandBindGlobalHeap>
+{
+    RHICommandBindGlobalHeap()
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIBindGlobalHeap();
+    }
+};
+
 struct RHICommandPipelineBarrierTexture : RHICommand<RHICommandPipelineBarrierTexture>
 {
     RHITexture* texture;
     RHITextureAccessState from_texture_access_state;
     RHITextureAccessState to_texture_access_state;
 
-    RHICommandPipelineBarrierTexture(RHITexture* in_texture,
-        RHITextureAccessState in_from_texture_access_state,
-        RHITextureAccessState in_to_texture_access_state)
+    RHICommandPipelineBarrierTexture(RHITexture* in_texture, const RHITextureAccessState& in_from_texture_access_state, const RHITextureAccessState& in_to_texture_access_state)
         : texture(in_texture),
         from_texture_access_state(in_from_texture_access_state),
         to_texture_access_state(in_to_texture_access_state)
@@ -141,43 +163,41 @@ struct RHICommandPipelineBarrierTexture : RHICommand<RHICommandPipelineBarrierTe
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_pipeline_barrier_texture(texture, from_texture_access_state, to_texture_access_state);
+        cmd_list_ctx.RHIPipelineBarrierTexture(texture, from_texture_access_state, to_texture_access_state);
     }
 };
 
 struct RHICommandPipelineBarrierBuffer : RHICommand<RHICommandPipelineBarrierBuffer>
 {
     RHIBuffer* buffer;
-    RHIBufferAccessState from_buffer_state;
-    RHIBufferAccessState to_buffer_state;
+    RHIBufferAccessState from_buffer_access_state;
+    RHIBufferAccessState to_buffer_access_state;
 
-    RHICommandPipelineBarrierBuffer(RHIBuffer* in_buffer, RHIBufferAccessState in_from_buffer_state, RHIBufferAccessState in_to_buffer_state)
+    RHICommandPipelineBarrierBuffer(RHIBuffer* in_buffer, const RHIBufferAccessState& in_from_buffer_access_state, const RHIBufferAccessState& in_to_buffer_access_state)
         : buffer(in_buffer),
-        from_buffer_state(in_from_buffer_state),
-        to_buffer_state(in_to_buffer_state)
+        from_buffer_access_state(in_from_buffer_access_state),
+        to_buffer_access_state(in_to_buffer_access_state)
     {
     }
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_pipeline_barrier_buffer(buffer, from_buffer_state, to_buffer_state);
+        cmd_list_ctx.RHIPipelineBarrierBuffer(buffer, from_buffer_access_state, to_buffer_access_state);
     }
 };
 
 struct RHICommandBeginRendering : RHICommand<RHICommandBeginRendering>
 {
-    TInlineArray<RHITextureView*, 8> color_attachment_view;
-    RHITextureView* depth_attachment_view;
-    bool clear_color;
+    RHIRenderPassInfo Info;
 
-    RHICommandBeginRendering(std::span<RHITextureView*> in_color_attachment_view, RHITextureView* in_depth_attachment_view, bool in_clear_color)
-        : color_attachment_view(in_color_attachment_view), depth_attachment_view(in_depth_attachment_view), clear_color(in_clear_color)
+    RHICommandBeginRendering(const RHIRenderPassInfo& InInfo)
+        : Info(InInfo)
     {
     }
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_begin_rendering(color_attachment_view, depth_attachment_view, clear_color);
+        cmd_list_ctx.RHIBeginRendering(Info);
     }
 };
 
@@ -189,8 +209,26 @@ struct RHICommandEndRendering : RHICommand<RHICommandEndRendering>
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_end_rendering();
+        cmd_list_ctx.RHIEndRendering();
     }
+};
+
+struct RHICommandDraw : RHICommand<RHICommandDraw>
+{
+	uint32_t vertexCount;
+	uint32_t instanceCount;
+	uint32_t firstVertex;
+    uint32_t firstInstance;
+
+	explicit RHICommandDraw(uint32_t in_vertexCount, uint32_t in_instanceCount, uint32_t in_firstVertex, uint32_t in_firstInstance)
+		: vertexCount(in_vertexCount), instanceCount(in_instanceCount), firstVertex(in_firstVertex), firstInstance(in_firstInstance)
+	{
+	}
+
+	void execute_internal(RHICommandListContext& cmd_list_ctx)
+	{
+		cmd_list_ctx.RHIDraw(vertexCount, instanceCount, firstVertex, firstInstance);
+	}
 };
 
 struct RHICommandBindPipeline : RHICommand<RHICommandBindPipeline>
@@ -204,7 +242,7 @@ struct RHICommandBindPipeline : RHICommand<RHICommandBindPipeline>
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_bind_pipeline(pipeline);
+        cmd_list_ctx.RHIBindPipeline(pipeline);
     }
 };
 
@@ -223,7 +261,7 @@ struct RHICommandCopyBuffer : RHICommand<RHICommandCopyBuffer>
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_copy_buffer(src_buffer, dst_buffer, src_offset, dst_offset, size);
+        cmd_list_ctx.RHICopyBuffer(src_buffer, dst_buffer, src_offset, dst_offset, size);
     }
 };
 
@@ -239,7 +277,7 @@ struct RHICommandCopyImage : RHICommand<RHICommandCopyImage>
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_copy_image(src, dst);
+        cmd_list_ctx.RHICopyImage(src, dst);
     }
 };
 
@@ -255,6 +293,174 @@ struct RHICommandSetScissor : RHICommand<RHICommandSetScissor>
 
     void execute_internal(RHICommandListContext& cmd_list_ctx)
     {
-        cmd_list_ctx.rhi_set_scissor_rect(position, extent);
+        cmd_list_ctx.RHISetScissorRect(position, extent);
     }
+};
+
+struct RHICommandSetViewport : RHICommand<RHICommandSetViewport>
+{
+	Vector2i position;
+	Vector2i extent;
+
+    RHICommandSetViewport(Vector2i in_position, Vector2i in_extent)
+		: position(in_position), extent(in_extent)
+	{
+	}
+
+	void execute_internal(RHICommandListContext& cmd_list_ctx)
+	{
+		cmd_list_ctx.RHISetViewport(position, extent);
+	}
+};
+
+struct RHICommandBindVertexBuffer : RHICommand<RHICommandBindVertexBuffer>
+{
+    RHIBuffer* vertex_buffer;
+
+    RHICommandBindVertexBuffer(RHIBuffer* in_vertex_buffer)
+        : vertex_buffer(in_vertex_buffer)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIBindVertexBuffer(vertex_buffer);
+    }
+};
+
+struct RHICommandBindIndexBuffer : RHICommand<RHICommandBindVertexBuffer>
+{
+    RHIBuffer* index_buffer;
+
+    RHICommandBindIndexBuffer(RHIBuffer* in_index_buffer)
+        : index_buffer(in_index_buffer)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIBindIndexBuffer(index_buffer);
+    }
+};
+
+struct RHICommandDrawIndexed : RHICommand<RHICommandDrawIndexed>
+{
+    uint32_t index_count;
+
+    RHICommandDrawIndexed(uint32_t in_index_count)
+        : index_count(in_index_count)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIDrawIndexed(index_count);
+    }
+};
+
+struct RHICommandDrawIndirectCount : RHICommand<RHICommandDrawIndirectCount>
+{
+    RHIBuffer* indirect_argument_buffer;
+    size_t indirect_argument_buffer_offset;
+    RHIBuffer* indirect_count_buffer;
+    size_t indirect_count_buffer_offset;
+    uint32_t max_draw_indirect_count;
+    uint32_t stride;
+
+    RHICommandDrawIndirectCount(RHIBuffer* in_indirect_argument_buffer,
+        size_t in_indirect_argument_buffer_offset,
+        RHIBuffer* in_indirect_count_buffer,
+        size_t in_indirect_count_buffer_offset,
+        uint32_t in_max_draw_indirect_count,
+        uint32_t in_stride)
+            : indirect_argument_buffer(in_indirect_argument_buffer),
+        indirect_argument_buffer_offset(in_indirect_argument_buffer_offset),
+        indirect_count_buffer(in_indirect_count_buffer),
+        indirect_count_buffer_offset(in_indirect_count_buffer_offset),
+        max_draw_indirect_count(in_max_draw_indirect_count),
+        stride(in_stride)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIDrawIndirectCount(indirect_argument_buffer, indirect_argument_buffer_offset, indirect_count_buffer, indirect_count_buffer_offset, max_draw_indirect_count, stride);
+    }
+};
+
+struct RHICommandDrawIndexedIndirectCount : RHICommand<RHICommandDrawIndexedIndirectCount>
+{
+    RHIBuffer* indirect_argument_buffer;
+    size_t indirect_argument_buffer_offset;
+    RHIBuffer* indirect_count_buffer;
+    size_t indirect_count_buffer_offset;
+    uint32_t max_draw_indirect_count;
+    uint32_t stride;
+
+    RHICommandDrawIndexedIndirectCount(RHIBuffer* in_indirect_argument_buffer,
+        size_t in_indirect_argument_buffer_offset,
+        RHIBuffer* in_indirect_count_buffer,
+        size_t in_indirect_count_buffer_offset,
+        uint32_t in_max_draw_indirect_count,
+        uint32_t in_stride)
+            : indirect_argument_buffer(in_indirect_argument_buffer),
+        indirect_argument_buffer_offset(in_indirect_argument_buffer_offset),
+        indirect_count_buffer(in_indirect_count_buffer),
+        indirect_count_buffer_offset(in_indirect_count_buffer_offset),
+        max_draw_indirect_count(in_max_draw_indirect_count),
+        stride(in_stride)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIDrawIndexedIndirectCount(indirect_argument_buffer, indirect_argument_buffer_offset, indirect_count_buffer, indirect_count_buffer_offset, max_draw_indirect_count, stride);
+    }
+};
+
+struct RHICommandAddWaitSemaphore : RHICommand<RHICommandAddWaitSemaphore>
+{
+    RHISemaphore* semaphore;
+    RHIPipelineStage pipeline_stage;
+
+    RHICommandAddWaitSemaphore(RHISemaphore* in_semaphore, RHIPipelineStage in_pipeline_stage)
+        : semaphore(in_semaphore), pipeline_stage(in_pipeline_stage)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& ctx)
+    {
+        ctx.RHIAddWaitSemaphore(semaphore, pipeline_stage);
+    }
+};
+
+struct RHICommandAddSignalSemaphore : RHICommand<RHICommandAddSignalSemaphore>
+{
+    RHISemaphore* semaphore;
+    RHIPipelineStage pipeline_stage;
+
+    RHICommandAddSignalSemaphore(RHISemaphore* in_semaphore, RHIPipelineStage in_pipeline_stage)
+        : semaphore(in_semaphore), pipeline_stage(in_pipeline_stage)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& ctx)
+    {
+        ctx.RHIAddSignalSemaphore(semaphore, pipeline_stage);
+    }
+};
+
+struct RHICommandSetShaderParameters : RHICommand<RHICommandSetShaderParameters>
+{
+    std::vector<uint8_t> Payload;
+
+    RHICommandSetShaderParameters(const std::vector<uint8_t> InPayload)
+		: Payload(InPayload)
+	{
+	}
+
+	void execute_internal(RHICommandListContext& cmd_list_ctx)
+	{
+		cmd_list_ctx.RHISetShaderParameters(Payload.data(), Payload.size());
+	}
 };

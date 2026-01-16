@@ -5,25 +5,30 @@
 #include <array>
 #include <span>
 #include <vector>
-#include <cstddef>
 
 template<typename T, size_t N>
-class TInlineArray
+class InlineArray
 {
 public:
-    TInlineArray() = default;
+    InlineArray() = default;
 
-    explicit TInlineArray(const std::array<T, N>& array)
+    explicit InlineArray(const T& element)
+    {
+        clear();
+        push_back(element);
+    }
+
+    explicit InlineArray(const std::array<T, N>& array)
     {
         assign(array);
     }
 
-    explicit TInlineArray(const std::span<T>& array)
+    explicit InlineArray(const std::span<T>& array)
     {
         assign(array);
     }
 
-    explicit TInlineArray(const std::vector<T>& array)
+    explicit InlineArray(const std::vector<T>& array)
     {
         assign(array);
     }

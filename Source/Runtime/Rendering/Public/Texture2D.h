@@ -30,7 +30,7 @@ struct Texture2D
     explicit Texture2D(ETextureType InType, uint32_t InWidth, uint32_t InHeight);
     ~Texture2D();
 
-    inline RHITexture* GetHandle() const;
+    inline RHITexture* GetRHITexture() const;
 
     void LoadRawTextureData(const uint8_t* Data);
 
@@ -43,7 +43,7 @@ private:
     uint32_t Height;
 };
 
-inline RHITexture* Texture2D::GetHandle() const
+inline RHITexture* Texture2D::GetRHITexture() const
 {
     return Handle;
 }

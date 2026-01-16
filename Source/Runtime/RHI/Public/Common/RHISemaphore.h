@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-enum class ERHIQueueSyncStage : uint8_t
+enum class RHISyncStage : uint8_t
 {
     TopOfPipe,
     ColorAttachmentOutput,
@@ -13,5 +13,5 @@ struct RHISemaphore
 {
     virtual ~RHISemaphore() = default;
     
-    virtual void* GetHandle() = 0;
+    virtual void* GetNativeHandle() = 0;
 };
