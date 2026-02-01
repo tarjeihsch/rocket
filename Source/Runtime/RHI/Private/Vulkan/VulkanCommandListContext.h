@@ -34,4 +34,6 @@ public:
     void RHIBindVertexBuffer(RHIBuffer * rhi_buffer) override;
     void RHIBindIndexBuffer(RHIBuffer * rhi_buffer) override;
 	void RHISetShaderParameters(const void* Data, uint32_t Size) override;
+	void RHIDebugMarkTimelineBegin(const ANSICHAR* Name) override;
+	void RHIDebugMarkTimelineEnd() override;
 };

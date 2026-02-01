@@ -12,6 +12,7 @@
 #include "VulkanSemaphore.h"
 #include "VulkanSurface.h"
 #include "Math/Vector2.h"
+#include <Common/RHITextureView.h>
 
 VulkanCommandListContext::VulkanCommandListContext(VulkanDevice &in_device)
     : Device(in_device), VulkanCommandBufferContext(*in_device.GetGraphicsQueue()->GetCommandBufferPool())
@@ -202,6 +203,21 @@ void VulkanCommandListContext::RHISetShaderParameters(const void* Data, uint32_t
     uint32_t DataOffset = Device.GetBindlessDescriptorManager()->GetParameterBuffer().Allocate(Data, Size);
 
     VulkanRHI::vkCmdPushConstants(GetCurrentCommandBuffer()->GetVkCommandBuffer(), Device.GetBindlessDescriptorManager()->GetGlobalPipelineLayout(), VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &DataOffset);
+}
+
+void VulkanCommandListContext::RHIDebugMarkTimelineBegin(const ANSICHAR *Name)
+{
+	VkDebugUtilsLabelEXT DebugLabel = {};
+	DebugLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+	DebugLabel.pLabelName = Name;
+	VulkanRHI::vkCmdBeginDebugUtilsLabelEXT(GetCurrentCommandBuffer()->GetVkCommandBuffer(), &DebugLabel);
+}
+
+void VulkanCommandListContext::RHIDebugMarkTimelineEnd()
+{
+	VkDebugUtilsLabelEXT DebugLabel = {};
+	DebugLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+	VulkanRHI::vkCmdEndDebugUtilsLabelEXT(GetCurrentCommandBuffer()->GetVkCommandBuffer());
 }
 
 void VulkanCommandListContext::RHICopyBuffer(RHIBuffer *src_buffer, RHIBuffer *dst_buffer, uint32_t src_offset, uint32_t dst_offset, uint32_t size)

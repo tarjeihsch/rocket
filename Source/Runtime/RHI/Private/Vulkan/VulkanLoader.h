@@ -151,6 +151,10 @@ enum class RHIPipelineStage : uint16_t;
     X(vkDestroySampler) \
     X(vkCmdPipelineBarrier2KHR) \
     X(vkGetSemaphoreCounterValue) \
+    X(vkSetDebugUtilsObjectNameEXT) \
+    X(vkCmdBeginDebugUtilsLabelEXT) \
+    X(vkCmdEndDebugUtilsLabelEXT) \
+    X(vkGetBufferDeviceAddress)
 
 #define VMA_BASE_FUNCTIONS(X) \
     X(vkGetInstanceProcAddr) \

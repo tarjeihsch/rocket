@@ -4,14 +4,21 @@
 
 #include "vulkan/vulkan_core.h"
 
-struct VulkanSemaphore final : RHISemaphore
+class VulkanDevice;
+
+class VulkanSemaphore final : RHISemaphore
 {
-    explicit VulkanSemaphore(VkSemaphore InSemaphore)
-        : Handle(InSemaphore)
-    {
-    }
+    VulkanDevice& Device;
 
-    void* GetNativeHandle() override { return Handle; };
+public:
+    VulkanSemaphore(VulkanDevice& InDevice);
+    ~VulkanSemaphore();
 
-    VkSemaphore Handle = VK_NULL_HANDLE;
+    void* GetNativeHandle() override 
+    { 
+        return NativeHandle; 
+    };
+
+private:
+    VkSemaphore NativeHandle = VK_NULL_HANDLE;
 };

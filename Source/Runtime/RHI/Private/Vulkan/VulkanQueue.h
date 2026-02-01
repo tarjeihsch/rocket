@@ -22,9 +22,13 @@ public:
     VulkanQueue(VulkanDevice& InDevice, VkQueueFlags InQueueFlags, bool InPresent, uint32_t InQueueFamilyIndex, uint32_t InQueueIndex);
      ~VulkanQueue();
 
-    void Wait();
     void Submit(RHICommandList& CmdList);
 
+    void Poll();
+
+    inline uint64_t GetLastCompletedTimelineValue() const { return LastCompletedTimelineValue; }
+    inline uint64_t GetLastSubmittedTimelineValue() const { return LastSubmittedTimelineValue; }
+    
     inline VkQueue GetHandle() const;
     inline VkQueueFlags GetQueueFlags() const;
     inline bool HasPresent() const;

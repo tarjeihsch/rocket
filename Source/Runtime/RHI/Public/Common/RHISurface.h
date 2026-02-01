@@ -24,8 +24,8 @@ class RHISurface
 public:
     virtual ~RHISurface() = default;
 
-    virtual void AcquireBackBuffer() = 0;
-    virtual void PresentBackBuffer() = 0;
+    virtual void BeginFrame() = 0;
+    virtual void EndFrame() = 0;
     virtual RHITexture* GetBackBufferTexture() = 0;
     virtual std::shared_ptr<RHISemaphore> GetImageAvailableSemaphore() const = 0;
     virtual std::shared_ptr<RHISemaphore> GetRenderFinishedSemaphore() const = 0;

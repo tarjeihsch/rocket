@@ -26,11 +26,11 @@ VulkanQueue::~VulkanQueue()
 
 void VulkanQueue::Submit(RHICommandList& CmdList)
 {
-	VulkanCommandListContext cmd_list_ctx(Device);
-    RHICommandListExecutor::execute(cmd_list_ctx, std::move(CmdList.flush()));
+	VulkanCommandListContext CmdListCtx(Device);
+    RHICommandListExecutor::Execute(CmdListCtx, std::move(CmdList.Flush()));
 	
     std::vector<VulkanCommandBufferPayload*> Payloads;
-    cmd_list_ctx.Finalize(Payloads);
+    CmdListCtx.Finalize(Payloads);
 
     for (VulkanCommandBufferPayload* payload : Payloads)
     {
@@ -64,9 +64,9 @@ void VulkanQueue::Submit(RHICommandList& CmdList)
             CommandBuffer->Submit();
         }
 
-		uint64_t TimelineValue = NextTimelineSemaphoreValue++;
-		payload->TimelineSemaphoreValue = TimelineValue;
-		LastSubmittedTimelineValue = TimelineValue;
+        uint64_t TimelineValue = NextTimelineSemaphoreValue++;
+        payload->TimelineSemaphoreValue = TimelineValue;
+        LastSubmittedTimelineValue = TimelineValue;
 
         VkSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
         TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -91,6 +91,7 @@ void VulkanQueue::Submit(RHICommandList& CmdList)
 
         VkResult Result = VulkanRHI::vkQueueSubmit2(Handle, 1, &SubmitInfo, nullptr);
         ensure(Result == VK_SUCCESS, "Failed to submit command buffer to graphics queue.");
+        LastSubmittedTimelineValue = TimelineValue;
 
         if (payload->PostSubmitCallback.Size())
         {
@@ -101,35 +102,29 @@ void VulkanQueue::Submit(RHICommandList& CmdList)
     }
 }
 
-void VulkanQueue::Wait()
+void VulkanQueue::Poll()
 {
+    VkResult Result = VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &LastCompletedTimelineValue);
+    ensure(Result == VK_SUCCESS);
+
     while (!SubmissionQueue.empty())
     {
-		VulkanCommandBufferPayload* Payload = SubmissionQueue.front();
-		SubmissionQueue.pop();
+        VulkanCommandBufferPayload* Payload = SubmissionQueue.front();
+        if (Payload->TimelineSemaphoreValue > LastCompletedTimelineValue)
+        {
+            break;
+        }
 
-		VkSemaphoreWaitInfo SemaphoreWaitInfo = {};
-		SemaphoreWaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
-        SemaphoreWaitInfo.flags = 0;
-		SemaphoreWaitInfo.semaphoreCount = 1;
-		SemaphoreWaitInfo.pSemaphores = &TimelineSemaphore;
-		SemaphoreWaitInfo.pValues = &Payload->TimelineSemaphoreValue;
-		VulkanRHI::vkWaitSemaphores(GetVulkanRHIMinimal()->RHIGetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX);
+        SubmissionQueue.pop();
 
-#if RK_DEBUG
-		uint64_t completed = 0;
-		VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &completed);
-		ensure(completed >= Payload->TimelineSemaphoreValue);
-#endif
+        for (VulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
+        {
+            CommandBuffer->Finish();
 
-		for (VulkanCommandBuffer* CB : Payload->CommandBuffers)
-		{
-			CB->Finish();
+            CommandBufferPool->Recycle(CommandBuffer);
+        }
 
-			CommandBufferPool->Recycle(CB);
-		}
-
-		delete Payload;
+        delete Payload;
     }
 }
 
@@ -140,7 +135,7 @@ VulkanCommandBufferPool* VulkanQueue::GetCommandBufferPool() const
 
 void VulkanQueue::Init()
 {
-    VulkanRHI::vkGetDeviceQueue(Device .GetVkDevice(), QueueFamilyIndex, 0, &Handle);
+    VulkanRHI::vkGetDeviceQueue(Device.GetVkDevice(), QueueFamilyIndex, 0, &Handle);
 
     VkSemaphoreTypeCreateInfo TimelineSemaphoreCreateInfo = {};
     TimelineSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;

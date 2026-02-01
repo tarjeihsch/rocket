@@ -84,20 +84,20 @@ public:
     };
 
     template <typename T>
-    inline void enqueue_resource(EType Type, T Handle, BindlessHandle BindingIndex)
+    inline void EnqueueResource(EType Type, T Handle, RHIDescriptorHandle BindingIndex)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, nullptr);
     }
 
     template <typename T>
-    inline void enqueue_resource_with_allocation(EType Type, T Handle, BindlessHandle BindingIndex, VmaAllocation Allocation)
+    inline void enqueue_resource_with_allocation(EType Type, T Handle, RHIDescriptorHandle BindingIndex, VmaAllocation Allocation)
     {
         static_assert(sizeof(T) <= sizeof(uint64_t), "Vulkan resource handle type size too large.");
         EnqueueGenericResource(Type, (uint64_t)Handle, BindingIndex, Allocation);
     }
 
-    void EnqueueGenericResource(EType Type, uint64_t Handle, BindlessHandle BindingIndex, VmaAllocation Allocation);
+    void EnqueueGenericResource(EType Type, uint64_t Handle, RHIDescriptorHandle BindingIndex, VmaAllocation Allocation);
     void ReleaseExpiredResources(uint64_t CompletedFrameNumber);
 
 private:
@@ -105,8 +105,8 @@ private:
     {
         EType StructureType;
         uint64_t FrameNumber;
-        uint64_t Handle;
-        BindlessHandle m_DescriptorHandle;
+        uint64_t NativeHandle;
+        RHIDescriptorHandle DescriptorHandle;
         VmaAllocation Allocation;
     };
 
@@ -133,13 +133,13 @@ public:
 
     inline VkDevice GetVkDevice() const;
     inline VkPhysicalDevice GetVkPhysicalDevice() const;
-    inline VmaAllocator get_vma_allocator() const;
+    inline VmaAllocator GetPersistentMemoryAllocator() const;
     inline VkDebugUtilsMessengerEXT GetVkDebugUtilsMessenger() const;
 
     inline VulkanPipelineManager* GetPipelineManager() const;
     inline VulkanDescriptorManager* GetBindlessDescriptorManager() const;
     inline FTransientResourceAllocator* GetTransientMemoryAllocator() const;
-    inline FDeferredDeletionQueue* get_deferred_deletion_queue() const;
+    inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
 
     void GC();
 
@@ -157,8 +157,6 @@ private:
     VulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
     FDeferredDeletionQueue* DeferredDeletionQueue;
-    VulkanCommandListContext* CommandListContext;
-    VulkanCommandListContext* ImmediateCommandListContext;
     FTransientResourceAllocator* TransientResourceAllocator;
 
 private:
@@ -175,7 +173,7 @@ inline VkPhysicalDevice VulkanDevice::GetVkPhysicalDevice() const
     return PhysicalDevice;
 }
 
-inline VmaAllocator VulkanDevice::get_vma_allocator() const
+inline VmaAllocator VulkanDevice::GetPersistentMemoryAllocator() const
 {
     return Allocator;
 }
@@ -200,7 +198,7 @@ inline FTransientResourceAllocator *VulkanDevice::GetTransientMemoryAllocator() 
     return TransientResourceAllocator;
 }
 
-inline FDeferredDeletionQueue *VulkanDevice::get_deferred_deletion_queue() const
+inline FDeferredDeletionQueue *VulkanDevice::GetDeferredDeletionQueue() const
 {
     return DeferredDeletionQueue;
 }

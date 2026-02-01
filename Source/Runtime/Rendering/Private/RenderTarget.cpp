@@ -2,6 +2,7 @@
 
 #include "Common/RHI.h"
 #include "Common/RHITexture.h"
+#include "Common/RHITextureView.h"
 
 RenderTarget::RenderTarget(const Vector2i& extent)
 {

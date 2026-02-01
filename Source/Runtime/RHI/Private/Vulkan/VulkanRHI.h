@@ -18,23 +18,20 @@ public:
     // IRHI interface
     virtual void Init() override;
     virtual void Shutdown() override;
-
-    virtual void Submit(RHICommandList& cmd_list) override;
-    virtual void Reset() override;
-
-    [[nodiscard]] virtual const char* get_name() const override;
-    [[nodiscard]] virtual const char* get_version() const override;
-    [[nodiscard]] virtual RHIInterfaceType get_interface_type() const noexcept override;
-    [[nodiscard]] virtual RHI* get_non_validation_rhi() const noexcept override;
-
-    virtual void rhi_wait_until_idle() const override;
-    virtual uint64_t rhi_get_frame_counter() const noexcept override;
-    virtual RHISurface* CreateSurface(RHISurfaceDesc desc) override;
-    virtual RHITexture* RHICreateTexture(RHITextureDesc Desc) const override;
-    virtual RHITextureView* RHICreateTextureView(RHITextureViewDesc TextureViewDesc, RHITexture* Texture) const override;
-    virtual RHIBuffer* RHICreateBuffer(RHIBufferDesc Desc) const override;
-    virtual RHISampler* RHICreateSampler(RHISamplerDesc Desc) const override;
-    virtual RHIPipeline* RHICreatePipeline(RHIPipelineDesc Desc) override;
+	virtual void Reset() override;
+    virtual void Submit(RHICommandList& CmdList) override;
+    virtual const char* GetName() const override;
+    virtual const char* GetVersion() const override;
+    virtual RHIInterfaceType GetInterfaceType() const noexcept override;
+    virtual RHI* GetNonValidationRHI() const noexcept override;
+    virtual void RHIWaitUntilIdle() const override;
+    virtual uint64_t RHIGetFrameCounter() const noexcept override;
+    virtual RHISurface* RHICreateSurface(const RHISurfaceDesc& Desc) override;
+    virtual RHITexture* RHICreateTexture(const RHITextureDesc& Desc) const override;
+    virtual RHITextureView* RHICreateTextureView(const RHITextureViewDesc& TextureViewDesc, RHITexture* Texture) const override;
+    virtual RHITextureSampler* RHICreateTextureSampler(const RHITextureSamplerDesc& Desc) const override;
+    virtual RHIBuffer* RHICreateBuffer(const RHIBufferDesc& Desc) const override;
+    virtual RHIPipeline* RHICreatePipeline(const RHIPipelineDesc& Desc) override;
 
     // IVulkanRHIMinimal interface
     virtual VkInstance RHIGetVkInstance() const override;

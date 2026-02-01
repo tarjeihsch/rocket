@@ -4,7 +4,6 @@
 #include "RenderGraphTypes.h"
 #include "Common/RHICommandList.h"
 
-class RHICommandList;
 class RenderGraphBuilder;
 
 class RenderGraph
@@ -20,7 +19,7 @@ public:
     TextureHandle ImportTexture(const std::string& name, RHITexture* texture, std::vector<RHISemaphore*> wait_semaphores, std::vector<RHISemaphore*> signal_semaphores);
     BufferHandle ImportBuffer(const std::string& name, RHIBuffer* buffer, std::vector<RHISemaphore*> wait_semaphores, std::vector<RHISemaphore*> signal_semaphores);
 
-    TextureHandle CreateTexture(const std::string& name, const RHITextureDesc& texture_desc);
+    TextureHandle CreateTexture(const std::string& name, RHITextureDesc& texture_desc);
     BufferHandle CreateBuffer(const std::string& name, const RHIBufferDesc& buffer_desc);
 
     TextureHandle GetTextureHandle(const std::string_view& name) const;
@@ -36,7 +35,7 @@ public:
     void Execute();
     void Reset();
 
-    RHICommandList & GetCommandList();
+    RHICommandList& GetCommandList();
 
 private:
     std::vector<RenderGraphPass> pass_data;

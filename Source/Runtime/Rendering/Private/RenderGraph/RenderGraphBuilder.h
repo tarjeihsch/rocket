@@ -1,4 +1,5 @@
 #pragma once
+
 #include "RenderGraphTypes.h"
 
 class RenderGraphPass;

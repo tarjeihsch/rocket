@@ -137,7 +137,7 @@ void VulkanBindlessHeap::ResourcePool::Init(uint32_t Count, uint32_t Binding)
 
 uint32_t VulkanBindlessHeap::ResourcePool::Allocate()
 {
-	ensure(!FreeIndices.empty()); // Increase MaxConfig if this hits
+	ensure(!FreeIndices.empty());
 	uint32_t Index = FreeIndices.front();
 	FreeIndices.pop();
 	return Index;
@@ -145,7 +145,7 @@ uint32_t VulkanBindlessHeap::ResourcePool::Allocate()
 
 void VulkanBindlessHeap::ResourcePool::Free(uint32_t Index)
 {
-	Generations[Index]++; // Invalidate old handles
+	Generations[Index]++;
 	FreeIndices.push(Index);
 }
 
@@ -209,7 +209,7 @@ void VulkanBindlessHeap::Shutdown()
 	if (DescriptorPool) VulkanRHI::vkDestroyDescriptorPool(Device->GetVkDevice(), DescriptorPool, nullptr);
 }
 
-BindlessHandle VulkanBindlessHeap::RegisterTexture(VkImageView View, VkImageLayout Layout)
+RHIDescriptorHandle VulkanBindlessHeap::RegisterTexture(VkImageView View, VkImageLayout Layout)
 {
 	uint32_t Index = TexturePool.Allocate();
 
@@ -231,7 +231,7 @@ BindlessHandle VulkanBindlessHeap::RegisterTexture(VkImageView View, VkImageLayo
 	return { Index, TexturePool.Generations[Index] };
 }
 
-BindlessHandle VulkanBindlessHeap::RegisterBuffer(VkBuffer Buffer, VkDeviceSize Range)
+RHIDescriptorHandle VulkanBindlessHeap::RegisterBuffer(VkBuffer Buffer, VkDeviceSize Range)
 {
 	uint32_t Index = BufferPool.Allocate();
 
@@ -253,7 +253,7 @@ BindlessHandle VulkanBindlessHeap::RegisterBuffer(VkBuffer Buffer, VkDeviceSize 
 	return { Index, BufferPool.Generations[Index] };
 }
 
-BindlessHandle VulkanBindlessHeap::RegisterSampler(VkSampler Sampler)
+RHIDescriptorHandle VulkanBindlessHeap::RegisterSampler(VkSampler Sampler)
 {
 	// 1. Allocate an index from the Sampler Pool
 	uint32_t Index = SamplerPool.Allocate();
@@ -281,7 +281,7 @@ BindlessHandle VulkanBindlessHeap::RegisterSampler(VkSampler Sampler)
 	return { Index, SamplerPool.Generations[Index] };
 }
 
-BindlessHandle VulkanBindlessHeap::RegisterStorageImage(VkImageView View, VkImageLayout Layout)
+RHIDescriptorHandle VulkanBindlessHeap::RegisterStorageImage(VkImageView View, VkImageLayout Layout)
 {
 	uint32_t Index = StorageImagePool.Allocate();
 
@@ -303,34 +303,34 @@ BindlessHandle VulkanBindlessHeap::RegisterStorageImage(VkImageView View, VkImag
 	return { Index, StorageImagePool.Generations[Index] };
 }
 
-void VulkanBindlessHeap::UnregisterSampler(BindlessHandle Handle)
+void VulkanBindlessHeap::UnregisterSampler(RHIDescriptorHandle Handle)
 {
 	// Validate Handle validity and Generation to prevent stale deletion
-	if (Handle.IsValid() && SamplerPool.Generations[Handle.Index] == Handle.Generation)
+	if (Handle.IsValid() && SamplerPool.Generations[Handle.Index] == Handle.Version)
 	{
 		SamplerPool.Free(Handle.Index);
 	}
 }
 
-void VulkanBindlessHeap::UnregisterStorageImage(BindlessHandle Handle)
+void VulkanBindlessHeap::UnregisterStorageImage(RHIDescriptorHandle Handle)
 {
-	if (Handle.IsValid() && StorageImagePool.Generations[Handle.Index] == Handle.Generation)
+	if (Handle.IsValid() && StorageImagePool.Generations[Handle.Index] == Handle.Version)
 	{
 		StorageImagePool.Free(Handle.Index);
 	}
 }
 
-void VulkanBindlessHeap::UnregisterTexture(BindlessHandle Handle)
+void VulkanBindlessHeap::UnregisterTexture(RHIDescriptorHandle Handle)
 {
-	if (Handle.IsValid() && TexturePool.Generations[Handle.Index] == Handle.Generation)
+	if (Handle.IsValid() && TexturePool.Generations[Handle.Index] == Handle.Version)
 	{
 		TexturePool.Free(Handle.Index);
 	}
 }
 
-void VulkanBindlessHeap::UnregisterBuffer(BindlessHandle Handle)
+void VulkanBindlessHeap::UnregisterBuffer(RHIDescriptorHandle Handle)
 {
-	if (Handle.IsValid() && BufferPool.Generations[Handle.Index] == Handle.Generation)
+	if (Handle.IsValid() && BufferPool.Generations[Handle.Index] == Handle.Version)
 	{
 		BufferPool.Free(Handle.Index);
 	}

@@ -31,6 +31,6 @@ public:
 
 inline IVulkanRHIMinimal* GetVulkanRHIMinimal()
 {
-    ensure(g_rhi->get_interface_type() == IVulkanRHIMinimal::StaticType);
+    ensure(g_rhi->GetInterfaceType() == IVulkanRHIMinimal::StaticType);
     return GetRHI<IVulkanRHIMinimal>();
 }

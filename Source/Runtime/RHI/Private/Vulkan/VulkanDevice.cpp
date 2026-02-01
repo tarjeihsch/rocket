@@ -124,14 +124,14 @@ FDeferredDeletionQueue::~FDeferredDeletionQueue()
     ReleaseExpiredResources(UINT64_MAX);
 }
 
-void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, BindlessHandle BindingIndex, VmaAllocation Allocation)
+void FDeferredDeletionQueue::EnqueueGenericResource(EType Type, uint64_t Handle, RHIDescriptorHandle BindingIndex, VmaAllocation Allocation)
 {
     FEntry Entry;
     Entry.StructureType = Type;
-    Entry.Handle = Handle;
+    Entry.NativeHandle = Handle;
     Entry.Allocation = Allocation;
-    Entry.FrameNumber = GetRHI()->rhi_get_frame_counter();
-    Entry.m_DescriptorHandle = BindingIndex;
+    Entry.FrameNumber = Device.GetGraphicsQueue()->GetLastSubmittedTimelineValue();
+    Entry.DescriptorHandle = BindingIndex;
 
     Entries.push_back(Entry);
 }
@@ -149,25 +149,25 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
 
         switch (It->StructureType)
         {
-        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->Handle, nullptr); break;
+        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->NativeHandle, nullptr); break;
         case EType::ImageView:
-            VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterTexture(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->NativeHandle, nullptr);
+            if (It->DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterTexture(It->DescriptorHandle); }
             break;
         case EType::Buffer:
-            VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterBuffer(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroyBuffer(Device.GetVkDevice(), (VkBuffer)It->NativeHandle, nullptr);
+            if (It->DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterBuffer(It->DescriptorHandle); }
             break;
         case EType::Sampler:
-            VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->Handle, nullptr);
-            if (It->m_DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterSampler(It->m_DescriptorHandle); }
+            VulkanRHI::vkDestroySampler(Device.GetVkDevice(), (VkSampler)It->NativeHandle, nullptr);
+            if (It->DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterSampler(It->DescriptorHandle); }
             break;
         default: break;
         }
 
         if (It->Allocation != nullptr)
         {
-            vmaFreeMemory(Device.get_vma_allocator(), It->Allocation);
+            vmaFreeMemory(Device.GetPersistentMemoryAllocator(), It->Allocation);
         }
 
         It = Entries.erase(It);
@@ -194,7 +194,7 @@ void VulkanDevice::GC()
 {
     TransientResourceAllocator->Reset();
 
-    DeferredDeletionQueue->ReleaseExpiredResources(GetRHI()->rhi_get_frame_counter());
+    DeferredDeletionQueue->ReleaseExpiredResources(GetGraphicsQueue()->GetLastCompletedTimelineValue());
 }
 
 void VulkanDevice::Initialize()
@@ -286,7 +286,6 @@ void VulkanDevice::Initialize()
     PipelineManager = new VulkanPipelineManager(*this);
     DescriptorManager = new VulkanDescriptorManager(*this);
     DeferredDeletionQueue = new FDeferredDeletionQueue(*this);
-    CommandListContext = new VulkanCommandListContext(*this);
     TransientResourceAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024);
 }
 
@@ -295,7 +294,6 @@ void VulkanDevice::Shutdown()
     delete PipelineManager;
     delete DescriptorManager;
     delete DeferredDeletionQueue;
-    delete CommandListContext;
     delete TransientResourceAllocator;
 
     for (auto& Queue : Queues)

@@ -1,11 +1,11 @@
 #include "Sampler.h"
 
 #include "Common/RHI.h"
-#include "Common/RHISampler.h"
+#include "Common/RHITextureSampler.h"
 
 Sampler::Sampler()
 {
-    RHISamplerDesc SamplerDesc = {};
+    RHITextureSamplerDesc SamplerDesc = {};
     SamplerDesc.MinFilter = ERHIFilterMode::Linear;
     SamplerDesc.MagFilter = ERHIFilterMode::Linear;
     SamplerDesc.MipFilter = ERHIFilterMode::Linear;
@@ -15,7 +15,7 @@ Sampler::Sampler()
     SamplerDesc.MinLod = 0.0f;
     SamplerDesc.MaxLod = 0.0f;
 
-    sampler = GetRHI()->RHICreateSampler(SamplerDesc);
+    sampler = GetRHI()->RHICreateTextureSampler(SamplerDesc);
 }
 
 Sampler::~Sampler()

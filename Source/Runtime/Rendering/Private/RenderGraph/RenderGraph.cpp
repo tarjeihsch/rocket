@@ -62,7 +62,7 @@ BufferHandle RenderGraph::ImportBuffer(const std::string &name, RHIBuffer *buffe
     return { index };
 }
 
-TextureHandle RenderGraph::CreateTexture(const std::string &name, const RHITextureDesc &texture_desc)
+TextureHandle RenderGraph::CreateTexture(const std::string &name, RHITextureDesc &texture_desc)
 {
 	uint32_t index = static_cast<uint32_t>(textures.size());
 
@@ -70,6 +70,8 @@ TextureHandle RenderGraph::CreateTexture(const std::string &name, const RHITextu
     resource.name = name;
     resource.texture = GetRHI()->RHICreateTexture(texture_desc);
     resource.type = ResourceType::Internal;
+
+    texture_desc.DebugName = name.c_str();
 
     return { index };
 }
@@ -162,6 +164,8 @@ void RenderGraph::Execute()
 
     for (const auto& pass : pass_data)
     {
+        command_list.Enqueue<RHICommandDebugMarkTimelineBegin>(pass.name.c_str());
+
         for (RHISemaphore* wait_semaphore : pass.wait_semaphores)
         {
             command_list.Enqueue<RHICommandAddWaitSemaphore>(wait_semaphore, RHIPipelineStage::TopOfPipe);
@@ -205,6 +209,8 @@ void RenderGraph::Execute()
         {
             command_list.Enqueue<RHICommandAddSignalSemaphore>(signal_semaphore, RHIPipelineStage::AllCommands);
         }
+
+        command_list.Enqueue<RHICommandDebugMarkTimelineEnd>();
     }
 }
 

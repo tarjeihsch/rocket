@@ -15,11 +15,11 @@ struct RHITexture;
 class VulkanSurface : public RHISurface
 {
 public:
-    VulkanSurface(VulkanDevice& Device, RHISurfaceDesc& InDesc);
+    VulkanSurface(VulkanDevice& Device, const RHISurfaceDesc& InDesc);
     ~VulkanSurface();
 
-    void AcquireBackBuffer() override;
-	void PresentBackBuffer() override;
+    void BeginFrame() override;
+	void EndFrame() override;
     virtual RHITexture* GetBackBufferTexture() override;
     virtual std::shared_ptr<RHISemaphore> GetImageAvailableSemaphore() const override;
     virtual std::shared_ptr<RHISemaphore> GetRenderFinishedSemaphore() const override;

@@ -9,6 +9,8 @@
 #include "RHIBuffer.h"
 #include "RHITexture.h"
 #include "Math/Vector2.h"
+#include "Common/RHICommon.h"
+#include "RHITextureView.h"
 
 enum class RHISyncStage : uint8_t;
 class RHISwapchain;
@@ -17,9 +19,6 @@ struct RHIBuffer;
 struct RHIPipeline;
 struct RHITexture;
 struct RHITextureView;
-enum class RHITextureLayout : uint8_t;
-enum class RHIResourceAccess : uint16_t;
-enum class RHIPipelineStage : uint16_t;
 
 class RHICommandListContext
 {
@@ -47,6 +46,8 @@ public:
     virtual void RHIBindVertexBuffer(RHIBuffer * rhi_buffer) = 0;
     virtual void RHIBindIndexBuffer(RHIBuffer * rhi_buffer) = 0;
     virtual void RHISetShaderParameters(const void* Data, uint32_t Size) = 0;
+    virtual void RHIDebugMarkTimelineBegin(const ANSICHAR* Name) = 0;
+    virtual void RHIDebugMarkTimelineEnd() = 0;
 };
 
 struct RHICommandBase
@@ -89,7 +90,7 @@ public:
         new (buffer.data() + Offset) Command(std::forward<Args>(args)...);
     }
 
-    std::vector<uint8_t> flush()
+    std::vector<uint8_t> Flush()
     {
         std::vector<uint8_t> Temp;
         Temp.swap(buffer);
@@ -122,7 +123,7 @@ private:
 class RHICommandListExecutor
 {
 public:
-    static void execute(RHICommandListContext& cmd_list_ctx, std::vector<uint8_t>&& buffer)
+    static void Execute(RHICommandListContext& cmd_list_ctx, std::vector<uint8_t>&& buffer)
     {
         uint8_t* start_pointer = buffer.data();
         uint8_t* end_pointer = start_pointer + buffer.size();
@@ -463,4 +464,31 @@ struct RHICommandSetShaderParameters : RHICommand<RHICommandSetShaderParameters>
 	{
 		cmd_list_ctx.RHISetShaderParameters(Payload.data(), Payload.size());
 	}
+};
+
+struct RHICommandDebugMarkTimelineBegin : RHICommand<RHICommandDebugMarkTimelineBegin>
+{
+    const ANSICHAR* Label;
+
+    RHICommandDebugMarkTimelineBegin(const ANSICHAR* InLabel)
+        : Label(InLabel)
+    {
+    }
+
+    void execute_internal(RHICommandListContext& Ctx)
+    {
+        Ctx.RHIDebugMarkTimelineBegin(Label);
+    }
+};
+
+struct RHICommandDebugMarkTimelineEnd : RHICommand<RHICommandDebugMarkTimelineEnd>
+{
+    RHICommandDebugMarkTimelineEnd()
+    {
+    }
+
+    void execute_internal(RHICommandListContext& cmd_list_ctx)
+    {
+        cmd_list_ctx.RHIDebugMarkTimelineEnd();
+    }
 };

@@ -6,18 +6,20 @@
 #include "Common/RHISurface.h"
 #include "Common/RHICommandList.h"
 #include "Common/RHIPipeline.h"
-#include "Common/RHISampler.h"
+#include "Common/RHITextureSampler.h"
 #include "RenderGraph/RenderGraph.h"
 #include "RenderGraph/RenderGraphBuilder.h"
 #include <Pipeline.h>
 #include <Sampler.h>
+#include <Common/RHITextureView.h>
+#include "Common/RHIDescriptorResource.h"
 
 Renderer& Renderer::Get()
 {
 	static Renderer renderer;
 	return renderer;
 }
-static RHISampler* sampler;
+static RHITextureSampler* sampler;
 void Renderer::Initialize()
 {
 	SetRHIModule(RHIInterfaceType::Vulkan);
@@ -25,7 +27,7 @@ void Renderer::Initialize()
 
 	render_graph = new RenderGraph();
 
-	RHISamplerDesc SamplerDesc = {};
+	RHITextureSamplerDesc SamplerDesc = {};
 	SamplerDesc.MinFilter = ERHIFilterMode::Linear;
 	SamplerDesc.MagFilter = ERHIFilterMode::Linear;
 	SamplerDesc.MipFilter = ERHIFilterMode::Linear;
@@ -34,7 +36,7 @@ void Renderer::Initialize()
 	SamplerDesc.AddressW = ERHIAddressMode::ClampToEdge;
 	SamplerDesc.MinLod = 0.0f;
 	SamplerDesc.MaxLod = 0.0f;
-	sampler = GetRHI()->RHICreateSampler(SamplerDesc);
+	sampler = GetRHI()->RHICreateTextureSampler(SamplerDesc);
 }
 
 void Renderer::Shutdown()
@@ -54,13 +56,7 @@ void Renderer::BeginFrame(Viewport* viewport)
 
 	// Build new transient frame data
 	context.target_surface = viewport->GetSurface();
-	context.target_surface->AcquireBackBuffer();
-
-	render_graph->ImportTexture("BackBuffer",
-		context.target_surface->GetBackBufferTexture(),
-		{ context.target_surface->GetImageAvailableSemaphore().get() },
-		{ context.target_surface->GetRenderFinishedSemaphore().get() }
-	);
+	context.target_surface->BeginFrame();
 
 	state = ST_HasBegun;
 }
@@ -72,7 +68,7 @@ void Renderer::EndFrame()
 	{
 		GraphicsPipeline ACESTonemap(ROCKET_BINARIES "/Shaders/ACESToneMap.vert.spv", ROCKET_BINARIES "/Shaders/ACESToneMap.frag.spv");
 
-		RHISamplerDesc SamplerDesc = {};
+		RHITextureSamplerDesc SamplerDesc = {};
 		SamplerDesc.MinFilter = ERHIFilterMode::Linear;
 		SamplerDesc.MagFilter = ERHIFilterMode::Linear;
 		SamplerDesc.MipFilter = ERHIFilterMode::Linear;
@@ -87,7 +83,11 @@ void Renderer::EndFrame()
 
 		TextureHandle hSceneColor = render_graph->CreateTexture("SceneColor", ColorDesc);
 		TextureHandle hSceneDepth = render_graph->CreateTexture("SceneDepth", DepthDesc);
-		TextureHandle hBackBuffer = render_graph->GetTextureHandle("BackBuffer");
+		TextureHandle hBackBuffer = render_graph->ImportTexture("BackBuffer",
+			context.target_surface->GetBackBufferTexture(),
+			{ context.target_surface->GetImageAvailableSemaphore().get() },
+			{ context.target_surface->GetRenderFinishedSemaphore().get() }
+		);
 
 		render_graph->AddGraphicsPass("GBuffer",
 			[&, hSceneColor, hSceneDepth](RenderGraphBuilder& Builder)
@@ -103,20 +103,20 @@ void Renderer::EndFrame()
 				RHITextureView* pColorView = pColor->GetDefaultView();
 				RHITextureView* pDepthView = pDepth->GetDefaultView();
 
-				RHIRenderPassInfo renderPassInfo = {};
-				renderPassInfo.ColorRenderTargets[0].TextureView = pColorView;
-				renderPassInfo.ColorRenderTargets[0].LoadOp = LoadAction::Clear;
-				renderPassInfo.ColorRenderTargets[0].StoreOp = StoreAction::Store;
-				renderPassInfo.ColorRenderTargets[0].ClearValue = LinearColor::Green;
-				renderPassInfo.NumColorRenderTargets = 1;
+				RHIRenderPassInfo RenderPassInfo = {};
+				RenderPassInfo.ColorRenderTargets[0].TextureView = pColorView;
+				RenderPassInfo.ColorRenderTargets[0].LoadOp = LoadAction::Clear;
+				RenderPassInfo.ColorRenderTargets[0].StoreOp = StoreAction::Store;
+				RenderPassInfo.ColorRenderTargets[0].ClearValue = LinearColor::Green;
+				RenderPassInfo.NumColorRenderTargets = 1;
 				
-				renderPassInfo.DepthStencilRenderTarget.TextureView = pDepthView;
-				renderPassInfo.DepthStencilRenderTarget.DepthLoadOp = LoadAction::Clear;
-				renderPassInfo.DepthStencilRenderTarget.DepthStoreOp = StoreAction::Store;
-				renderPassInfo.DepthStencilRenderTarget.ClearDepth = 1.0f;
-				renderPassInfo.DepthStencilRenderTarget.ClearStencil = 0.0f;
+				RenderPassInfo.DepthStencilRenderTarget.TextureView = pDepthView;
+				RenderPassInfo.DepthStencilRenderTarget.DepthLoadOp = LoadAction::Clear;
+				RenderPassInfo.DepthStencilRenderTarget.DepthStoreOp = StoreAction::Store;
+				RenderPassInfo.DepthStencilRenderTarget.ClearDepth = 1.0f;
+				RenderPassInfo.DepthStencilRenderTarget.ClearStencil = 0.0f;
 
-				command_list.Enqueue<RHICommandBeginRendering>(renderPassInfo);
+				command_list.Enqueue<RHICommandBeginRendering>(RenderPassInfo);
 
 				command_list.Enqueue<RHICommandSetScissor>(Vector2i(0, 0), Vector2i(1280, 720));
 				command_list.Enqueue<RHICommandSetViewport>(Vector2i(0, 0), Vector2i(1280, 720));
@@ -125,7 +125,7 @@ void Renderer::EndFrame()
 			}
 		);
 
-		render_graph->AddGraphicsPass("Composition",
+		render_graph->AddGraphicsPass("ToneMap",
 			[&](RenderGraphBuilder& Builder)
 			{
 				Builder.ReadTexture(hSceneColor);
@@ -147,7 +147,7 @@ void Renderer::EndFrame()
 				RenderPassInfo.NumColorRenderTargets = 1;
 
 				RHIBufferMemoryPacker MemoryPacker(RHIBufferMemoryPackerAlignmentLayout::STD430);
-				MemoryPacker.Write(pColorView->GetBindingIndex());
+				MemoryPacker.Write(pColorView->GetDescriptorHandle().Index);
 				MemoryPacker.Write(sampler->GetBindingIndex());
 
 				command_list.Enqueue<RHICommandBeginRendering>(RenderPassInfo);
@@ -179,7 +179,7 @@ void Renderer::EndFrame()
 
 	GetRHI()->Submit(render_graph->GetCommandList());
 
-	context.target_surface->PresentBackBuffer();
+	context.target_surface->EndFrame();
 
 	state = ST_IsFinished;
 }

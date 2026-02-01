@@ -1,28 +1,29 @@
-#include "VulkanSampler.h"
+#include "VulkanTextureSampler.h"
 
-VulkanSampler::VulkanSampler(VulkanDevice& InDevice, RHISamplerDesc &InDesc)
+VulkanTextureSampler::VulkanTextureSampler(VulkanDevice& InDevice, const RHITextureSamplerDesc &InDesc)
     : Device(InDevice),
     Desc(InDesc),
     Sampler(VK_NULL_HANDLE)
 {
     Alloc();
 }
-VulkanSampler::~VulkanSampler()
+
+VulkanTextureSampler::~VulkanTextureSampler()
 {
     Free();
 }
 
-void* VulkanSampler::GetHandle() const
+void* VulkanTextureSampler::GetHandle() const
 {
     return Sampler;
 }
 
-uint32_t VulkanSampler::GetBindingIndex() const
+uint32_t VulkanTextureSampler::GetBindingIndex() const
 {
     return DescriptorHandle.Index;
 }
 
-void VulkanSampler::Alloc()
+void VulkanTextureSampler::Alloc()
 {
     VkSamplerCreateInfo SamplerCreateInfo = {};
     SamplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -66,7 +67,7 @@ void VulkanSampler::Alloc()
     DescriptorHandle = Device.GetBindlessDescriptorManager()->GetHeap().RegisterSampler(Sampler);
 }
 
-void VulkanSampler::Free()
+void VulkanTextureSampler::Free()
 {
-    Device.get_deferred_deletion_queue()->enqueue_resource(FDeferredDeletionQueue::EType::Sampler, Sampler, DescriptorHandle);
+    Device.GetDeferredDeletionQueue()->EnqueueResource(FDeferredDeletionQueue::EType::Sampler, Sampler, DescriptorHandle);
 }

@@ -4,25 +4,10 @@
 #include <queue>
 #include <mutex>
 #include <vulkan/vulkan_core.h>
+#include "Common/RHIDescriptorResource.h"
 
 class VulkanDevice;
 
-// -----------------------------------------------------------------------------
-// Core Types
-// -----------------------------------------------------------------------------
-
-struct BindlessHandle
-{
-	uint32_t Index = 0xFFFFFFFF;
-	uint32_t Generation = 0;
-
-	bool IsValid() const { return Index != 0xFFFFFFFF; }
-};
-
-// -----------------------------------------------------------------------------
-// Component 1: Dynamic Ring Buffer
-// Uses a "Linear Allocator" strategy for uploading frame parameters.
-// -----------------------------------------------------------------------------
 class VulkanDynamicRingBuffer
 {
 public:
@@ -31,8 +16,6 @@ public:
 
 	void BeginFrame();
 
-	// Allocates memory in the ring buffer and copies data to it.
-	// Returns the Byte Offset within the GPU buffer.
 	uint32_t Allocate(const void* Data, uint32_t Size);
 
 	VkDescriptorSet GetDescriptorSet() const { return DescriptorSet; }
@@ -54,10 +37,6 @@ private:
 	VkDescriptorSet DescriptorSet = VK_NULL_HANDLE;
 };
 
-// -----------------------------------------------------------------------------
-// Component 2: Bindless Descriptor Heap
-// Manages the unbounded arrays of Textures, Buffers, and Samplers.
-// -----------------------------------------------------------------------------
 class VulkanBindlessHeap
 {
 public:
@@ -73,16 +52,16 @@ public:
 	void Shutdown();
 
 	// Resource Registration
-	BindlessHandle RegisterTexture(VkImageView View, VkImageLayout Layout);
-	BindlessHandle RegisterBuffer(VkBuffer Buffer, VkDeviceSize Range = VK_WHOLE_SIZE);
-	BindlessHandle RegisterSampler(VkSampler Sampler);
-	BindlessHandle RegisterStorageImage(VkImageView View, VkImageLayout Layout);
+	RHIDescriptorHandle RegisterTexture(VkImageView View, VkImageLayout Layout);
+	RHIDescriptorHandle RegisterBuffer(VkBuffer Buffer, VkDeviceSize Range = VK_WHOLE_SIZE);
+	RHIDescriptorHandle RegisterSampler(VkSampler Sampler);
+	RHIDescriptorHandle RegisterStorageImage(VkImageView View, VkImageLayout Layout);
 
 	// Resource Unregistration (Caller must ensure GPU is done using index!)
-	void UnregisterTexture(BindlessHandle Handle);
-	void UnregisterBuffer(BindlessHandle Handle);
-	void UnregisterSampler(BindlessHandle Handle);
-	void UnregisterStorageImage(BindlessHandle Handle);
+	void UnregisterTexture(RHIDescriptorHandle Handle);
+	void UnregisterBuffer(RHIDescriptorHandle Handle);
+	void UnregisterSampler(RHIDescriptorHandle Handle);
+	void UnregisterStorageImage(RHIDescriptorHandle Handle);
 
 	VkDescriptorSet GetDescriptorSet() const { return DescriptorSet; }
 	VkDescriptorSetLayout GetLayout() const { return DescriptorSetLayout; }
@@ -112,30 +91,22 @@ private:
 	ResourcePool StorageImagePool; // Binding 3
 };
 
-
-// -----------------------------------------------------------------------------
-// Component 3: The Manager
-// Coordinates the Sets and Layouts.
-// -----------------------------------------------------------------------------
 class VulkanDescriptorManager
 {
 public:
 	explicit VulkanDescriptorManager(VulkanDevice& Device);
 	~VulkanDescriptorManager();
 
-	// Accessors for sub-systems
 	VulkanBindlessHeap& GetHeap() { return BindlessHeap; }
 	VulkanDynamicRingBuffer& GetParameterBuffer() { return ParameterBuffer; }
 
-	// The Global Pipeline Layout used by all Bindless Shaders
 	VkPipelineLayout GetGlobalPipelineLayout() const { return GlobalPipelineLayout; }
 
-	// Called at the start of a new frame to reset the ring buffer cursor
 	void BeginFrame();
 
 private:
 	VulkanDevice& Device;
 	VulkanBindlessHeap BindlessHeap;
 	VulkanDynamicRingBuffer ParameterBuffer;
-	VkPipelineLayout GlobalPipelineLayout = VK_NULL_HANDLE;
+	VkPipelineLayout GlobalPipelineLayout;
 };

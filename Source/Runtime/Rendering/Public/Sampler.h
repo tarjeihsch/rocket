@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-class RHISampler;
+class RHITextureSampler;
 
 class Sampler
 {
@@ -13,5 +13,5 @@ public:
     uint32_t GetBindingIndex() const;
 
 private:
-    RHISampler* sampler;
+    RHITextureSampler* sampler;
 };

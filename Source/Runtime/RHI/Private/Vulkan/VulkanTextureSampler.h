@@ -1,15 +1,15 @@
 #pragma once
 #include "Assertion.h"
-#include "Common/RHISampler.h"
+#include "Common/RHITextureSampler.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include <vulkan/vulkan_core.h>
 
-class VulkanSampler : public RHISampler
+class VulkanTextureSampler : public RHITextureSampler
 {
 public:
-    VulkanSampler(VulkanDevice& Device, RHISamplerDesc& Desc);
-    ~VulkanSampler() override;
+    VulkanTextureSampler(VulkanDevice& Device, const RHITextureSamplerDesc& Desc);
+    ~VulkanTextureSampler() override;
 
     virtual void* GetHandle() const override;
     virtual uint32_t GetBindingIndex() const override;
@@ -19,9 +19,9 @@ private:
     void Free();
 
 private:
-    RHISamplerDesc Desc;
+    RHITextureSamplerDesc Desc;
     VkSampler Sampler;
 
     VulkanDevice& Device;
-    BindlessHandle DescriptorHandle;
+    RHIDescriptorHandle DescriptorHandle;
 };

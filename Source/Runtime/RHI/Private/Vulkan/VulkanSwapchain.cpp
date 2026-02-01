@@ -6,16 +6,17 @@
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
 #include "VulkanTexture.h"
+#include "VulkanSemaphore.h"
 
 #include <algorithm>
 
-#include "VulkanSemaphore.h"
+constexpr uint32_t MaxFramesInFlight = 2;
 
 VulkanSwapchain::VulkanSwapchain(VulkanDevice& InDevice)
     : Device(InDevice),
     Swapchain(nullptr),
     CurrentImageIndex(0),
-    SemaphoreIndex(0),
+    CurrentFrameIndex(0),
     NumAcquireCalls(0),
     NumPresentCalls(0)
 {
@@ -28,14 +29,11 @@ VulkanSwapchain::~VulkanSwapchain()
 
 void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR SurfaceFormat, VkExtent2D InExtent)
 {
-    // Cache the current extent
-    Extent = InExtent;
-
     VkSurfaceCapabilitiesKHR SurfaceCapabilities;
     VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
 
-    Extent.width = std::clamp(Extent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
-    Extent.height = std::clamp(Extent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
+    Extent.width = std::clamp(InExtent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
+    Extent.height = std::clamp(InExtent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
 
     // Surface size is fixed (eg. fullscreen)
     if (SurfaceCapabilities.currentExtent.width != UINT32_MAX)
@@ -82,7 +80,7 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
     VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
     ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
 
-    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, ImageCount - 1);
+    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, MaxFramesInFlight);
 
     std::vector<VkImage> Images;
 
@@ -96,72 +94,49 @@ void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR S
         BackBuffers.push_back(std::make_unique<VulkanTexture>(Device, Desc, Images[Index]));
     }
 
-    VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
-    SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    FrameSyncData.resize(ImageCount, {});
 
-    ImageAcquiredSemaphores.resize(ImageCount - 1);
-    RenderFinishedSemaphores.resize(ImageCount);
-
-    for (uint32_t Index = 0; Index < ImageAcquiredSemaphores.size(); ++Index)
+    for (FrameSync& Frame : FrameSyncData)
     {
-        VkSemaphore Semaphore;
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
-
-        ImageAcquiredSemaphores[Index] = std::make_shared<VulkanSemaphore>(Semaphore);
+        Frame.ReadySemaphore = std::make_shared<VulkanSemaphore>();
+        Frame.SignalSemaphore = std::make_shared<VulkanSemaphore>();
     }
-
-    for (uint32_t Index = 0; Index < RenderFinishedSemaphores.size(); ++Index)
-    {
-        VkSemaphore Semaphore;
-        VulkanRHI::vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore);
-
-        RenderFinishedSemaphores[Index] = std::make_shared<VulkanSemaphore>(Semaphore);
-    }
-
-    ensure(ImageAcquiredSemaphores.size() > 0, "Swapchain has no acquire semaphores (image count too low?)");
 }
 
 void VulkanSwapchain::DestroySwapchain()
 {
     Device.WaitUntilIdle();
 
-    if (Swapchain != VK_NULL_HANDLE)
-    {
-        VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
-        Swapchain = VK_NULL_HANDLE;
-    }
-
-    // TODO: Use DTOR to release/destroy
-    for (auto& Semaphore : ImageAcquiredSemaphores)
-    {
-        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
-    }
-
-    // TODO: Use DTOR to release/destroy
-    for (auto& Semaphore : RenderFinishedSemaphores)
-    {
-        VulkanRHI::vkDestroySemaphore(Device.GetVkDevice(), Semaphore->Handle, nullptr);
-    }
+    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
 
     BackBuffers.clear();
-    ImageAcquiredSemaphores.clear();
-    RenderFinishedSemaphores.clear();
+    FrameSyncData.clear();
 
-    CurrentImageIndex = UINT32_MAX;
-    SemaphoreIndex = 0;
-    NumAcquireCalls = 0;
-    NumPresentCalls = 0;
+    CurrentImageIndex = 0;
+    CurrentFrameIndex = 0;
+}
+
+void VulkanSwapchain::WaitForImage()
+{
+    FrameSync Frame = FrameSyncData[CurrentFrameIndex];
+
+    if (Frame.InFlight)
+    {
+        uint64_t CompletedValue = 0;
+        VkResult Result = VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &CompletedValue);
+        ensure(Result == VK_SUCCESS, "Failed to get timeline semaphore value");
+    }
 }
 
 bool VulkanSwapchain::AcquireBackBufferImage()
 {
-    SemaphoreIndex = (SemaphoreIndex + 1) % ImageAcquiredSemaphores.size();
+    CurrentFrameIndex = (CurrentFrameIndex + 1) % FrameSyncData.size();
 
-    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(GetVulkanRHIMinimal()->RHIGetVkDevice(), Swapchain, UINT64_MAX, ImageAcquiredSemaphores[SemaphoreIndex]->Handle, VK_NULL_HANDLE, &CurrentImageIndex);
+    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(Device.GetVkDevice(), Swapchain, UINT64_MAX, static_cast<VkSemaphore>(FrameSyncData[CurrentFrameIndex].ReadySemaphore->GetNativeHandle()), VK_NULL_HANDLE, &CurrentImageIndex);
 
     if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
     {
-        RK_LOG_INFO("Swapchain is out of date.");
+        RK_LOG_INFO("Swapchain is out of date .");
         return false;
     }
 
@@ -171,6 +146,17 @@ bool VulkanSwapchain::AcquireBackBufferImage()
 
 void VulkanSwapchain::PresentBackBufferImage()
 {
+    VkSemaphore Semaphore = static_cast<VkSemaphore>(FrameSyncData[CurrentFrameIndex].ReadySemaphore->GetNativeHandle());
+
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pWaitSemaphores = &Semaphore;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pSwapchains = &Swapchain;
+    present_info.swapchainCount = 1;
+    present_info.pImageIndices = &CurrentImageIndex;
+    VulkanRHI::vkQueuePresentKHR(GetVulkanRHIMinimal()->RHIGetPresentVkQueue(), &present_info);
+ 
     ++NumPresentCalls;
 }
 

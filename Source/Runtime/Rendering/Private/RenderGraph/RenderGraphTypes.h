@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <functional>
 
 #include "Common/RHIBuffer.h"
 #include "Common/RHITexture.h"

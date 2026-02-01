@@ -20,7 +20,7 @@
     #include <objc/objc.h>
 #endif
 
-VulkanSurface::VulkanSurface(VulkanDevice& InDevice, RHISurfaceDesc& InDesc)
+VulkanSurface::VulkanSurface(VulkanDevice& InDevice, const RHISurfaceDesc& InDesc)
     : Device(InDevice)
 {
     VkResult Result;
@@ -142,7 +142,7 @@ RHITexture* VulkanSurface::GetBackBufferTexture()
     return Swapchain->GetBackBufferTexture();
 }
 
-void VulkanSurface::AcquireBackBuffer()
+void VulkanSurface::BeginFrame()
 {
 	if (!Swapchain->AcquireBackBufferImage())
 	{
@@ -152,27 +152,17 @@ void VulkanSurface::AcquireBackBuffer()
 	}
 }
 
-void VulkanSurface::PresentBackBuffer()
+void VulkanSurface::EndFrame()
 {
-	VkSemaphore render_finished_semaphore = static_cast<VkSemaphore>(GetRenderFinishedSemaphore()->GetNativeHandle());
-    VkSwapchainKHR swapchain = Swapchain->GetVkSwapchain();
-
-    VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present_info.pWaitSemaphores = &render_finished_semaphore;
-	present_info.waitSemaphoreCount = 1;
-    present_info.pSwapchains = &swapchain;
-    present_info.swapchainCount = 1;
-    present_info.pImageIndices = &Swapchain->CurrentImageIndex;
-    VulkanRHI::vkQueuePresentKHR(GetVulkanRHIMinimal()->RHIGetPresentVkQueue(), &present_info);
+    Swapchain->PresentBackBufferImage();
 }
 
 std::shared_ptr<RHISemaphore> VulkanSurface::GetImageAvailableSemaphore() const
 {
-    return Swapchain->get_image_acquired_semaphore();
+    return Swapchain->GetReadySemaphore();
 }
 
 std::shared_ptr<RHISemaphore> VulkanSurface::GetRenderFinishedSemaphore() const
 {
-    return Swapchain->get_render_finished_semaphore();
+    return Swapchain->GetSignalSemaphore();
 }

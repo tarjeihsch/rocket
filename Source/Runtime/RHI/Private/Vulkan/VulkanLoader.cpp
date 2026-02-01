@@ -9,8 +9,9 @@
 
 #include "VulkanLoader.h"
 
+#include "Common/RHICommon.h"
 #include "Common/RHIPipeline.h"
-#include "Common/RHISampler.h"
+#include "Common/RHITextureSampler.h"
 #include "Common/RHITexture.h"
 #include "Common/RHIBuffer.h"
 #include "Vulkan/VulkanRHIMinimal.h"

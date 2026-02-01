@@ -12,24 +12,26 @@ class VulkanDevice;
 struct VulkanBuffer : RHIBuffer
 {
 private:
-    VulkanDevice& device;
+    VulkanDevice& Device;
 
 public:
     VulkanBuffer(VulkanDevice& in_device, const RHIBufferDesc& in_buffer_desc);
     VulkanBuffer(VulkanDevice& in_device, const RHIBufferDesc& in_buffer_desc, VkBuffer in_buffer_handle);
     ~VulkanBuffer();
 
+    // Begin RHIBuffer interface
     virtual void* GetNativeBuffer() const override;
-    virtual uint32_t GetBindingIndex() const override;
-    virtual void Map(const void *Data, uint64_t Size, uint64_t DstOffset) override;
+    virtual void Map(const void *Data, uint64_t Size, uint64_t DstOffset = 0) override;
+    // End RHIBuffer interface
 
 private:
     void Alloc();
     void Free();
 
 private:
-    VkBuffer buffer_handle;
-    VmaAllocation allocation_handle;
-    VkDeviceSize allocation_offset;
-    BindlessHandle descriptor;
+    VkBuffer BufferHandle;
+    VmaAllocation AllocationHandle;
+    VkDeviceSize AllocationOffset;
+    RHIDescriptorHandle DescriptorHandle;
+    uint64_t Address;
 };

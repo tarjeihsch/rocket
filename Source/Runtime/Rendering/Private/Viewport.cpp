@@ -30,7 +30,7 @@ void Viewport::Init()
 	surface_desc.Backend = window->GetNativeBackend();
 	surface_desc.NativeWindowHandle = window->GetNativeWindowHandle();
 	surface_desc.NativeInstanceHandle = window->GetNativeWindowSystemHandle();
-	surface = GetRHI()->CreateSurface(surface_desc);
+	surface = GetRHI()->RHICreateSurface(surface_desc);
 }
 
 void Viewport::Shutdown()

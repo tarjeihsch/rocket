@@ -2,7 +2,7 @@
 
 #include "RHI.h"
 
-#include <glm/glm.hpp>
+#include "Common/RHICommon.h"
 
 enum class RHIResourceAccess : uint16_t;
 enum class RHIPipelineStage : uint16_t;
@@ -149,7 +149,7 @@ struct RHIBufferAccessState
 	}
 };
 
-struct RHIBuffer : public IBindable
+struct RHIBuffer
 {
     RHIBuffer(const RHIBufferDesc& in_buffer_desc, const RHIBufferAccessState& in_buffer_access_state)
         : buffer_desc(in_buffer_desc), buffer_access_state(in_buffer_access_state)
@@ -159,7 +159,7 @@ struct RHIBuffer : public IBindable
     virtual ~RHIBuffer() = default;
 
     virtual void* GetNativeBuffer() const = 0;
-    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset = 0) = 0;
+    virtual void Map(const void* Data, uint64_t Size, uint64_t DstOffset) = 0;
 
     __inline const RHIBufferDesc& GetBufferDesc() const
     {
@@ -270,56 +270,6 @@ template<>
 constexpr RHIBufferMemoryPackerTypeLayout GetLayout<int32_t>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
 {
 	return { 4, 4 };
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec2>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    return {8, 8};
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec3>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    return {16, 16};
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::vec4>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    return {16, 16};
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat2>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    if (P_Layout == RHIBufferMemoryPackerAlignmentLayout::STD140)
-    {
-        return {16, 32}; // 2 vec4 columns
-    }
-    else
-    {
-        return {8, 16};  // 2 vec2 columns
-    }
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat3>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    if (P_Layout == RHIBufferMemoryPackerAlignmentLayout::STD140)
-    {
-        return {16, 48}; // 3 vec4 columns
-    }
-    else
-    {
-        return {16, 48}; // 3 vec3 where each aligns as vec4. NB: still 48
-    }
-}
-
-template<>
-constexpr RHIBufferMemoryPackerTypeLayout GetLayout<glm::mat4>(RHIBufferMemoryPackerAlignmentLayout P_Layout)
-{
-    return {16, 64}; // 4 vec4 columns
 }
 
 template <typename T>
