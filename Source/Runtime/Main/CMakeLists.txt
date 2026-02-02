@@ -41,7 +41,6 @@ target_link_libraries(Main
     PUBLIC 
         Rocket::Core
         Rocket::Platform
-        Rocket::Rendering
 )
 
 set_target_properties(Main PROPERTIES POSITION_INDEPENDENT_CODE ON)

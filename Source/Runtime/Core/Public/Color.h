@@ -2,10 +2,13 @@
 
 struct LinearColor
 {
-	float R, G, B, A;
+	float R;
+	float G;
+	float B;
+	float A;
 
 	LinearColor()
-		: R(0.0f), G(0.0f), B(0.0f), A(0.0f)
+		: R(0), G(0), B(0), A(0)
 	{
 	}
 

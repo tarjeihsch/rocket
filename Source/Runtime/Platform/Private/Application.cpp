@@ -11,8 +11,6 @@
 #include <deque>
 #include <GLFW/glfw3.h>
 
-#include "../../RHI/Public/Common/RHI.h"
-
 void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSink* eventSink);
 
 class EventQueue : public EventSink
@@ -176,7 +174,6 @@ void Application::process_deferred_message(const Event& event)
             const bool repeat = false;
             const ANSICHAR* UTF8 = event.text.value.buffer;
 
-            // UTF-8 decode loop with no allocations.
             for (const unsigned char* P = reinterpret_cast<const unsigned char*>(UTF8); P && *P; )
             {
                 uint32_t Codepoint = 0;
@@ -205,7 +202,6 @@ void Application::process_deferred_message(const Event& event)
                 }
                 else
                 {
-                    // Invalid sequence; skip.
                     ++P;
                     continue;
                 }

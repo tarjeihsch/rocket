@@ -14,9 +14,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -25,9 +25,9 @@ set(RK_ENABLE_PROFILER 0 CACHE BOOL "Enable Rocket profiler")
 
 foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
     string(TOUPPER "${cfg}" CFG)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFG}  ${CMAKE_BINARY_DIR})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG}  ${CMAKE_BINARY_DIR})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CFG}  ${CMAKE_BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFG} ${CMAKE_BINARY_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFG} ${CMAKE_BINARY_DIR})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CFG} ${CMAKE_BINARY_DIR})
 endforeach()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -47,24 +47,22 @@ add_compile_definitions(ROCKET_CONTENT=\"${CMAKE_CURRENT_SOURCE_DIR}/Content\")
 # Third Party modules
 add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
-add_subdirectory(Source/ThirdParty/glm EXCLUDE_FROM_ALL)
 
 # Rocket modules
 add_subdirectory(Source/Runtime/Main)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
-add_subdirectory(Source/Runtime/RHI)
-add_subdirectory(Source/Runtime/Rendering)
+#add_subdirectory(Source/Runtime/RHI)
+#add_subdirectory(Source/Runtime/Rendering)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
-set_target_properties(glm PROPERTIES FOLDER "ThirdParty/glm")
 
 set(ROCKET_EXPORT_LIBS
     Core
     Platform
-    RHI
-    Rendering
+    #    RHI
+    #    Rendering
 )
 
 configure_package_config_file(
