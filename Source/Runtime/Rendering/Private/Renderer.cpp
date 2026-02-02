@@ -12,7 +12,6 @@
 #include <Pipeline.h>
 #include <Sampler.h>
 #include <Common/RHITextureView.h>
-#include "Common/RHIDescriptorResource.h"
 
 Renderer& Renderer::Get()
 {

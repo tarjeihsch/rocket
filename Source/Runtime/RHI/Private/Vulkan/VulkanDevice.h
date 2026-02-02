@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <vma/vk_mem_alloc.h>
+#include <Assertion.h>
 
 class VulkanCommandListContext;
 class VulkanDevice;
@@ -15,8 +16,8 @@ class VulkanResourceManager;
 
 struct FTransientResourceAllocator
 {
-    FTransientResourceAllocator(VulkanDevice& InDevice, VkDeviceSize InSize)
-        : Device(InDevice), Size(InSize)
+    FTransientResourceAllocator(VulkanDevice& InDevice, VkDeviceSize InSize, VkMemoryPropertyFlags InRequiredFlags, bool bInMapMemory)
+        : Device(InDevice), Size(InSize), RequiredFlags(InRequiredFlags), bMapMemory(bInMapMemory)
     {
         Init();
     }
@@ -31,27 +32,47 @@ struct FTransientResourceAllocator
     void AllocImage(VkImage Image, uint64_t& OutOffset);
     void AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset);
 
-    void* GetMappedBasePtr() const;
-
+    inline void* GetMappedBasePtr() const;
     inline size_t GetSize() const;
     inline size_t GetOffset() const;
 
 private:
     void Init();
     void Shutdown();
+    void EnsureMemory(uint32_t MemoryTypeBits);
+
+    static uint32_t FindMemoryType(uint32_t TypeBits, VkMemoryPropertyFlags required, const VkPhysicalDeviceMemoryProperties& memProps)
+    {
+        for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
+        {
+            if ((TypeBits & (1 << i)) && (memProps.memoryTypes[i].propertyFlags & required) == required)
+            {
+                return i;
+            }
+        }
+        ensure(false && "No compatible memory type found");
+        return UINT32_MAX;
+    }
 
 private:
     VmaVirtualBlock VirtualMemory = nullptr;
-    VkDeviceMemory PhysicalMemory = nullptr;
+    VkDeviceMemory PhysicalMemory = VK_NULL_HANDLE;
     VkDeviceSize Offset = 0;
     VkDeviceSize Size = 0;
     void* MappedBasePtr = nullptr;
 
-    uint64_t TotalAllocations;
-    uint64_t CurrentAllocations;
+    uint64_t TotalAllocations = 0;
+    uint64_t CurrentAllocations = 0;
 
     VulkanDevice& Device;
+    VkMemoryPropertyFlags RequiredFlags;
+    bool bMapMemory = false;
 };
+
+inline void* FTransientResourceAllocator::GetMappedBasePtr() const
+{
+    return MappedBasePtr;
+}
 
 inline size_t FTransientResourceAllocator::GetSize() const
 {
@@ -138,8 +159,9 @@ public:
 
     inline VulkanPipelineManager* GetPipelineManager() const;
     inline VulkanDescriptorManager* GetBindlessDescriptorManager() const;
-    inline FTransientResourceAllocator* GetTransientMemoryAllocator() const;
     inline FDeferredDeletionQueue* GetDeferredDeletionQueue() const;
+    inline FTransientResourceAllocator* GetTransientCPUAllocator() const;
+    inline FTransientResourceAllocator* GetTransientGPUAllocator() const;
 
     void GC();
 
@@ -157,7 +179,9 @@ private:
     VulkanPipelineManager* PipelineManager;
     VulkanDescriptorManager* DescriptorManager;
     FDeferredDeletionQueue* DeferredDeletionQueue;
-    FTransientResourceAllocator* TransientResourceAllocator;
+
+    FTransientResourceAllocator* TransientCPUAllocator;
+    FTransientResourceAllocator* TransientGPUAllocator;
 
 private:
     VkPhysicalDevice PhysicalDevice;
@@ -193,9 +217,14 @@ inline VulkanDescriptorManager* VulkanDevice::GetBindlessDescriptorManager() con
     return DescriptorManager;
 }
 
-inline FTransientResourceAllocator *VulkanDevice::GetTransientMemoryAllocator() const
+inline FTransientResourceAllocator *VulkanDevice::GetTransientCPUAllocator() const
 {
-    return TransientResourceAllocator;
+    return TransientCPUAllocator;
+}
+
+inline FTransientResourceAllocator* VulkanDevice::GetTransientGPUAllocator() const
+{
+    return TransientGPUAllocator;
 }
 
 inline FDeferredDeletionQueue *VulkanDevice::GetDeferredDeletionQueue() const

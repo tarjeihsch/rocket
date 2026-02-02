@@ -23,8 +23,8 @@ public:
      ~VulkanQueue();
 
     void Submit(RHICommandList& CmdList);
-
-    void Poll();
+    void WaitForTimelineValue(uint64_t TimelineValue);
+    void Retire();
 
     inline uint64_t GetLastCompletedTimelineValue() const { return LastCompletedTimelineValue; }
     inline uint64_t GetLastSubmittedTimelineValue() const { return LastSubmittedTimelineValue; }

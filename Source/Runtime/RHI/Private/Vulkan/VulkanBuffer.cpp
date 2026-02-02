@@ -41,7 +41,7 @@ void VulkanBuffer::Map(const void *Data, uint64_t Size, uint64_t DstOffset)
 
     if (GetBufferDesc().Lifetime == RHIResourceLifetime::Transient)
     {
-        void* BasePtr = Device.GetTransientMemoryAllocator()->GetMappedBasePtr();
+        void* BasePtr = Device.GetTransientCPUAllocator()->GetMappedBasePtr();
         void* DestPtr = static_cast<uint8_t*>(BasePtr) + AllocationOffset + DstOffset;
 
         memcpy(DestPtr, Data, Size);
@@ -68,7 +68,7 @@ void VulkanBuffer::Alloc()
         VkResult Result = VulkanRHI::vkCreateBuffer(Device.GetVkDevice(), &CreateInfo, nullptr, &BufferHandle);
         ensure(Result == VK_SUCCESS);
 
-        Device.GetTransientMemoryAllocator()->AllocBuffer(BufferHandle, AllocationOffset);
+        Device.GetTransientCPUAllocator()->AllocBuffer(BufferHandle, AllocationOffset);
     }
     else if (GetBufferDesc().Lifetime == RHIResourceLifetime::Persistent)
     {

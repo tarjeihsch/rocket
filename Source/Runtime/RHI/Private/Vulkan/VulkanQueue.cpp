@@ -102,7 +102,22 @@ void VulkanQueue::Submit(RHICommandList& CmdList)
     }
 }
 
-void VulkanQueue::Poll()
+void VulkanQueue::WaitForTimelineValue(uint64_t Value)
+{
+    VkSemaphoreWaitInfo WaitInfo = {};
+    WaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    WaitInfo.semaphoreCount = 1;
+    WaitInfo.pSemaphores = &TimelineSemaphore;
+    WaitInfo.pValues = &Value;
+
+    VkResult Result = VulkanRHI::vkWaitSemaphores(Device.GetVkDevice(), &WaitInfo, UINT64_MAX);
+    ensure(Result == VK_SUCCESS);
+
+    Result = VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &LastCompletedTimelineValue);
+    ensure(Result == VK_SUCCESS);
+}
+
+void VulkanQueue::Retire()
 {
     VkResult Result = VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &LastCompletedTimelineValue);
     ensure(Result == VK_SUCCESS);
@@ -119,8 +134,7 @@ void VulkanQueue::Poll()
 
         for (VulkanCommandBuffer* CommandBuffer : Payload->CommandBuffers)
         {
-            CommandBuffer->Finish();
-
+            CommandBuffer->Retire();
             CommandBufferPool->Recycle(CommandBuffer);
         }
 

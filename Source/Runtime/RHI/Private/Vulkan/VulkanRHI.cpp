@@ -165,7 +165,7 @@ void CVulkanRHI::Submit(RHICommandList& cmd_list)
 
 void CVulkanRHI::Reset()
 {
-    Device->GetGraphicsQueue()->Poll();
+    Device->GetGraphicsQueue()->Retire();
 
     Device->GC();
 

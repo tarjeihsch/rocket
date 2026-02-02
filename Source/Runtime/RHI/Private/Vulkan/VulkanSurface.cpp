@@ -7,6 +7,8 @@
 #include "VulkanSemaphore.h"
 #include "VulkanSwapchain.h"
 #include "Vulkan/VulkanRHIMinimal.h"
+#include "VulkanQueue.h"
+#include "VulkanDevice.h"
 
 #if defined(_WIN32)
     #include <windows.h>
@@ -144,25 +146,27 @@ RHITexture* VulkanSurface::GetBackBufferTexture()
 
 void VulkanSurface::BeginFrame()
 {
-	if (!Swapchain->AcquireBackBufferImage())
+    VulkanQueue& Queue = *Device.GetGraphicsQueue();
+	if (!Swapchain->AcquireNextImage(Queue))
 	{
 		Swapchain->DestroySwapchain();
 		Swapchain->CreateSwapchain(Surface, SurfaceFormat, { 1280, 720 });
-		Swapchain->AcquireBackBufferImage();
+		Swapchain->AcquireNextImage(Queue);
 	}
 }
 
 void VulkanSurface::EndFrame()
 {
-    Swapchain->PresentBackBufferImage();
+    VulkanQueue& Queue = *Device.GetPresentQueue();
+    Swapchain->Present(Queue);
 }
 
 std::shared_ptr<RHISemaphore> VulkanSurface::GetImageAvailableSemaphore() const
 {
-    return Swapchain->GetReadySemaphore();
+    return std::static_pointer_cast<RHISemaphore>(Swapchain->GetImageAvailableSemaphore());
 }
 
 std::shared_ptr<RHISemaphore> VulkanSurface::GetRenderFinishedSemaphore() const
 {
-    return Swapchain->GetSignalSemaphore();
+    return std::static_pointer_cast<RHISemaphore>(Swapchain->GetRenderFinishedSemaphore());
 }

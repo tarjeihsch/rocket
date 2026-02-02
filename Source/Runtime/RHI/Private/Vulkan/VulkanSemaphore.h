@@ -6,7 +6,7 @@
 
 class VulkanDevice;
 
-class VulkanSemaphore final : RHISemaphore
+class VulkanSemaphore final : public RHISemaphore
 {
     VulkanDevice& Device;
 
@@ -19,6 +19,5 @@ public:
         return NativeHandle; 
     };
 
-private:
     VkSemaphore NativeHandle = VK_NULL_HANDLE;
 };

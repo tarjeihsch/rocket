@@ -85,7 +85,7 @@ void VulkanCommandBuffer::Submit()
     State = VulkanCommandBufferState::Submitted;
 }
 
-void VulkanCommandBuffer::Finish()
+void VulkanCommandBuffer::Retire()
 {
     ensure(State == VulkanCommandBufferState::Submitted);
 

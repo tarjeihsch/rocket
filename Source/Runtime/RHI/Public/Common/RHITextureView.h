@@ -4,7 +4,7 @@
 
 #include "Color.h"
 #include "Common/RHICommon.h"
-#include "Common/RHIDescriptorResource.h"
+#include "RHIDescriptorResource.h"
 
 class RHITexture;
 

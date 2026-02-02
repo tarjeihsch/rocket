@@ -68,7 +68,7 @@ void VulkanTexture::alloc()
         VkResult Result = VulkanRHI::vkCreateImage(GetVulkanRHIMinimal()->RHIGetVkDevice(), &image_create_info, nullptr, &NativeHandle);
         ensure(Result == VK_SUCCESS);
 
-        device.GetTransientMemoryAllocator()->AllocImage(NativeHandle, offset);
+        device.GetTransientGPUAllocator()->AllocImage(NativeHandle, offset);
     }
     else if (GetTextureDesc().lifetime == RHIResourceLifetime::Persistent)
     {

@@ -13,51 +13,41 @@
 
 void FTransientResourceAllocator::Init()
 {
-    VkResult Result = VK_SUCCESS;
+    // Only create the virtual block; physical memory is lazy-allocated per resource type.
+    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
+    BlockCreateInfo.size = Size;
+    VkResult Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
+    ensure(Result == VK_SUCCESS, "Failed to create virtual block.");
+}
 
-    VkPhysicalDeviceMemoryProperties MemoryProperties;
-    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(Device.GetVkPhysicalDevice(), &MemoryProperties);
+void FTransientResourceAllocator::EnsureMemory(uint32_t MemoryTypeBits)
+{
+    if (PhysicalMemory != VK_NULL_HANDLE)
+        return;
 
-    // All memory types are acceptable but regarded unsafe for production. Use vkGetImageMemoryRequirements or vkGetBufferMemoryRequirements instead.
-    // TODO: Query correct memory type for proper performance. Different hardware might differ in TypeIndex order.
-    uint32_t MemoryTypeBits = 0xFFFFFFFF;
-    uint32_t TypeIndex = UINT32_MAX;
+    VkPhysicalDeviceMemoryProperties MemProps;
+    VulkanRHI::vkGetPhysicalDeviceMemoryProperties(Device.GetVkPhysicalDevice(), &MemProps);
 
-    for (uint32_t Index = 0; Index < MemoryProperties.memoryTypeCount; ++Index)
-    {
-        if ((MemoryTypeBits & (1 << Index)) && ((MemoryProperties.memoryTypes[Index].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)))
-        {
-            TypeIndex = Index;
-            break;
-        }
-    }
-
-    ensure(TypeIndex != UINT32_MAX);
+    uint32_t TypeIndex = FindMemoryType(MemoryTypeBits, RequiredFlags, MemProps);
 
     VkMemoryAllocateInfo AllocInfo = {};
     AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     AllocInfo.allocationSize = Size;
     AllocInfo.memoryTypeIndex = TypeIndex;
 
-    Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
-    ensure(Result == VK_SUCCESS, "Failed to allocate memory.");
+    VkResult Result = VulkanRHI::vkAllocateMemory(Device.GetVkDevice(), &AllocInfo, nullptr, &PhysicalMemory);
+    ensure(Result == VK_SUCCESS);
 
-    Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
-    ensure(Result == VK_SUCCESS, "Failed to map transient memory.");
-
-    VmaVirtualBlockCreateInfo BlockCreateInfo = {};
-    BlockCreateInfo.size = 64ull * 1024 * 1024;
-    BlockCreateInfo.flags = 0;
-
-    Result = vmaCreateVirtualBlock(&BlockCreateInfo, &VirtualMemory);
-    ensure(Result == VK_SUCCESS, "Failed to create virtual block.");
-
-    RK_LOG_INFO("Reserved virtual block for transient resources: {} MB", MB(Size));
+    if (bMapMemory)
+    {
+        Result = VulkanRHI::vkMapMemory(Device.GetVkDevice(), PhysicalMemory, 0, Size, 0, &MappedBasePtr);
+        ensure(Result == VK_SUCCESS);
+    }
 }
 
 void FTransientResourceAllocator::Shutdown()
 {
-    VulkanRHI::vkFreeMemory(GetVulkanRHIMinimal()->RHIGetVkDevice(), PhysicalMemory, nullptr);
+    VulkanRHI::vkFreeMemory(Device.GetVkDevice(), PhysicalMemory, nullptr);
     vmaClearVirtualBlock(VirtualMemory);
     vmaDestroyVirtualBlock(VirtualMemory);
 }
@@ -66,54 +56,53 @@ void FTransientResourceAllocator::Reset()
 {
     vmaClearVirtualBlock(VirtualMemory);
     Offset = 0;
+    CurrentAllocations = 0;
 }
 
 void FTransientResourceAllocator::AllocImage(VkImage Image, uint64_t& OutOffset)
 {
-    VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetImageMemoryRequirements(Device.GetVkDevice(), Image, &MemoryRequirements);
+    VkMemoryRequirements Req;
+    VulkanRHI::vkGetImageMemoryRequirements(Device.GetVkDevice(), Image, &Req);
+
+    EnsureMemory(Req.memoryTypeBits);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
-    AllocInfo.size = MemoryRequirements.size;
-    AllocInfo.alignment = MemoryRequirements.alignment;
+    AllocInfo.size = Req.size;
+    AllocInfo.alignment = Req.alignment;
 
-    // We can safely throw away the allocation and offset info given by vmaVirtualAllocate, as we are resetting the entire allocator each frame.
     VmaVirtualAllocation Allocation;
-
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
-    ensure(Result == VK_SUCCESS, "Failed to allocate transient image memory.");
+    ensure(Result == VK_SUCCESS);
+
     VulkanRHI::vkBindImageMemory(Device.GetVkDevice(), Image, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
-    Offset += MemoryRequirements.size;
+    Offset += Req.size;
 }
 
 void FTransientResourceAllocator::AllocBuffer(VkBuffer Buffer, uint64_t& OutOffset)
 {
-    VkMemoryRequirements MemoryRequirements;
-    VulkanRHI::vkGetBufferMemoryRequirements(Device.GetVkDevice(), Buffer, &MemoryRequirements);
+    VkMemoryRequirements Req;
+    VulkanRHI::vkGetBufferMemoryRequirements(Device.GetVkDevice(), Buffer, &Req);
+
+    EnsureMemory(Req.memoryTypeBits);
 
     VmaVirtualAllocationCreateInfo AllocInfo = {};
-    AllocInfo.size = MemoryRequirements.size;
-    AllocInfo.alignment = MemoryRequirements.alignment;
+    AllocInfo.size = Req.size;
+    AllocInfo.alignment = Req.alignment;
 
-    // We can safely throw away the allocation and offset info given by vmaVirtualAllocate, as we are resetting the entire allocator each frame.
     VmaVirtualAllocation Allocation;
-
     VkResult Result = vmaVirtualAllocate(VirtualMemory, &AllocInfo, &Allocation, &OutOffset);
-    ensure(Result == VK_SUCCESS, "Failed to allocate transient buffer memory.");
+    ensure(Result == VK_SUCCESS);
+
     VulkanRHI::vkBindBufferMemory(Device.GetVkDevice(), Buffer, PhysicalMemory, OutOffset);
 
     CurrentAllocations++;
     TotalAllocations++;
-    Offset += MemoryRequirements.size;
+    Offset += Req.size;
 }
 
-void *FTransientResourceAllocator::GetMappedBasePtr() const
-{
-    return MappedBasePtr;
-}
 
 FDeferredDeletionQueue::FDeferredDeletionQueue(VulkanDevice &InDevice) : Device(InDevice)
 {
@@ -149,7 +138,11 @@ void FDeferredDeletionQueue::ReleaseExpiredResources(uint64_t CompletedFrameNumb
 
         switch (It->StructureType)
         {
-        case EType::Image: VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->NativeHandle, nullptr); break;
+        case EType::Image: 
+        {
+            VulkanRHI::vkDestroyImage(Device.GetVkDevice(), (VkImage)It->NativeHandle, nullptr); 
+            break;
+        }
         case EType::ImageView:
             VulkanRHI::vkDestroyImageView(Device.GetVkDevice(), (VkImageView)It->NativeHandle, nullptr);
             if (It->DescriptorHandle.IsValid()) { Device.GetBindlessDescriptorManager()->GetHeap().UnregisterTexture(It->DescriptorHandle); }
@@ -192,7 +185,8 @@ void VulkanDevice::WaitUntilIdle() const
 
 void VulkanDevice::GC()
 {
-    TransientResourceAllocator->Reset();
+    TransientCPUAllocator->Reset();
+    TransientGPUAllocator->Reset();
 
     DeferredDeletionQueue->ReleaseExpiredResources(GetGraphicsQueue()->GetLastCompletedTimelineValue());
 }
@@ -286,7 +280,8 @@ void VulkanDevice::Initialize()
     PipelineManager = new VulkanPipelineManager(*this);
     DescriptorManager = new VulkanDescriptorManager(*this);
     DeferredDeletionQueue = new FDeferredDeletionQueue(*this);
-    TransientResourceAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024);
+    TransientCPUAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, true);
+    TransientGPUAllocator = new FTransientResourceAllocator(*this, 32ull * 1024 * 1024, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false);
 }
 
 void VulkanDevice::Shutdown()
@@ -294,7 +289,7 @@ void VulkanDevice::Shutdown()
     delete PipelineManager;
     delete DescriptorManager;
     delete DeferredDeletionQueue;
-    delete TransientResourceAllocator;
+    delete TransientCPUAllocator;
 
     for (auto& Queue : Queues)
     {

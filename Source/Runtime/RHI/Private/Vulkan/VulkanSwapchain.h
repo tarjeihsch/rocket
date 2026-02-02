@@ -2,80 +2,83 @@
 
 #include "Common/RHISwapchain.h"
 
+#include <memory>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include <memory>
 
-class VulkanCommandListContext;
-struct VulkanSemaphore;
 class VulkanDevice;
+class VulkanQueue;
+struct VulkanSemaphore;
 struct VulkanTexture;
-struct VulkanTextureView;
 
 class VulkanSwapchain : public RHISwapchain
 {
-private:
-    VulkanDevice& Device;
+	friend class VulkanSurface;
+
+	VulkanDevice& Device;
 
 public:
-    explicit VulkanSwapchain(VulkanDevice& InDevice);
-    virtual ~VulkanSwapchain() override;
+	explicit VulkanSwapchain(VulkanDevice& InDevice);
+	virtual ~VulkanSwapchain() override;
 
-    inline VkSwapchainKHR GetVkSwapchain() const;
-    inline VkExtent2D GetFramebufferExtent() const;
-
-    inline RHITexture* GetBackBufferTexture() const;
-    inline std::shared_ptr<VulkanSemaphore> GetReadySemaphore() const;
-    inline std::shared_ptr<VulkanSemaphore> GetSignalSemaphore() const;
-    
-private:
-    void CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR SurfaceFormat, VkExtent2D Extent);
-    void DestroySwapchain();
-
-    void WaitForImage();
-    bool AcquireBackBufferImage();
-    void PresentBackBufferImage();
+	VkSwapchainKHR GetHandle() const { return NativeHandle; }
+	VkExtent2D GetExtent() const { return Extent; }
+	uint32_t GetImageCount() const { return static_cast<uint32_t>(BackBuffers.size()); }
+	uint32_t GetCurrentImageIndex() const { return CurrentImageIndex; }
+	RHITexture* GetBackBufferTexture() const;
+	
+	inline std::shared_ptr<VulkanSemaphore> GetImageAvailableSemaphore() const;
+	inline std::shared_ptr<VulkanSemaphore> GetRenderFinishedSemaphore() const;
 
 private:
-    struct FrameSync
-    {
-        std::shared_ptr<VulkanSemaphore> ReadySemaphore;
-        std::shared_ptr<VulkanSemaphore> SignalSemaphore;
-        uint64_t SubmittedTimelineValue = 0;
-        uint64_t CompletedTimelineValue = 0;
-        bool InFlight = false;
-    };
-    
-    VkSwapchainKHR Swapchain;
-    VkExtent2D Extent;
+	void CreateSwapchain(VkSurfaceKHR InSurface, VkSurfaceFormatKHR InSurfaceFormat, VkExtent2D InRequestedExtent);
+	void DestroySwapchain();
 
-    std::vector<std::unique_ptr<VulkanTexture>> BackBuffers;
-    std::vector<FrameSync> FrameSyncData;
+	bool AcquireNextImage(VulkanQueue& Queue);
+	void Present(VulkanQueue& Queue);
 
-    uint32_t CurrentImageIndex;
-    uint32_t CurrentFrameIndex;
-    uint32_t NumAcquireCalls;
-    uint32_t NumPresentCalls;
+private:
+	struct AcquireSyncState
+	{
+		std::shared_ptr<VulkanSemaphore> Semaphore;
+		uint64_t LastUsedTimelineValue = 0;
+	};
 
-    friend class VulkanSurface;
+	struct ImageSyncState
+	{
+		std::shared_ptr<VulkanSemaphore> Semaphore;
+		uint64_t TimelineValue = 0;
+	};
+
+	VkExtent2D ClampExtentToSurfaceCapabilities(VkExtent2D InExtent, const VkSurfaceCapabilitiesKHR& Capabilities) const;
+	uint32_t DetermineOptimalImageCount(const VkSurfaceCapabilitiesKHR& Capabilities) const;
+	VkSharingMode ConfigureQueueFamilySharing(VkSwapchainCreateInfoKHR& OutCreateInfo) const;
+
+	void CreateBackBufferTextures(const std::vector<VkImage>& Images);
+	void CreateSynchronizationPrimitives(uint32_t InImageCount);
+	void ResetSyncState();
+
+private:	
+	VkSwapchainKHR NativeHandle;
+	VkExtent2D Extent;
+	
+	std::vector<std::unique_ptr<VulkanTexture>> BackBuffers;
+	std::vector<AcquireSyncState> AcquireSyncStates;
+	std::vector<ImageSyncState> ImageSyncStates;
+
+	uint32_t CurrentAcquireIndex = 0;
+	uint32_t CurrentImageIndex = 0;
+	
+	uint64_t TotalAcquireCount = 0;
+	uint64_t TotalPresentCount = 0;
 };
 
-inline VkSwapchainKHR VulkanSwapchain::GetVkSwapchain() const
+inline std::shared_ptr<VulkanSemaphore> VulkanSwapchain::GetImageAvailableSemaphore() const
 {
-    return Swapchain;
+	return AcquireSyncStates[CurrentAcquireIndex].Semaphore;
 }
 
-inline VkExtent2D VulkanSwapchain::GetFramebufferExtent() const
+inline std::shared_ptr<VulkanSemaphore> VulkanSwapchain::GetRenderFinishedSemaphore() const
 {
-    return Extent;
-}
-
-inline std::shared_ptr<VulkanSemaphore> VulkanSwapchain::GetReadySemaphore() const
-{
-    return FrameSyncData[CurrentFrameIndex].ReadySemaphore;
-}
-
-inline std::shared_ptr<VulkanSemaphore> VulkanSwapchain::GetSignalSemaphore() const
-{
-    return FrameSyncData[CurrentFrameIndex].SignalSemaphore;
+	return ImageSyncStates[CurrentImageIndex].Semaphore;
 }

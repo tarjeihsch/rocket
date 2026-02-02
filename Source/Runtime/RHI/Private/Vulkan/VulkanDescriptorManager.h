@@ -4,7 +4,7 @@
 #include <queue>
 #include <mutex>
 #include <vulkan/vulkan_core.h>
-#include "Common/RHIDescriptorResource.h"
+#include <Common/RHIDescriptorResource.h>
 
 class VulkanDevice;
 

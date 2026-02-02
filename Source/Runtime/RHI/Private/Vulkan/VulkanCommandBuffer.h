@@ -37,7 +37,7 @@ public:
     void End();
 
     void Submit();
-    void Finish();
+    void Retire();
     void Reset();
 
     inline VulkanCommandBufferState GetState() const;

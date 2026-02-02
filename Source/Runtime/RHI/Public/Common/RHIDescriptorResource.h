@@ -51,10 +51,10 @@ public:
 		return GetResidentVersion() != GetContentVersion();
 	}
 
-	void SetResidentHandle(const RHIDescriptorHandle& InDescriptorHandle, uint32_t InResidentVersion) noexcept
+	void SetResidentHandle(const RHIDescriptorHandle& InDescriptorHandle) noexcept
 	{
 		DescriptorHandle = InDescriptorHandle;
-		ResidentVersion = InResidentVersion;
+		ResidentVersion = ContentVersion;
 	}
 
 	void ClearResidentHandle() noexcept

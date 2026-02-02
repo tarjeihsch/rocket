@@ -1,168 +1,278 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "VulkanSwapchain.h"
 
 #include "Assertion.h"
-#include "Window.h"
 #include "Vulkan/VulkanRHIMinimal.h"
 #include "VulkanDevice.h"
 #include "VulkanLoader.h"
-#include "VulkanTexture.h"
+#include "VulkanQueue.h"
 #include "VulkanSemaphore.h"
+#include "VulkanTexture.h"
 
 #include <algorithm>
 
-constexpr uint32_t MaxFramesInFlight = 2;
-
 VulkanSwapchain::VulkanSwapchain(VulkanDevice& InDevice)
-    : Device(InDevice),
-    Swapchain(nullptr),
-    CurrentImageIndex(0),
-    CurrentFrameIndex(0),
-    NumAcquireCalls(0),
-    NumPresentCalls(0)
+	: Device(InDevice),
+	NativeHandle(nullptr),
+	Extent(0, 0)
 {
 }
 
 VulkanSwapchain::~VulkanSwapchain()
 {
-    DestroySwapchain();
+	DestroySwapchain();
 }
 
-void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR Surface, VkSurfaceFormatKHR SurfaceFormat, VkExtent2D InExtent)
+void VulkanSwapchain::CreateSwapchain(VkSurfaceKHR InSurface, VkSurfaceFormatKHR InSurfaceFormat, VkExtent2D InRequestedExtent)
 {
-    VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-    VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetVulkanRHIMinimal()->RHIGetVkPhysicalDevice(), Surface, &SurfaceCapabilities);
+	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
+	VulkanRHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Device.GetVkPhysicalDevice(), InSurface, &SurfaceCapabilities);
 
-    Extent.width = std::clamp(InExtent.width, SurfaceCapabilities.minImageExtent.width, SurfaceCapabilities.maxImageExtent.width);
-    Extent.height = std::clamp(InExtent.height, SurfaceCapabilities.minImageExtent.height, SurfaceCapabilities.maxImageExtent.height);
+	Extent = ClampExtentToSurfaceCapabilities(InRequestedExtent, SurfaceCapabilities);
+	const uint32_t ImageCount = DetermineOptimalImageCount(SurfaceCapabilities);
 
-    // Surface size is fixed (eg. fullscreen)
-    if (SurfaceCapabilities.currentExtent.width != UINT32_MAX)
-    {
-        Extent = SurfaceCapabilities.currentExtent;
-    }
+	VkSwapchainCreateInfoKHR CreateInfo = {};
+	CreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	CreateInfo.surface = InSurface;
+	CreateInfo.minImageCount = ImageCount;
+	CreateInfo.imageFormat = InSurfaceFormat.format;
+	CreateInfo.imageColorSpace = InSurfaceFormat.colorSpace;
+	CreateInfo.imageExtent = Extent;
+	CreateInfo.imageArrayLayers = 1;
+	CreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	CreateInfo.preTransform = SurfaceCapabilities.currentTransform;
+	CreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	CreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	CreateInfo.clipped = VK_TRUE;
+	CreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    uint32_t ImageCount = SurfaceCapabilities.minImageCount + 1;
-    if (SurfaceCapabilities.maxImageCount > 0 && ImageCount > SurfaceCapabilities.maxImageCount)
-    {
-        ImageCount = SurfaceCapabilities.maxImageCount;
-    }
+	ConfigureQueueFamilySharing(CreateInfo);
 
-    VkSwapchainCreateInfoKHR SwapchainCreateInfo = {};
-    SwapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    SwapchainCreateInfo.surface = Surface;
-    SwapchainCreateInfo.minImageCount = ImageCount;
-    SwapchainCreateInfo.imageFormat = SurfaceFormat.format;
-    SwapchainCreateInfo.imageColorSpace = SurfaceFormat.colorSpace;
-    SwapchainCreateInfo.imageExtent = Extent;
-    SwapchainCreateInfo.imageArrayLayers = 1;
-    SwapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    SwapchainCreateInfo.preTransform = SurfaceCapabilities.currentTransform;
-    SwapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    SwapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    SwapchainCreateInfo.clipped = VK_TRUE;
+	VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &CreateInfo, nullptr, &NativeHandle);
+	ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
 
-    if (GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex() != GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex())
-    {
-        std::vector<uint32_t> QueueFamilyIndices = { GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex(), GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex() };
+	// Retrieve swapchain images
+	uint32_t ActualImageCount = 0;
+	VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), NativeHandle, &ActualImageCount, nullptr);
 
-        // Images can be used across multiple queue families without explicit ownership transfers.
-        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        SwapchainCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-        SwapchainCreateInfo.pQueueFamilyIndices = QueueFamilyIndices.data();
-    }
-    else
-    {
-        // An image is owned by one queue family at a time and ownership must be explicitly
-        // transferred before using it in another queue family. This option offers the best performance.
-        SwapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
+	std::vector<VkImage> SwapchainImages(ActualImageCount);
+	VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), NativeHandle, &ActualImageCount, SwapchainImages.data());
 
-    VkResult Result = VulkanRHI::vkCreateSwapchainKHR(Device.GetVkDevice(), &SwapchainCreateInfo, nullptr, &Swapchain);
-    ensure(Result == VK_SUCCESS, "Failed to create swapchain.");
+	RK_LOG_INFO("Swapchain created: {}x{}, {} images", Extent.width, Extent.height, ActualImageCount);
 
-    RK_LOG_INFO("Swapchain: {} images, {} frames-in-flight", ImageCount, MaxFramesInFlight);
-
-    std::vector<VkImage> Images;
-
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, nullptr);
-    Images.resize(ImageCount);
-    VulkanRHI::vkGetSwapchainImagesKHR(Device.GetVkDevice(), Swapchain, &ImageCount, Images.data());
-
-    for (uint32_t Index = 0; Index < ImageCount; ++Index)
-    {
-        RHITextureDesc Desc = RHITextureDesc::Create2D(Extent.width, Extent.height, RHIResourceLifetime::Unmanaged, RHITextureFormat::B8G8R8A8_SRGB, RHITextureUsage::Color | RHITextureUsage::CopyDst | RHITextureUsage::Present, RHITextureLayout::None, 0, 0, 1);
-        BackBuffers.push_back(std::make_unique<VulkanTexture>(Device, Desc, Images[Index]));
-    }
-
-    FrameSyncData.resize(ImageCount, {});
-
-    for (FrameSync& Frame : FrameSyncData)
-    {
-        Frame.ReadySemaphore = std::make_shared<VulkanSemaphore>();
-        Frame.SignalSemaphore = std::make_shared<VulkanSemaphore>();
-    }
+	CreateBackBufferTextures(SwapchainImages);
+	CreateSynchronizationPrimitives(ActualImageCount);
 }
 
 void VulkanSwapchain::DestroySwapchain()
 {
-    Device.WaitUntilIdle();
+	if (NativeHandle == VK_NULL_HANDLE)
+	{
+		return;
+	}
 
-    VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), Swapchain, nullptr);
+	Device.WaitUntilIdle();
 
-    BackBuffers.clear();
-    FrameSyncData.clear();
+	BackBuffers.clear();
+	AcquireSyncStates.clear();
+	ImageSyncStates.clear();
 
-    CurrentImageIndex = 0;
-    CurrentFrameIndex = 0;
+	VulkanRHI::vkDestroySwapchainKHR(Device.GetVkDevice(), NativeHandle, nullptr);
+	NativeHandle = VK_NULL_HANDLE;
+
+	ResetSyncState();
 }
 
-void VulkanSwapchain::WaitForImage()
+bool VulkanSwapchain::AcquireNextImage(VulkanQueue& Queue)
 {
-    FrameSync Frame = FrameSyncData[CurrentFrameIndex];
+	CurrentAcquireIndex = TotalAcquireCount % AcquireSyncStates.size();
+	AcquireSyncState& AcquireState = AcquireSyncStates[CurrentAcquireIndex];
 
-    if (Frame.InFlight)
-    {
-        uint64_t CompletedValue = 0;
-        VkResult Result = VulkanRHI::vkGetSemaphoreCounterValue(Device.GetVkDevice(), TimelineSemaphore, &CompletedValue);
-        ensure(Result == VK_SUCCESS, "Failed to get timeline semaphore value");
-    }
+	if (AcquireState.LastUsedTimelineValue > 0)
+	{
+		Queue.WaitForTimelineValue(AcquireState.LastUsedTimelineValue);
+	}
+
+	uint32_t ImageIndex = 0;
+	VkResult Result = VulkanRHI::vkAcquireNextImageKHR(Device.GetVkDevice(), NativeHandle, UINT64_MAX, AcquireState.Semaphore->NativeHandle, VK_NULL_HANDLE, &ImageIndex);
+
+	if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
+	{
+		return false;
+	}
+
+	ensure(Result == VK_SUCCESS, "Failed to acquire swapchain image.");
+
+	CurrentImageIndex = ImageIndex;
+	TotalAcquireCount++;
+
+	ImageSyncState& ImageState = ImageSyncStates[CurrentImageIndex];
+	if (ImageState.TimelineValue > 0)
+	{
+		Queue.WaitForTimelineValue(ImageState.TimelineValue);
+		ImageState.TimelineValue = 0;
+	}
+
+	return true;
 }
 
-bool VulkanSwapchain::AcquireBackBufferImage()
+void VulkanSwapchain::Present(VulkanQueue& Queue)
 {
-    CurrentFrameIndex = (CurrentFrameIndex + 1) % FrameSyncData.size();
+	ImageSyncState& ImageState = ImageSyncStates[CurrentImageIndex];
 
-    VkResult Result = VulkanRHI::vkAcquireNextImageKHR(Device.GetVkDevice(), Swapchain, UINT64_MAX, static_cast<VkSemaphore>(FrameSyncData[CurrentFrameIndex].ReadySemaphore->GetNativeHandle()), VK_NULL_HANDLE, &CurrentImageIndex);
+	VkPresentInfoKHR PresentInfo = {};
+	PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	PresentInfo.waitSemaphoreCount = 1;
+	PresentInfo.pWaitSemaphores = &ImageState.Semaphore->NativeHandle;
+	PresentInfo.swapchainCount = 1;
+	PresentInfo.pSwapchains = &NativeHandle;
+	PresentInfo.pImageIndices = &CurrentImageIndex;
 
-    if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR)
-    {
-        RK_LOG_INFO("Swapchain is out of date .");
-        return false;
-    }
+	VkResult Result = VulkanRHI::vkQueuePresentKHR(Device.GetPresentQueue()->GetHandle(), &PresentInfo);
 
-    ++NumAcquireCalls;
-    return true;
+	// VK_SUBOPTIMAL_KHR is not a fatal error - we can continue presenting.
+	// The next BeginFrame will detect out-of-date and trigger recreation.
+	if (Result != VK_SUCCESS && Result != VK_SUBOPTIMAL_KHR && Result != VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		ensure(false, "Failed to present swapchain image.");
+	}
+
+	// Record synchronization state for this frame
+	const uint64_t SubmittedTimelineValue = Queue.GetLastSubmittedTimelineValue();
+
+	ImageState.TimelineValue = SubmittedTimelineValue;
+
+	AcquireSyncStates[CurrentAcquireIndex].LastUsedTimelineValue = SubmittedTimelineValue;
+
+	TotalPresentCount++;
 }
 
-void VulkanSwapchain::PresentBackBufferImage()
-{
-    VkSemaphore Semaphore = static_cast<VkSemaphore>(FrameSyncData[CurrentFrameIndex].ReadySemaphore->GetNativeHandle());
-
-    VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.pWaitSemaphores = &Semaphore;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pSwapchains = &Swapchain;
-    present_info.swapchainCount = 1;
-    present_info.pImageIndices = &CurrentImageIndex;
-    VulkanRHI::vkQueuePresentKHR(GetVulkanRHIMinimal()->RHIGetPresentVkQueue(), &present_info);
- 
-    ++NumPresentCalls;
-}
+////////////////////////////////////////////////////////////////////////////////
+// Back Buffer Access
+////////////////////////////////////////////////////////////////////////////////
 
 RHITexture* VulkanSwapchain::GetBackBufferTexture() const
 {
-    ensure(BackBuffers.size() != 0)
+	ensure(!BackBuffers.empty(), "Swapchain has no back buffers.");
+	return BackBuffers[CurrentImageIndex].get();
+}
 
-    return BackBuffers[CurrentImageIndex].get();
+////////////////////////////////////////////////////////////////////////////////
+// Internal Helpers
+////////////////////////////////////////////////////////////////////////////////
+
+VkExtent2D VulkanSwapchain::ClampExtentToSurfaceCapabilities(
+	VkExtent2D InExtent,
+	const VkSurfaceCapabilitiesKHR& Capabilities) const
+{
+	// Special value indicating the surface size is determined by the swapchain extent
+	if (Capabilities.currentExtent.width != UINT32_MAX)
+	{
+		return Capabilities.currentExtent;
+	}
+
+	VkExtent2D ClampedExtent;
+	ClampedExtent.width = std::clamp(
+		InExtent.width,
+		Capabilities.minImageExtent.width,
+		Capabilities.maxImageExtent.width
+	);
+	ClampedExtent.height = std::clamp(
+		InExtent.height,
+		Capabilities.minImageExtent.height,
+		Capabilities.maxImageExtent.height
+	);
+
+	return ClampedExtent;
+}
+
+uint32_t VulkanSwapchain::DetermineOptimalImageCount(const VkSurfaceCapabilitiesKHR& Capabilities) const
+{
+	// Request one more than minimum to allow triple buffering when possible
+	uint32_t DesiredCount = Capabilities.minImageCount + 1;
+
+	// Clamp to maximum if one is specified (0 means unlimited)
+	if (Capabilities.maxImageCount > 0)
+	{
+		DesiredCount = min(DesiredCount, Capabilities.maxImageCount);
+	}
+
+	return DesiredCount;
+}
+
+VkSharingMode VulkanSwapchain::ConfigureQueueFamilySharing(VkSwapchainCreateInfoKHR& OutCreateInfo) const
+{
+	const uint32_t GraphicsFamily = GetVulkanRHIMinimal()->RHIGetGraphicsQueueFamilyIndex();
+	const uint32_t PresentFamily = GetVulkanRHIMinimal()->RHIGetPresentQueueFamilyIndex();
+
+	if (GraphicsFamily != PresentFamily)
+	{
+		// Different queue families require concurrent sharing mode.
+		// This has slightly lower performance but avoids explicit ownership transfers.
+		static std::vector<uint32_t> QueueFamilyIndices;
+		QueueFamilyIndices = { GraphicsFamily, PresentFamily };
+
+		OutCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		OutCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
+		OutCreateInfo.pQueueFamilyIndices = QueueFamilyIndices.data();
+
+		return VK_SHARING_MODE_CONCURRENT;
+	}
+
+	OutCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	OutCreateInfo.queueFamilyIndexCount = 0;
+	OutCreateInfo.pQueueFamilyIndices = nullptr;
+
+	return VK_SHARING_MODE_EXCLUSIVE;
+}
+
+void VulkanSwapchain::CreateBackBufferTextures(const std::vector<VkImage>& Images)
+{
+	BackBuffers.clear();
+	BackBuffers.reserve(Images.size());
+
+	const RHITextureDesc BackBufferDesc = RHITextureDesc::Create2D(
+		Extent.width,
+		Extent.height,
+		RHIResourceLifetime::Unmanaged,
+		RHITextureFormat::B8G8R8A8_SRGB,
+		RHITextureUsage::Color | RHITextureUsage::CopyDst | RHITextureUsage::Present,
+		RHITextureLayout::None,
+		0, 0, 1
+	);
+
+	for (VkImage Image : Images)
+	{
+		BackBuffers.push_back(std::make_unique<VulkanTexture>(Device, BackBufferDesc, Image));
+	}
+}
+
+void VulkanSwapchain::CreateSynchronizationPrimitives(uint32_t InImageCount)
+{
+	AcquireSyncStates.clear();
+	AcquireSyncStates.resize(InImageCount);
+
+	for (AcquireSyncState& State : AcquireSyncStates)
+	{
+		State.Semaphore = std::make_shared<VulkanSemaphore>(Device);
+		State.LastUsedTimelineValue = 0;
+	}
+
+	ImageSyncStates.clear();
+	ImageSyncStates.resize(InImageCount);
+
+	for (ImageSyncState& State : ImageSyncStates)
+	{
+		State.Semaphore = std::make_shared<VulkanSemaphore>(Device);
+		State.TimelineValue = 0;
+	}
+}
+
+void VulkanSwapchain::ResetSyncState()
+{
+	CurrentAcquireIndex = 0;
+	CurrentImageIndex = 0;
+	TotalAcquireCount = 0;
+	TotalPresentCount = 0;
 }
