@@ -1,6 +1,6 @@
 #include "Event.h"
 
-#include "Assertion.h"
+//#include "Assertion.h"
 #include "EventSink.h"
 
 #include <GLFW/glfw3.h>
@@ -18,7 +18,7 @@ struct NativeWindowUserData
 static NativeWindowUserData* GetUserData(GLFWwindow* window)
 { 
     NativeWindowUserData* userData = static_cast<NativeWindowUserData*>(glfwGetWindowUserPointer(window));
-    ensure(userData != nullptr);
+    //ensure(userData != nullptr);
     return userData;
 }
 
@@ -314,8 +314,8 @@ void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSi
 {
     GLFWwindow* window = static_cast<GLFWwindow*>(nativeWindow);
         
-    ensure(window);
-    ensure(eventSink);
+    //ensure(window);
+    //ensure(eventSink);
 
     NativeWindowUserData* userData = new NativeWindowUserData();
     userData->WindowHandleID = WindowHandleID;
@@ -341,8 +341,8 @@ void UnregisterPlatformWindow(void* nativeWindow)
     GLFWwindow* window = static_cast<GLFWwindow*>(nativeWindow);
     NativeWindowUserData* userData = GetUserData(window);
         
-    ensure(window);
-    ensure(userData);
+    //ensure(window);
+    //ensure(userData);
         
     glfwSetWindowCloseCallback(window, nullptr);
     glfwSetWindowSizeCallback(window, nullptr);

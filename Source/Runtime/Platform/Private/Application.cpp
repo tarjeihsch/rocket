@@ -1,6 +1,6 @@
 #include "Application.h"
 
-#include "Assertion.h"
+//#include "Assertion.h"
 #include "CoreTypes.h"
 #include "Event.h"
 #include "Window.h"
