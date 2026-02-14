@@ -1,3 +1,8 @@
+#define VMA_IMPLEMENTATION
+
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
+
 #include "Vulkan/VulkanLoader.h"
 
 #include <cassert>
@@ -133,11 +138,10 @@ namespace RHI
 #if defined(_WIN32)
         g_dynamic_library = ::LoadLibraryA("vulkan-1.dll");
         vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(::GetProcAddress(static_cast<HMODULE>(g_dynamic_library), "vkGetInstanceProcAddr"));
-#elif defined(__linux__)
+#endif
+
+#if defined(__linux__)
         g_dynamic_library = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
-        vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(g_dynamic_library, "vkGetInstanceProcAddr"));
-#elif defined(__APPLE__)
-        g_dynamic_library = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
         vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(g_dynamic_library, "vkGetInstanceProcAddr"));
 #endif
     }
@@ -146,9 +150,9 @@ namespace RHI
     {
 #if defined(_WIN32)
         ::FreeLibrary(static_cast<HMODULE>(g_dynamic_library));
-#elif defined(__linux__)
-        dlclose(g_dynamic_library);
-#elif defined(__APPLE__)
+#endif
+
+#if defined(__linux__)
         dlclose(g_dynamic_library);
 #endif
     }

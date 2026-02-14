@@ -5,6 +5,7 @@
 #endif
 
 #include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
 
 #if defined(_WIN32)
     #include <vulkan/vulkan_win32.h>

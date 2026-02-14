@@ -4,8 +4,6 @@
 #include <cstddef>
 #include <wtypes.h>
 
-#define ANSICHAR char
-
 namespace RHI 
 {
     struct GPUBindGroup;
@@ -354,8 +352,6 @@ namespace RHI
         GPUHeapType heap_type = GPUHeapType::Unknown;
         GPUBufferFlags flags = GPUBufferFlag::None;
 
-        GPUBufferDesc() = default;
-
         static GPUBufferDesc DefaultBuffer(uint64_t size, GPUBufferFlags flags = GPUBufferFlag::None)
         {
             GPUBufferDesc desc;
@@ -363,6 +359,44 @@ namespace RHI
             desc.heap_type = GPUHeapType::Default;
             desc.flags = flags;
             return desc;
+        }
+
+        static GPUBufferDesc UploadBuffer(uint64_t size, GPUBufferFlags flags = GPUBufferFlag::None)
+        {
+            GPUBufferDesc desc;
+            desc.size = size;
+            desc.heap_type = GPUHeapType::Upload;
+            desc.flags = flags;
+            return desc;
+        }
+
+        static GPUBufferDesc ReadbackBuffer(uint64_t size, GPUBufferFlags flags = GPUBufferFlag::None)
+        {
+            GPUBufferDesc desc;
+            desc.size = size;
+            desc.heap_type = GPUHeapType::Readback;
+            desc.flags = flags;
+            return desc;
+        }
+
+        static GPUBufferDesc VertexBuffer(uint64_t size)
+        {
+            return DefaultBuffer(size, GPUBufferFlag::Vertex);
+        }
+
+        static GPUBufferDesc IndexBuffer(uint64_t size)
+        {
+            return DefaultBuffer(size, GPUBufferFlag::Index);
+        }
+
+        static GPUBufferDesc StorageBuffer(uint64_t size)
+        {
+            return DefaultBuffer(size, GPUBufferFlag::Storage);
+        }
+
+        static GPUBufferDesc UniformBuffer(uint64_t size)
+        {
+            return DefaultBuffer(size, GPUBufferFlag::Uniform);
         }
     };
 

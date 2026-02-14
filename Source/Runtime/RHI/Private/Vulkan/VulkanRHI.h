@@ -8,14 +8,13 @@ namespace RHI
 {
     struct VulkanGPUBuffer : GPUBuffer
     {
-        VkDevice& device;
-
-        VulkanGPUBuffer(VkDevice in_device);
+        ~VulkanGPUBuffer();
 
         void SetDebugName(const char* debug_name) override;
         uint64_t GetVirtualAddress() const override;
 
-        VkBuffer buffer;
+        VkBuffer            buffer              = nullptr;
+        VmaAllocation       allocation          = nullptr;
     };
 
     class VulkanRHI : public IRHI

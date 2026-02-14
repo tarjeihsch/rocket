@@ -1,4 +1,5 @@
 #include "VulkanRHI.h"
+
 #include <vector>
 #include <assert.h>
 #include <unordered_set>
@@ -20,6 +21,7 @@ namespace RHI
     static VkInstance           g_instance          = nullptr;
     static VkPhysicalDevice     g_physical_device   = nullptr;
     static VkDevice             g_logical_device    = nullptr;
+    static VmaAllocator         g_allocator         = nullptr;
 
     static uint32_t             g_graphics_family   = UINT32_MAX;
     static uint32_t             g_compute_family    = UINT32_MAX;
@@ -27,30 +29,32 @@ namespace RHI
 
     static GPUAdapter           g_adapter           = {};
 
-    static void SetDebugName(VkObjectType type, uint64_t handle, const char* debug_name)
+    static void SetDebugNameInternal(VkObjectType type, uint64_t handle, const char* debug_name)
     {
         VkDebugUtilsObjectNameInfoEXT debug_info = {};
         debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
         debug_info.objectType = type;
         debug_info.objectHandle = handle;
         debug_info.pObjectName = debug_name;
+        RHI::vkSetDebugUtilsObjectNameEXT(g_logical_device, &debug_info);
     }
 
-    VulkanGPUBuffer::VulkanGPUBuffer(VkDevice in_device)
-        : device(in_device)
+    VulkanGPUBuffer::~VulkanGPUBuffer()
     {
+        vmaDestroyBuffer(g_allocator, buffer, allocation);
     }
 
     void VulkanGPUBuffer::SetDebugName(const char *debug_name)
     {
+        SetDebugNameInternal(VK_OBJECT_TYPE_BUFFER, reinterpret_cast<uint64_t>(buffer), debug_name);
     }
     
     uint64_t VulkanGPUBuffer::GetVirtualAddress() const
     {
         VkBufferDeviceAddressInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO ;
+        info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
         info.buffer = buffer;
-        return RHI::vkGetBufferDeviceAddress(device, &info);
+        return RHI::vkGetBufferDeviceAddress(g_logical_device, &info);
     }
 
     VulkanRHI::VulkanRHI()
@@ -294,10 +298,54 @@ namespace RHI
         assert(Result == VK_SUCCESS);
 
         RHI::LoadVulkanDevice(g_logical_device);
+
+        VmaVulkanFunctions allocator_functions = {};
+        allocator_functions.vkGetInstanceProcAddr = RHI::vkGetInstanceProcAddr;
+        allocator_functions.vkGetDeviceProcAddr = RHI::vkGetDeviceProcAddr;
+        allocator_functions.vkGetPhysicalDeviceProperties = RHI::vkGetPhysicalDeviceProperties;
+        allocator_functions.vkGetPhysicalDeviceMemoryProperties = RHI::vkGetPhysicalDeviceMemoryProperties;
+        allocator_functions.vkAllocateMemory = RHI::vkAllocateMemory;
+        allocator_functions.vkFreeMemory = RHI::vkFreeMemory;
+        allocator_functions.vkMapMemory = RHI::vkMapMemory;
+        allocator_functions.vkUnmapMemory = RHI::vkUnmapMemory;
+        allocator_functions.vkFlushMappedMemoryRanges = RHI::vkFlushMappedMemoryRanges;
+        allocator_functions.vkInvalidateMappedMemoryRanges = RHI::vkInvalidateMappedMemoryRanges;
+        allocator_functions.vkBindBufferMemory = RHI::vkBindBufferMemory;
+        allocator_functions.vkBindImageMemory = RHI::vkBindImageMemory;
+        allocator_functions.vkGetBufferMemoryRequirements = RHI::vkGetBufferMemoryRequirements;
+        allocator_functions.vkGetImageMemoryRequirements = RHI::vkGetImageMemoryRequirements;
+        allocator_functions.vkCreateBuffer = RHI::vkCreateBuffer;
+        allocator_functions.vkDestroyBuffer = RHI::vkDestroyBuffer;
+        allocator_functions.vkCreateImage = RHI::vkCreateImage;
+        allocator_functions.vkDestroyImage = RHI::vkDestroyImage;
+        allocator_functions.vkCmdCopyBuffer = RHI::vkCmdCopyBuffer;
+        allocator_functions.vkGetBufferMemoryRequirements2KHR = RHI::vkGetBufferMemoryRequirements2;
+        allocator_functions.vkGetImageMemoryRequirements2KHR = RHI::vkGetImageMemoryRequirements2;
+        allocator_functions.vkBindBufferMemory2KHR = RHI::vkBindBufferMemory2;
+        allocator_functions.vkBindImageMemory2KHR = RHI::vkBindImageMemory2;
+        allocator_functions.vkGetPhysicalDeviceMemoryProperties2KHR = RHI::vkGetPhysicalDeviceMemoryProperties2;
+        allocator_functions.vkGetDeviceBufferMemoryRequirements = RHI::vkGetDeviceBufferMemoryRequirements;
+        allocator_functions.vkGetDeviceImageMemoryRequirements = RHI::vkGetDeviceImageMemoryRequirements;
+
+        VmaAllocatorCreateInfo AllocatorCreateInfo = {};
+        AllocatorCreateInfo.physicalDevice = g_physical_device;
+        AllocatorCreateInfo.device = g_logical_device;
+        AllocatorCreateInfo.instance = g_instance;
+        AllocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+        AllocatorCreateInfo.pVulkanFunctions = &allocator_functions;
+
+        Result = vmaCreateAllocator(&AllocatorCreateInfo, &g_allocator);
+        assert(Result == VK_SUCCESS);
     }
 
     VulkanRHI::~VulkanRHI()
     {
+        RHI::vkDeviceWaitIdle(g_logical_device);
+
+        vmaDestroyAllocator(g_allocator);
+
+        RHI::vkDestroyDevice(g_logical_device, nullptr);
+        RHI::vkDestroyInstance(g_instance, nullptr);
     }
 
     GPUAdapter VulkanRHI::GetAdapater() const
@@ -311,11 +359,37 @@ namespace RHI
     
     void VulkanRHI::WaitIdle()
     {
+        RHI::vkDeviceWaitIdle(g_logical_device);
     }
     
     GPUBuffer *VulkanRHI::CreateBuffer(const GPUBufferDesc &buffer_desc)
     {
-        return nullptr;
+        VulkanGPUBuffer* buffer = new VulkanGPUBuffer();
+        
+        VkBufferUsageFlags buffer_usage_flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Vertex) buffer_usage_flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Index) buffer_usage_flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Storage) buffer_usage_flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Uniform) buffer_usage_flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+        VkBufferCreateInfo buffer_info = {};
+        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size = buffer_desc.size;
+        buffer_info.usage = buffer_usage_flags;
+
+        VmaAllocationCreateInfo allocation_info = {};
+        allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+        switch (buffer_desc.heap_type)
+        {
+            case GPUHeapType::Upload: allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; break;
+            case GPUHeapType::Readback: allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT; break;
+        }
+
+        VkResult result = vmaCreateBuffer(g_allocator, &buffer_info, &allocation_info, &buffer->buffer, &buffer->allocation, nullptr);
+        assert(result == VK_SUCCESS);
+
+        return buffer;
     }
     
     GPUTexture *VulkanRHI::CreateTexture(const GPUTextureDesc &texture_desc)

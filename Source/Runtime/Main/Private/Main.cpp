@@ -21,8 +21,11 @@ int main()
 
 	RHI::Initialize(RHI::GPUDriver::Vulkan);
 
+	RHI::GPUBufferDesc buffer_desc = RHI::GPUBufferDesc::StorageBuffer(32ULL * 1024 * 1024);
+	RHI::GPUBuffer* buffer = RHI::GetRHI()->CreateBuffer(buffer_desc);
+
 	while (!GWindowShouldClose)
-	{
+	{	
 		Application::Get().PumpMessageQueue();
 	}
 

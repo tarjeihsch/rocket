@@ -4,6 +4,12 @@
 
 namespace RHI
 {
+    // RHI Resource Ownership
+    // All RHI resources (buffers, textures, etc.) are created via IRHI factory methods
+    // (e.g. CreateBuffer) and destroyed by deleting the returned pointer. Resources
+    // clean up their underlying API objects in their destructors. There are no
+    // explicit Destroy methods on the RHI interface.
+
     struct GPUBuffer
     {
         virtual ~GPUBuffer() = default;
