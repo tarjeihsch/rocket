@@ -63,9 +63,9 @@ namespace RHI
     
         virtual void SetDebugName(const char* debug_name) = 0;
 
-        virtual void SetBuffer(uint32_t bind_point, const GPUBuffer* buffer) = 0;
-        virtual void SetTexture(uint32_t bind_point, const GPUTexture* texture) = 0;
-        virtual void SetSampler(uint32_t bind_point, const GPUSampler* sampler) = 0;
+        virtual void SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index = 0) = 0;
+        virtual void SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index = 0) = 0;
+        virtual void SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index = 0) = 0;
     };
 
     struct GPUShader

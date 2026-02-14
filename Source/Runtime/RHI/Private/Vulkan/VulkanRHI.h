@@ -48,9 +48,9 @@ namespace RHI
         ~VulkanGPUBindGroup();
 
         void SetDebugName(const char* debug_name) override;
-        void SetBuffer(uint32_t bind_point, const GPUBuffer* buffer) override;
-        void SetTexture(uint32_t bind_point, const GPUTexture* texture) override;
-        void SetSampler(uint32_t bind_point, const GPUSampler* sampler) override;
+        void SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index) override;
+        void SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index) override;
+        void SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index) override;
 
         VkDescriptorSet             descriptor_set              = nullptr;
         VkDescriptorSetLayout       descriptor_set_layout       = nullptr;

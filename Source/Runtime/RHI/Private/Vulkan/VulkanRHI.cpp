@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "VulkanTypes.h"
+#include <unordered_map>
 
 RHI::IRHI* CreateVulkanRHI()
 {
@@ -14,6 +15,8 @@ RHI::IRHI* CreateVulkanRHI()
 
 namespace RHI
 {
+    static constexpr uint32_t MAX_BIND_GROUP_ENTRIES = 16;
+
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
         printf("[Vulkan] %s\n", CallbackData->pMessage);
@@ -88,18 +91,40 @@ namespace RHI
 
     VulkanGPUBindGroup::~VulkanGPUBindGroup()
     {
+        RHI::vkDestroyDescriptorPool(g_logical_device, descriptor_pool, nullptr);
+        RHI::vkDestroyDescriptorSetLayout(g_logical_device, descriptor_set_layout, nullptr);
     }
 
     void VulkanGPUBindGroup::SetDebugName(const char* debug_name)
     {
     }
-    void VulkanGPUBindGroup::SetBuffer(uint32_t bind_point, const GPUBuffer* buffer)
+
+    void VulkanGPUBindGroup::SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index)
     {
+
     }
-    void VulkanGPUBindGroup::SetTexture(uint32_t bind_point, const GPUTexture* texture)
+
+    void VulkanGPUBindGroup::SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index)
     {
+        const VulkanGPUTexture* native_texture = static_cast<const VulkanGPUTexture*>(texture);
+
+        VkDescriptorImageInfo image_info = {};
+        image_info.imageView = native_texture->srv;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = descriptor_set;
+        write.dstBinding = position;
+        write.dstArrayElement = index;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        write.pImageInfo = &image_info;
+
+        RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write, 0, nullptr);
     }
-    void VulkanGPUBindGroup::SetSampler(uint32_t bind_point, const GPUSampler* sampler)
+
+    void VulkanGPUBindGroup::SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index)
     {
     }
 
@@ -257,6 +282,11 @@ namespace RHI
         g_adapter.max_compute_workgroup_count[0] = physical_device_properties.limits.maxComputeWorkGroupCount[0];
         g_adapter.max_compute_workgroup_count[1] = physical_device_properties.limits.maxComputeWorkGroupCount[1];
         g_adapter.max_compute_workgroup_count[2] = physical_device_properties.limits.maxComputeWorkGroupCount[2];
+        g_adapter.max_sampled_textures = physical_device_properties.limits.maxDescriptorSetSampledImages;
+        g_adapter.max_storage_textures = physical_device_properties.limits.maxDescriptorSetStorageImages;
+        g_adapter.max_storage_buffers = physical_device_properties.limits.maxDescriptorSetStorageBuffers;
+        g_adapter.max_uniform_buffers = physical_device_properties.limits.maxDescriptorSetUniformBuffers;
+        g_adapter.max_samplers = physical_device_properties.limits.maxDescriptorSetSamplers;
         g_adapter.bindless_support = query_device_features_1_2.descriptorIndexing && query_device_features_1_2.runtimeDescriptorArray;
         g_adapter.indirect_draw_support = query_device_features.features.multiDrawIndirect;
         g_adapter.timestamp_query_support = physical_device_properties.limits.timestampComputeAndGraphics;
@@ -554,7 +584,74 @@ namespace RHI
     
     GPUBindGroup *VulkanRHI::CreateBindGroup(const GPUBindGroupDesc &bind_group_desc)
     {
-        return nullptr;
+        VulkanGPUBindGroup* bind_group = new VulkanGPUBindGroup();
+
+        VkDescriptorBindingFlags binding_flags[MAX_BIND_GROUP_ENTRIES];
+        std::fill(binding_flags, binding_flags + bind_group_desc.entry_count, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {};
+        binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        binding_flags_info.bindingCount = bind_group_desc.entry_count;
+        binding_flags_info.pBindingFlags = binding_flags;
+
+        VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[MAX_BIND_GROUP_ENTRIES];
+        memset(descriptor_set_layout_bindings, 0, sizeof(VkDescriptorSetLayoutBinding) * MAX_BIND_GROUP_ENTRIES);
+
+        for (uint32_t index = 0; index < bind_group_desc.entry_count; ++index)
+        {
+            descriptor_set_layout_bindings[index].binding = bind_group_desc.entries[index].position;
+            descriptor_set_layout_bindings[index].descriptorCount = bind_group_desc.entries[index].count;
+            descriptor_set_layout_bindings[index].stageFlags = VK_SHADER_STAGE_ALL;
+
+            switch (bind_group_desc.entries[index].bind_type)
+            {
+                case GPUBindGroupEntryType::StorageBuffer: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; break;
+                case GPUBindGroupEntryType::UniformBuffer: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; break;
+                case GPUBindGroupEntryType::SampledTexture: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE; break;
+                case GPUBindGroupEntryType::StorageTexture: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; break;
+                case GPUBindGroupEntryType::Sampler: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; break;
+            }
+        }
+
+        VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = &binding_flags_info;
+        descriptor_set_layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        descriptor_set_layout_create_info.bindingCount = bind_group_desc.entry_count;
+        descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
+
+        VkResult result = RHI::vkCreateDescriptorSetLayout(g_logical_device, &descriptor_set_layout_create_info, nullptr, &bind_group->descriptor_set_layout);
+        assert(result == VK_SUCCESS);
+
+        VkDescriptorPoolSize pool_sizes[] =
+        {
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, g_adapter.max_storage_buffers },
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, g_adapter.max_uniform_buffers },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, g_adapter.max_sampled_textures },
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, g_adapter.max_storage_textures },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, g_adapter.max_samplers },
+        };
+
+        VkDescriptorPoolCreateInfo pool_info = {};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        pool_info.maxSets = 1;
+        pool_info.poolSizeCount = std::size(pool_sizes);
+        pool_info.pPoolSizes = pool_sizes;
+
+        result = RHI::vkCreateDescriptorPool(g_logical_device, &pool_info, nullptr, &bind_group->descriptor_pool);
+        assert(result == VK_SUCCESS);
+
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = bind_group->descriptor_pool;
+        alloc_info.descriptorSetCount = 1;
+        alloc_info.pSetLayouts = &bind_group->descriptor_set_layout;
+
+        result = RHI::vkAllocateDescriptorSets(g_logical_device, &alloc_info, &bind_group->descriptor_set);
+        assert(result == VK_SUCCESS);
+
+        return bind_group;
     }
     
     GPUPipeline *VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)

@@ -96,10 +96,9 @@ namespace RHI
         INTEL       = 0x8086,
     };
 
-    enum class GPUBindingType
+    enum class GPUBindGroupEntryType
     {
         Unknown,
-
         UniformBuffer,
         StorageBuffer,
         SampledTexture,
@@ -283,10 +282,9 @@ namespace RHI
 
     struct GPUBindGroupEntry
     {
-        uint32_t bind_point = 0;
-        uint32_t bind_count = 0;
-        GPUBindingType bind_type = GPUBindingType::Unknown;
-        GPUShaderStageFlags stage_flags = GPUShaderStageFlag::None;
+        GPUBindGroupEntryType bind_type = GPUBindGroupEntryType::Unknown;
+        uint32_t position = 0;
+        uint32_t count = 0;
     };
 
     struct GPUAdapter final
@@ -304,6 +302,11 @@ namespace RHI
         uint32_t max_push_constant_size = 0;
         uint32_t max_compute_workgroup_size[3] = {};
         uint32_t max_compute_workgroup_count[3] = {};
+        uint32_t max_sampled_textures = 0;
+        uint32_t max_storage_textures = 0;
+        uint32_t max_storage_buffers = 0;
+        uint32_t max_uniform_buffers = 0;
+        uint32_t max_samplers = 0;
 
         uint8_t bindless_support : 1 = false;
         uint8_t mesh_shader_support : 1 = false;
