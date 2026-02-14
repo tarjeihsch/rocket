@@ -5,6 +5,8 @@
 #include <unordered_set>
 #include <string_view>
 
+#include "VulkanTypes.h"
+
 RHI::IRHI* CreateVulkanRHI()
 {
     return new RHI::VulkanRHI();
@@ -48,6 +50,20 @@ namespace RHI
     {
         SetDebugNameInternal(VK_OBJECT_TYPE_BUFFER, reinterpret_cast<uint64_t>(buffer), debug_name);
     }
+
+    VulkanGPUTexture::~VulkanGPUTexture()
+    {
+        vmaDestroyImage(g_allocator, texture, allocation);
+        
+        for (VkImageView view : views)
+        {
+            vkDestroyImageView(g_logical_device, view, nullptr);
+        }
+    }
+
+    void VulkanGPUTexture::SetDebugName(const char* debug_name)
+    {
+    }
     
     uint64_t VulkanGPUBuffer::GetVirtualAddress() const
     {
@@ -55,6 +71,36 @@ namespace RHI
         info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
         info.buffer = buffer;
         return RHI::vkGetBufferDeviceAddress(g_logical_device, &info);
+    }
+
+    void* VulkanGPUBuffer::Lock()
+    {
+        void* mapped = nullptr;
+        VkResult result = vmaMapMemory(g_allocator, allocation, &mapped);
+        assert(result == VK_SUCCESS);
+        return mapped;
+    }
+
+    void VulkanGPUBuffer::Unlock()
+    {
+        vmaUnmapMemory(g_allocator, allocation);
+    }
+
+    VulkanGPUBindGroup::~VulkanGPUBindGroup()
+    {
+    }
+
+    void VulkanGPUBindGroup::SetDebugName(const char* debug_name)
+    {
+    }
+    void VulkanGPUBindGroup::SetBuffer(uint32_t bind_point, const GPUBuffer* buffer)
+    {
+    }
+    void VulkanGPUBindGroup::SetTexture(uint32_t bind_point, const GPUTexture* texture)
+    {
+    }
+    void VulkanGPUBindGroup::SetSampler(uint32_t bind_point, const GPUSampler* sampler)
+    {
     }
 
     VulkanRHI::VulkanRHI()
@@ -372,6 +418,13 @@ namespace RHI
         if (buffer_desc.flags & GPUBufferFlag::Storage) buffer_usage_flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (buffer_desc.flags & GPUBufferFlag::Uniform) buffer_usage_flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
+        VmaAllocationCreateFlags allocation_flags = 0;
+        switch (buffer_desc.heap_type)
+        {
+            case GPUHeapType::Upload: allocation_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; break;
+            case GPUHeapType::Readback: allocation_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT; break;
+        }
+
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = buffer_desc.size;
@@ -379,12 +432,7 @@ namespace RHI
 
         VmaAllocationCreateInfo allocation_info = {};
         allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-        switch (buffer_desc.heap_type)
-        {
-            case GPUHeapType::Upload: allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; break;
-            case GPUHeapType::Readback: allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT; break;
-        }
+        allocation_info.flags = allocation_flags;
 
         VkResult result = vmaCreateBuffer(g_allocator, &buffer_info, &allocation_info, &buffer->buffer, &buffer->allocation, nullptr);
         assert(result == VK_SUCCESS);
@@ -392,9 +440,111 @@ namespace RHI
         return buffer;
     }
     
-    GPUTexture *VulkanRHI::CreateTexture(const GPUTextureDesc &texture_desc)
+    GPUTexture* VulkanRHI::CreateTexture(const GPUTextureDesc& texture_desc)
     {
-        return nullptr;
+        VulkanGPUTexture* texture = new VulkanGPUTexture();
+
+        VkFormat format = GetNativeFormat(texture_desc.format);
+
+        VkImageUsageFlags image_usage_flags = 0;
+        if (texture_desc.flags & GPUTextureFlag::RenderTarget) image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (texture_desc.flags & GPUTextureFlag::DepthTarget) image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (texture_desc.flags & GPUTextureFlag::SRV) image_usage_flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        if (texture_desc.flags & GPUTextureFlag::UAV) image_usage_flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+        if (texture_desc.flags & GPUTextureFlag::TransferSrc) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        if (texture_desc.flags & GPUTextureFlag::TransferDst) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+        VkImageType texture_type = VK_IMAGE_TYPE_2D;
+        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
+        VkImageCreateFlags texture_flags = 0;
+        switch (texture_desc.dimension)
+        {
+            case GPUTextureDimension::Texture1D:   
+            {
+                texture_type = VK_IMAGE_TYPE_1D;
+                view_type = VK_IMAGE_VIEW_TYPE_1D;
+                break;
+            }
+            case GPUTextureDimension::Texture2D:   
+            {
+                texture_type = VK_IMAGE_TYPE_2D;
+                view_type = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            }
+            case GPUTextureDimension::Texture3D:   
+            {
+                texture_type = VK_IMAGE_TYPE_3D;
+                view_type = VK_IMAGE_VIEW_TYPE_3D;
+                break;
+            }
+            case GPUTextureDimension::TextureCube:
+            {
+                texture_type = VK_IMAGE_TYPE_2D;
+                view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+                texture_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+                break;
+            }
+        }
+
+        VkImageCreateInfo image_info = {};
+        image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_info.format = format;
+        image_info.extent = { texture_desc.width, texture_desc.height, texture_desc.depth };
+        image_info.mipLevels = texture_desc.mip_level_count;
+        image_info.arrayLayers = texture_desc.layer_count;
+        image_info.samples = static_cast<VkSampleCountFlagBits>(texture_desc.sample_count);
+        image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_info.usage = image_usage_flags;
+        image_info.imageType = texture_type;
+        image_info.flags = texture_flags;
+
+        VmaAllocationCreateInfo allocation_info = {};
+        allocation_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+
+        VkResult result = vmaCreateImage(g_allocator, &image_info, &allocation_info, &texture->texture, &texture->allocation, nullptr);
+        assert(result == VK_SUCCESS);
+
+        const bool is_depth = (texture_desc.flags & GPUTextureFlag::DepthTarget) != 0;
+        VkImageAspectFlags aspect = is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkImageViewCreateInfo view_info = {};
+        view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image = texture->texture;
+        view_info.viewType = view_type;
+        view_info.format = format;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount = texture_desc.layer_count;
+        view_info.subresourceRange.baseMipLevel = 0;
+
+        if (texture_desc.flags & GPUTextureFlag::RenderTarget)
+        {
+            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            view_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &view_info, nullptr, &texture->rtv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::DepthTarget)
+        {
+            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            view_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &view_info, nullptr, &texture->dsv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::SRV)
+        {
+            view_info.subresourceRange.aspectMask = aspect;
+            view_info.subresourceRange.levelCount = texture_desc.mip_level_count;
+            RHI::vkCreateImageView(g_logical_device, &view_info, nullptr, &texture->srv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::UAV)
+        {
+            view_info.subresourceRange.aspectMask = aspect;
+            view_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &view_info, nullptr, &texture->uav);
+        }
+
+        return texture;
     }
     
     GPUSampler *VulkanRHI::CreateSampler(const GPUSamplerDesc &sampler_desc)
@@ -425,29 +575,5 @@ namespace RHI
     GPUCommandList *VulkanRHI::CreateCommandList()
     {
         return nullptr;
-    }
-    
-    void VulkanRHI::DestroyBuffer(GPUBuffer *buffer)
-    {
-    }
-    
-    void VulkanRHI::DestroyTexture(GPUTexture *texture)
-    {
-    }
-    
-    void VulkanRHI::DestroySampler(GPUSampler *sampler)
-    {
-    }
-    
-    void VulkanRHI::DestroyShader(GPUShader *shader)
-    {
-    }
-    
-    void VulkanRHI::DestroyPipeline(GPUPipeline *pipeline)
-    {
-    }
-    
-    void VulkanRHI::DestroyBindGroup(GPUBindGroup *bind_group)
-    {
     }
 }

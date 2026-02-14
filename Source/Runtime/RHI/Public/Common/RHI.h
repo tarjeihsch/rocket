@@ -16,6 +16,9 @@ namespace RHI
 
         virtual void SetDebugName(const char* debug_name) = 0;
         virtual uint64_t GetVirtualAddress() const = 0;
+
+        virtual void* Lock() = 0;
+        virtual void Unlock() = 0;
     };
 
     struct GPUBufferView
@@ -131,13 +134,6 @@ namespace RHI
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
         virtual GPUCommandList* CreateCommandList() = 0;
-
-        virtual void DestroyBuffer(GPUBuffer* buffer) = 0;
-        virtual void DestroyTexture(GPUTexture* texture) = 0;
-        virtual void DestroySampler(GPUSampler* sampler) = 0;
-        virtual void DestroyShader(GPUShader* shader) = 0;
-        virtual void DestroyPipeline(GPUPipeline* pipeline) = 0;
-        virtual void DestroyBindGroup(GPUBindGroup* bind_group) = 0;
 	};
 
     void Initialize(GPUDriver driver);

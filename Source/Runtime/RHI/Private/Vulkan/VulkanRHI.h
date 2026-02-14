@@ -13,8 +13,48 @@ namespace RHI
         void SetDebugName(const char* debug_name) override;
         uint64_t GetVirtualAddress() const override;
 
+        void* Lock() override;
+        void Unlock() override;
+
         VkBuffer            buffer              = nullptr;
         VmaAllocation       allocation          = nullptr;
+    };
+
+    struct VulkanGPUTexture : GPUTexture
+    {
+        ~VulkanGPUTexture();
+
+        void SetDebugName(const char* debug_name) override;
+
+        VkImage             texture             = nullptr;
+        VmaAllocation       allocation          = nullptr;
+        
+        union
+        {
+            struct
+            {
+                VkImageView rtv;
+                VkImageView dsv;
+                VkImageView srv;
+                VkImageView uav;
+            };
+
+            VkImageView views[4] = {};
+        };
+    };
+
+    struct VulkanGPUBindGroup : GPUBindGroup
+    {
+        ~VulkanGPUBindGroup();
+
+        void SetDebugName(const char* debug_name) override;
+        void SetBuffer(uint32_t bind_point, const GPUBuffer* buffer) override;
+        void SetTexture(uint32_t bind_point, const GPUTexture* texture) override;
+        void SetSampler(uint32_t bind_point, const GPUSampler* sampler) override;
+
+        VkDescriptorSet             descriptor_set              = nullptr;
+        VkDescriptorSetLayout       descriptor_set_layout       = nullptr;
+        VkDescriptorPool            descriptor_pool             = nullptr;
     };
 
     class VulkanRHI : public IRHI
@@ -36,12 +76,5 @@ namespace RHI
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;
         GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) override;
         GPUCommandList* CreateCommandList() override;
-
-        void DestroyBuffer(GPUBuffer* buffer) override;
-        void DestroyTexture(GPUTexture* texture) override;
-        void DestroySampler(GPUSampler* sampler) override;
-        void DestroyShader(GPUShader* shader) override;
-        void DestroyPipeline(GPUPipeline* pipeline) override;
-        void DestroyBindGroup(GPUBindGroup* bind_group) override;
     };
 }

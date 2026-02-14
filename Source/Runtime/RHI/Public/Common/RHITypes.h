@@ -30,14 +30,38 @@ namespace RHI
     {
         Unknown,
 
+        // 8-bit normalized
+        RGBA8_UNORM,
+        RGBA8_SRGB,
+        BGRA8_UNORM,
+        BGRA8_SRGB,
+
+        // 16-bit float
+        R16_FLOAT,
+        RG16_FLOAT,
+        RGBA16_FLOAT,
+
+        // 32-bit float
+        R32_FLOAT,
+        RG32_FLOAT,
+        RGB32_FLOAT,
         RGBA32_FLOAT,
+
+        // 32-bit unsigned integer
         RGBA32_UINT,
         RGBA32_SINT,
-
-        RGB32_FLOAT,
         RGB32_UINT,
         RGB32_SINT,
+        R32_UINT,
+
+        // Depth / Stencil
+        D16_UNORM,
+        D32_FLOAT,
+        D24_UNORM_S8,
+        D32_FLOAT_S8
     };
+
+
 
     enum class GPUHeapType
     {
@@ -56,11 +80,11 @@ namespace RHI
 
     enum class GPUTextureDimension
     {
-        // Invalid state
         Unknown,
         Texture1D,
         Texture2D,
-        Texture3D
+        Texture3D,
+        TextureCube
     };
 
     enum class GPUAdapterVendor
@@ -415,19 +439,77 @@ namespace RHI
         uint32_t layer_count = 1;
         uint32_t sample_count = 1;
 
-        static GPUTextureDesc DefaultTexture(GPUFormat format, GPUTextureFlags flags, GPUTextureDimension dimension, uint32_t width, uint32_t height, uint32_t depth, uint32_t mip_level_count, uint32_t layer_count, uint32_t sample_count)
+        static GPUTextureDesc Texture1D(GPUFormat format, uint32_t width, GPUTextureFlags flags = GPUTextureFlag::SRV, uint32_t mip_level_count = 1)
         {
-            GPUTextureDesc texture_desc;
+            GPUTextureDesc desc;
+            desc.format = format;
+            desc.flags = flags;
+            desc.dimension = GPUTextureDimension::Texture1D;
+            desc.width = width;
+            desc.mip_level_count = mip_level_count;
+            return desc;
+        }
 
-            texture_desc.format = format;
-            texture_desc.flags = flags;
-            texture_desc.dimension = dimension;
-            texture_desc.width = width;
-            texture_desc.height = height;
-            texture_desc.depth = depth;
-            texture_desc.mip_level_count = mip_level_count;
-            texture_desc.layer_count = layer_count;
-            texture_desc.sample_count = sample_count;
+        static GPUTextureDesc Texture2D(GPUFormat format, uint32_t width, uint32_t height, GPUTextureFlags flags = GPUTextureFlag::SRV, uint32_t mip_level_count = 1, uint32_t sample_count = 1)
+        {
+            GPUTextureDesc desc;
+            desc.format = format;
+            desc.flags = flags;
+            desc.dimension = GPUTextureDimension::Texture2D;
+            desc.width = width;
+            desc.height = height;
+            desc.mip_level_count = mip_level_count;
+            desc.sample_count = sample_count;
+            return desc;
+        }
+
+        static GPUTextureDesc Texture3D(GPUFormat format, uint32_t width, uint32_t height, uint32_t depth, GPUTextureFlags flags = GPUTextureFlag::SRV, uint32_t mip_level_count = 1)
+        {
+            GPUTextureDesc desc;
+            desc.format = format;
+            desc.flags = flags;
+            desc.dimension = GPUTextureDimension::Texture3D;
+            desc.width = width;
+            desc.height = height;
+            desc.depth = depth;
+            desc.mip_level_count = mip_level_count;
+            return desc;
+        }
+
+        static GPUTextureDesc TextureCube(GPUFormat format, uint32_t size, GPUTextureFlags flags = GPUTextureFlag::SRV, uint32_t mip_level_count = 1)
+        {
+            GPUTextureDesc desc;
+            desc.format = format;
+            desc.flags = flags;
+            desc.dimension = GPUTextureDimension::TextureCube;
+            desc.width = size;
+            desc.height = size;
+            desc.layer_count = 6;
+            desc.mip_level_count = mip_level_count;
+            return desc;
+        }
+
+        static GPUTextureDesc Texture2DArray(GPUFormat format, uint32_t width, uint32_t height, uint32_t layer_count, GPUTextureFlags flags = GPUTextureFlag::SRV, uint32_t mip_level_count = 1)
+        {
+            GPUTextureDesc desc;
+            desc.format = format;
+            desc.flags = flags;
+            desc.dimension = GPUTextureDimension::Texture2D;
+            desc.width = width;
+            desc.height = height;
+            desc.layer_count = layer_count;
+            desc.mip_level_count = mip_level_count;
+            return desc;
+        }
+
+        static GPUTextureDesc RenderTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
+        {
+            return Texture2D(format, width, height, GPUTextureFlag::RenderTarget | GPUTextureFlag::SRV, 1, sample_count);
+        }
+
+        static GPUTextureDesc DepthTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
+        {
+            return Texture2D(format, width, height, GPUTextureFlag::DepthTarget | GPUTextureFlag::SRV, 1, sample_count);
         }
     };
 
