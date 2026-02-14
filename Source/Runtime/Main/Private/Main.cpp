@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "MessageController.h"
+#include "Common/RHI.h"
 
 bool GWindowShouldClose = false;
 
@@ -18,10 +19,14 @@ int main()
 	Application::Get().Initialize();
 	Application::Get().SetMessageController(&GEngineMessageController);
 
+	RHI::Initialize(RHI::GPUDriver::Vulkan);
+
 	while (!GWindowShouldClose)
 	{
 		Application::Get().PumpMessageQueue();
 	}
+
+	RHI::Shutdown();
 
 	Application::Get().Shutdown();
 }

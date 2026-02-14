@@ -112,9 +112,6 @@ namespace RHI
     public:
         virtual ~IRHI() = default;
 
-        virtual void Initialize() = 0;
-        virtual void Deinitialize() = 0;
-
         virtual GPUAdapter GetAdapater() const = 0;
 
         virtual void Submit(GPUCommandList* command_list) = 0;
@@ -125,6 +122,7 @@ namespace RHI
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
         virtual GPUBindGroup* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) = 0;
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
+        virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
         virtual GPUCommandList* CreateCommandList() = 0;
 
@@ -135,4 +133,20 @@ namespace RHI
         virtual void DestroyPipeline(GPUPipeline* pipeline) = 0;
         virtual void DestroyBindGroup(GPUBindGroup* bind_group) = 0;
 	};
+
+    void Initialize(GPUDriver driver);
+    void Shutdown();
+
+    extern IRHI* g_rhi;
+
+    inline IRHI* GetRHI()
+    {
+        return g_rhi;
+    }
+
+    template<typename T>
+    T* CastRHI() 
+    {
+        return static_cast<T>(GetRHI());
+    }
 };

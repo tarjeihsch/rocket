@@ -13,6 +13,21 @@ namespace RHI
     struct GPUTexture;
     struct GPUBuffer;
 
+    enum class GPUDriver
+    {
+        Unknown,
+
+        OpenGL,
+
+        Vulkan,
+
+        Direct3D12,
+
+        Metal,
+
+        WebGPU
+    };
+
     enum class GPUFormat
     {
         Unknown,
@@ -252,7 +267,7 @@ namespace RHI
         GPUShaderStageFlags stage_flags = GPUShaderStageFlag::None;
     };
 
-    struct GPUAdapter
+    struct GPUAdapter final
     {
         char device_name[256];
         GPUAdapterVendor vendor = GPUAdapterVendor::Unknown;
@@ -274,6 +289,9 @@ namespace RHI
         uint8_t multiview_support : 1 = false;
         uint8_t indirect_draw_support : 1 = false;
         uint8_t timestamp_query_support : 1 = false;
+        uint8_t graphics_queue : 1 = false;
+        uint8_t compute_queue : 1 = false;
+        uint8_t transfer_queue : 1 = false;
     };
 
     struct GPUColorAttachment
@@ -435,6 +453,11 @@ namespace RHI
 
         uint32_t buffer_count = 0;
         GPUPresentMode present_mode = GPUPresentMode::Unknown;
+    };
+
+    struct GPUShaderDesc
+    {
+        
     };
 
 }
