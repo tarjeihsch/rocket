@@ -16,45 +16,47 @@ RHI::IRHI* CreateVulkanRHI()
 
 namespace RHI
 {
-    static constexpr uint32_t           MAX_SHADER_BINDINGS                         = 4U;
+    static constexpr uint32_t           MAX_SHADER_BINDINGS                             = 4U;
     
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES        = 64U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES        = 64U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS         = 16U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES            = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES            = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS             = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                    = 16U;
 
-    static constexpr uint32_t           BINDING_SAMPLED_IMAGES                      = 0U;
-    static constexpr uint32_t           BINDING_STORAGE_IMAGES                      = 1U;
-    static constexpr uint32_t           BINDING_STORAGE_BUFFERS                     = 2U;
-    static constexpr uint32_t           BINDING_SAMPLERS                            = 3U;
+    static constexpr uint32_t           BINDING_SAMPLED_IMAGES                          = 0U;
+    static constexpr uint32_t           BINDING_STORAGE_IMAGES                          = 1U;
+    static constexpr uint32_t           BINDING_STORAGE_BUFFERS                         = 2U;
+    static constexpr uint32_t           BINDING_SAMPLERS                                = 3U;
 
-    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                  = 8;
-    static constexpr uint32_t           MAX_FRAMES_IN_FLIGHT                        = 3;
+    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                      = 8;
+    static constexpr uint32_t           CONCURRENT_FRAME_COUNT                          = 3;
 
-    static VkInstance                   g_instance                                  = nullptr;
-    static VkPhysicalDevice             g_physical_device                           = nullptr;
-    static VkDevice                     g_logical_device                            = nullptr;
-    static VmaAllocator                 g_allocator                                 = nullptr;
+    static VkInstance                   g_instance                                      = nullptr;
+    static VkPhysicalDevice             g_physical_device                               = nullptr;
+    static VkDevice                     g_logical_device                                = nullptr;
+    static VmaAllocator                 g_allocator                                     = nullptr;
 
-    static uint32_t                     g_graphics_family                           = UINT32_MAX;
-    static uint32_t                     g_compute_family                            = UINT32_MAX;
-    static uint32_t                     g_transfer_family                           = UINT32_MAX;
+    static uint32_t                     g_graphics_family                               = UINT32_MAX;
+    static uint32_t                     g_compute_family                                = UINT32_MAX;
+    static uint32_t                     g_transfer_family                               = UINT32_MAX;
 
-    static VkQueue                      g_graphics_queue                            = nullptr;
-    static VkQueue                      g_compute_queue                             = nullptr;
-    static VkQueue                      g_transfer_queue                            = nullptr;
+    static VkQueue                      g_graphics_queue                                = nullptr;
+    static VkQueue                      g_compute_queue                                 = nullptr;
+    static VkQueue                      g_transfer_queue                                = nullptr;
 
-    static VkPipelineLayout  	        g_pipeline_layout                           = nullptr;
-    static VkDescriptorSetLayout        g_descriptor_set_layout                     = nullptr;
-    static VkDescriptorSet              g_descriptor_set                            = nullptr;
-    static VkDescriptorPool             g_descriptor_pool                           = nullptr;
+    static VkPipelineLayout  	        g_pipeline_layout                               = nullptr;
+    static VkDescriptorSetLayout        g_descriptor_set_layout                         = nullptr;
+    static VkDescriptorSet              g_descriptor_set                                = nullptr;
+    static VkDescriptorPool             g_descriptor_pool                               = nullptr;
 
-    static GPUAdapter                   g_adapter                                   = {};
+    static GPUAdapter                   g_adapter                                       = {};
 
-    static uint64_t                     g_frame_counter                             = 0;
-    static VulkanGPUFrameSync           g_frame_sync[3]                             = {};
+    static uint64_t                     g_frame_counter                                 = 0;
+    static VkSemaphore                  g_image_available[CONCURRENT_FRAME_COUNT]       = {};
+    static VkSemaphore                  g_render_finished[CONCURRENT_FRAME_COUNT]       = {};
+    static VkFence                      g_in_flight_fence[CONCURRENT_FRAME_COUNT]       = {};
 
-    #define CURRENT_FRAME               g_frame_counter % MAX_FRAMES_IN_FLIGHT
+    #define CURRENT_FRAME               g_frame_counter % CONCURRENT_FRAME_COUNT
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
@@ -159,9 +161,9 @@ namespace RHI
 
     void VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
-        RHI::vkWaitForFences(g_logical_device, 1, &g_frame_sync[CURRENT_FRAME] .in_flight_fence, VK_TRUE, UINT64_MAX);
-        RHI::vkResetFences(g_logical_device, 1, &g_frame_sync[CURRENT_FRAME].in_flight_fence);
-        RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_frame_sync[CURRENT_FRAME].image_available, VK_NULL_HANDLE, &current_image_index);
+        RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
+        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
+        RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
     }
 
     void VulkanGPUSwapchain::PresentBackBuffer()
@@ -169,7 +171,7 @@ namespace RHI
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &g_frame_sync[CURRENT_FRAME].render_finished;
+        present_info.pWaitSemaphores = &g_render_finished[CURRENT_FRAME];
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain;
         present_info.pImageIndices = &current_image_index;
@@ -544,31 +546,29 @@ namespace RHI
         result = RHI::vkCreatePipelineLayout(g_logical_device, &layout_info, nullptr, &g_pipeline_layout);
         assert(result == VK_SUCCESS);
 
-        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
             VkSemaphoreCreateInfo semaphore_create_info = {};
             semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_frame_sync[index].image_available);
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_frame_sync[index].render_finished);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_image_available[index]);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_render_finished[index]);
 
             VkFenceCreateInfo fence_info = {};
             fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
                 
-            RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &g_frame_sync[index].in_flight_fence);
+            RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &g_in_flight_fence[index]);
         }
     }
 
     VulkanRHI::~VulkanRHI()
     {
-        RHI::vkDeviceWaitIdle(g_logical_device);
-
-        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
-            RHI::vkDestroySemaphore(g_logical_device, g_frame_sync[index].image_available, nullptr);
-            RHI::vkDestroySemaphore(g_logical_device, g_frame_sync[index].render_finished, nullptr);
-            RHI::vkDestroyFence(g_logical_device, g_frame_sync[index].in_flight_fence, nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, g_image_available[index], nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, g_render_finished[index], nullptr);
+            RHI::vkDestroyFence(g_logical_device, g_in_flight_fence[index], nullptr);
         }
 
         RHI::vkDestroyDescriptorPool(g_logical_device, g_descriptor_pool, nullptr);
@@ -596,12 +596,12 @@ namespace RHI
 
         VkSemaphoreSubmitInfo wait_info = {};
         wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-        wait_info.semaphore = g_frame_sync[CURRENT_FRAME].image_available;
+        wait_info.semaphore = g_image_available[CURRENT_FRAME];
         wait_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         VkSemaphoreSubmitInfo signal_info = {};
         signal_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-        signal_info.semaphore = g_frame_sync[CURRENT_FRAME].render_finished;
+        signal_info.semaphore = g_render_finished[CURRENT_FRAME];
         signal_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
         VkSubmitInfo2 submit_info = {};
@@ -613,7 +613,7 @@ namespace RHI
         submit_info.signalSemaphoreInfoCount = 1;
         submit_info.pSignalSemaphoreInfos = &signal_info;
 
-        RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_frame_sync[CURRENT_FRAME].in_flight_fence);
+        RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
     }
     
     void VulkanRHI::WaitIdle()
@@ -995,7 +995,7 @@ namespace RHI
     {
         VulkanGPUCommandList* command_list = new VulkanGPUCommandList();
 
-        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
             VkCommandPoolCreateInfo command_pool_create_info = {};
             command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -1047,7 +1047,7 @@ namespace RHI
 
     VulkanGPUCommandList::~VulkanGPUCommandList()
     {
-        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
             RHI::vkDestroyCommandPool(g_logical_device, command_pool[index], nullptr);
         }

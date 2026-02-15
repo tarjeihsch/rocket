@@ -145,13 +145,16 @@ int main()
 
 		swapchain->PresentBackBuffer();
 	}
-
+	
+	RHI::GetRHI()->WaitIdle();
+	
 	delete buffer;
 	delete texture;
 	delete vertex_shader;
 	delete fragment_shader;
 	delete graphics_pipeline;
 	delete swapchain;
+	delete command_list;
 
 	RHI::Shutdown();
 

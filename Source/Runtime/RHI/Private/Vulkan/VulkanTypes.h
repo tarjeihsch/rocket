@@ -5,13 +5,6 @@
 
 namespace RHI
 {
-    struct VulkanGPUFrameSync
-    {
-        VkSemaphore     image_available     = {};
-        VkSemaphore     render_finished     = {};
-        VkFence         in_flight_fence     = {};
-    };
-
     static VkFormat GetNativeFormat(GPUFormat format)
     {
         switch (format)
