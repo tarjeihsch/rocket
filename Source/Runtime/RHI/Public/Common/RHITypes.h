@@ -527,23 +527,11 @@ namespace RHI
 
     };
 
-    struct GPUBindGroupDesc
-    {
-        const GPUBindGroupEntry* entries = nullptr;
-        uint32_t entry_count;
-    };
-
     struct GPUGraphicsPipelineDesc
     {
         const GPUShader* vertex_shader = nullptr;
         const GPUShader* fragment_shader = nullptr;
         
-        const GPUShaderResources* const* bind_group_data;
-        uint32_t bind_group_count = 0;
-
-        GPUShaderStageFlags push_constant_stage_flags = GPUShaderStageFlag::None;
-        uint32_t push_constant_size = 0;
-
         GPUPrimitiveTopology topology = GPUPrimitiveTopology::Unknown;
         GPUCullMode cull_mode = GPUCullMode::Back;
         GPUFrontFace front_face = GPUFrontFace::CounterClockwise;

@@ -57,17 +57,6 @@ namespace RHI
         virtual ~GPUComputePipeline() = default;
     };
 
-    struct GPUShaderResources
-    {
-        virtual ~GPUShaderResources() = default;
-    
-        virtual void SetDebugName(const char* debug_name) = 0;
-
-        virtual void SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index = 0) = 0;
-        virtual void SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index = 0) = 0;
-        virtual void SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index = 0) = 0;
-    };
-
     struct GPUShader
     {
         virtual ~GPUShader() = default;
@@ -97,7 +86,7 @@ namespace RHI
         virtual void SetBindGroup(uint32_t index, const GPUShaderResources* bind_group) = 0;
         virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
         virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
-        virtual void SetPushConstants(GPUShaderStageFlags stages, const void* data, uint32_t size) = 0;
+        virtual void SetPushConstants(const void* data, uint32_t size) = 0;
 
         virtual void Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) = 0;
         virtual void DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) = 0;
@@ -128,17 +117,20 @@ namespace RHI
 
         virtual GPUAdapter GetAdapater() const = 0;
 
-        virtual void Submit(GPUCommandList* command_list) = 0;
-        virtual void WaitIdle() = 0;
-
         virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
         virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
-        virtual GPUShaderResources* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) = 0;
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
         virtual GPUCommandList* CreateCommandList() = 0;
+
+        virtual void SetTexture(uint32_t index, const GPUTexture* texture) = 0;
+        virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;
+        virtual void SetSampler(uint32_t index, const GPUSampler* sampler) = 0;
+
+        virtual void Submit(GPUCommandList* command_list) = 0;
+        virtual void WaitIdle() = 0;
 	};
 
     void Initialize(GPUDriver driver);

@@ -16,28 +16,43 @@ RHI::IRHI* CreateVulkanRHI()
 
 namespace RHI
 {
-    static constexpr uint32_t MAX_BIND_GROUP_ENTRIES = 16;
+    static constexpr uint32_t           MAX_SHADER_BINDINGS                         = 4U;
+    
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES        = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES        = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS         = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                = 16U;
+
+    static constexpr uint32_t           BINDING_SAMPLED_IMAGES                      = 0U;
+    static constexpr uint32_t           BINDING_STORAGE_IMAGES                      = 1U;
+    static constexpr uint32_t           BINDING_STORAGE_BUFFERS                     = 2U;
+    static constexpr uint32_t           BINDING_SAMPLERS                            = 3U;
+
+    static VkInstance                   g_instance                                  = nullptr;
+    static VkPhysicalDevice             g_physical_device                           = nullptr;
+    static VkDevice                     g_logical_device                            = nullptr;
+    static VmaAllocator                 g_allocator                                 = nullptr;
+
+    static uint32_t                     g_graphics_family                           = UINT32_MAX;
+    static uint32_t                     g_compute_family                            = UINT32_MAX;
+    static uint32_t                     g_transfer_family                           = UINT32_MAX;
+
+    static VkQueue                      g_graphics_queue                            = nullptr;
+    static VkQueue                      g_compute_queue                             = nullptr;
+    static VkQueue                      g_transfer_queue                            = nullptr;
+
+    static VkPipelineLayout  	        g_pipeline_layout                           = nullptr;
+    static VkDescriptorSetLayout        g_descriptor_set_layout                     = nullptr;
+    static VkDescriptorSet              g_descriptor_set                            = nullptr;
+    static VkDescriptorPool             g_descriptor_pool                           = nullptr;
+
+    static GPUAdapter                   g_adapter                                   = {};
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
         printf("[Vulkan] %s\n", CallbackData->pMessage);
         return VK_FALSE;
     }
-
-    static VkInstance           g_instance          = nullptr;
-    static VkPhysicalDevice     g_physical_device   = nullptr;
-    static VkDevice             g_logical_device    = nullptr;
-    static VmaAllocator         g_allocator         = nullptr;
-
-    static uint32_t             g_graphics_family   = UINT32_MAX;
-    static uint32_t             g_compute_family    = UINT32_MAX;
-    static uint32_t             g_transfer_family   = UINT32_MAX;
-
-    static VkQueue              g_graphics_queue    = nullptr;
-    static VkQueue              g_compute_queue     = nullptr;
-    static VkQueue              g_transfer_queue    = nullptr;
-
-    static GPUAdapter           g_adapter           = {};
 
     static void SetDebugNameInternal(VkObjectType type, uint64_t handle, const char* debug_name)
     {
@@ -94,45 +109,6 @@ namespace RHI
         vmaUnmapMemory(g_allocator, allocation);
     }
 
-    VulkanGPUShaderResources::~VulkanGPUShaderResources()
-    {
-        RHI::vkDestroyDescriptorPool(g_logical_device, descriptor_pool, nullptr);
-        RHI::vkDestroyDescriptorSetLayout(g_logical_device, descriptor_set_layout, nullptr);
-    }
-
-    void VulkanGPUShaderResources::SetDebugName(const char* debug_name)
-    {
-    }
-
-    void VulkanGPUShaderResources::SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index)
-    {
-
-    }
-
-    void VulkanGPUShaderResources::SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index)
-    {
-        const VulkanGPUTexture* native_texture = static_cast<const VulkanGPUTexture*>(texture);
-
-        VkDescriptorImageInfo image_info = {};
-        image_info.imageView = native_texture->srv;
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descriptor_set;
-        write.dstBinding = position;
-        write.dstArrayElement = index;
-        write.descriptorCount = 1;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        write.pImageInfo = &image_info;
-
-        RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write, 0, nullptr);
-    }
-
-    void VulkanGPUShaderResources::SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index)
-    {
-    }
-
     VulkanGPUShader::~VulkanGPUShader()
     {
         RHI::vkDestroyShaderModule(g_logical_device, module, nullptr);
@@ -141,7 +117,6 @@ namespace RHI
     VulkanGPUGraphicsPipeline::~VulkanGPUGraphicsPipeline()
     {
         RHI::vkDestroyPipeline(g_logical_device, pipeline, nullptr);
-        RHI::vkDestroyPipelineLayout(g_logical_device, layout, nullptr);
     }
 
     void VulkanGPUGraphicsPipeline::SetDebugName(const char* debug_name)
@@ -155,21 +130,13 @@ namespace RHI
 
         for (uint32_t index = 0; index < image_count; index++)
         {
-            for (VkImageView view : textures[index]->views)
-            {
-                RHI::vkDestroyImageView(g_logical_device, view, nullptr);
-            }
+            RHI::vkDestroySemaphore(g_logical_device, image_available[index], nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, render_finished[index], nullptr);
+            RHI::vkDestroyFence(g_logical_device, in_flight_fences[index], nullptr);
 
-            for (uint32_t i = 0; i < frames_in_flight; i++)
-            {
-                RHI::vkDestroySemaphore(g_logical_device, image_available[i], nullptr);
-                RHI::vkDestroySemaphore(g_logical_device, render_finished[i], nullptr);
-                RHI::vkDestroyFence(g_logical_device, in_flight_fences[i], nullptr);
-            }
-
-            memset(textures[index]->views, 0, sizeof(textures[index]->views));
             textures[index]->texture = nullptr;
             textures[index]->allocation = nullptr;
+
             delete textures[index];
         }
 
@@ -495,11 +462,93 @@ namespace RHI
 
         Result = vmaCreateAllocator(&AllocatorCreateInfo, &g_allocator);
         assert(Result == VK_SUCCESS);
+
+        VkDescriptorBindingFlags binding_flags[MAX_SHADER_BINDINGS];
+        std::fill(binding_flags, binding_flags + MAX_SHADER_BINDINGS, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {};
+        binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        binding_flags_info.bindingCount = MAX_SHADER_BINDINGS;
+        binding_flags_info.pBindingFlags = binding_flags;
+
+        VkDescriptorSetLayoutBinding bindings[MAX_SHADER_BINDINGS] = {};
+        bindings[BINDING_SAMPLED_IMAGES].binding = BINDING_SAMPLED_IMAGES;
+        bindings[BINDING_SAMPLED_IMAGES].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        bindings[BINDING_SAMPLED_IMAGES].descriptorCount = std::min<uint32_t>(g_adapter.max_sampled_textures, MAX_SHADER_RESOURCE_SAMPLED_TEXTURES);
+        bindings[BINDING_SAMPLED_IMAGES].stageFlags = VK_SHADER_STAGE_ALL;
+        
+        bindings[BINDING_STORAGE_IMAGES].binding = BINDING_STORAGE_IMAGES;
+        bindings[BINDING_STORAGE_IMAGES].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        bindings[BINDING_STORAGE_IMAGES].descriptorCount = std::min<uint32_t>(g_adapter.max_storage_textures, MAX_SHADER_RESOURCE_STORAGE_TEXTURES);
+        bindings[BINDING_STORAGE_IMAGES].stageFlags = VK_SHADER_STAGE_ALL;
+        
+        bindings[BINDING_STORAGE_BUFFERS].binding = BINDING_STORAGE_BUFFERS;
+        bindings[BINDING_STORAGE_BUFFERS].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[BINDING_STORAGE_BUFFERS].descriptorCount = std::min<uint32_t>(g_adapter.max_storage_buffers, MAX_SHADER_RESOURCE_STORAGE_BUFFERS);
+        bindings[BINDING_STORAGE_BUFFERS].stageFlags = VK_SHADER_STAGE_ALL;
+        
+        bindings[BINDING_SAMPLERS].binding = BINDING_SAMPLERS;
+        bindings[BINDING_SAMPLERS].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        bindings[BINDING_SAMPLERS].descriptorCount = std::min<uint32_t>(g_adapter.max_samplers, MAX_SHADER_RESOURCE_SAMPLERS);
+        bindings[BINDING_SAMPLERS].stageFlags = VK_SHADER_STAGE_ALL;
+
+        VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
+        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        descriptor_set_layout_create_info.pNext = &binding_flags_info;
+        descriptor_set_layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        descriptor_set_layout_create_info.bindingCount = MAX_SHADER_BINDINGS;
+        descriptor_set_layout_create_info.pBindings = bindings;
+
+        result = RHI::vkCreateDescriptorSetLayout(g_logical_device, &descriptor_set_layout_create_info, nullptr, &g_descriptor_set_layout);
+        assert(result == VK_SUCCESS);
+
+        VkDescriptorPoolSize descriptor_pool_size_data[MAX_SHADER_BINDINGS] = {};
+        descriptor_pool_size_data[BINDING_SAMPLED_IMAGES] = { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min<uint32_t>(g_adapter.max_sampled_textures, MAX_SHADER_RESOURCE_SAMPLED_TEXTURES) };
+        descriptor_pool_size_data[BINDING_STORAGE_IMAGES] = { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::min<uint32_t>(g_adapter.max_storage_textures, MAX_SHADER_RESOURCE_STORAGE_TEXTURES) };
+        descriptor_pool_size_data[BINDING_STORAGE_BUFFERS] = { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, std::min<uint32_t>(g_adapter.max_storage_buffers, MAX_SHADER_RESOURCE_STORAGE_BUFFERS) };
+        descriptor_pool_size_data[BINDING_SAMPLERS] = { VK_DESCRIPTOR_TYPE_SAMPLER, std::min<uint32_t>(g_adapter.max_samplers, MAX_SHADER_RESOURCE_SAMPLERS) };
+
+        VkDescriptorPoolCreateInfo descriptor_pool_create_info = {};
+        descriptor_pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        descriptor_pool_create_info.maxSets = 1;
+        descriptor_pool_create_info.poolSizeCount = std::size(descriptor_pool_size_data);
+        descriptor_pool_create_info.pPoolSizes = descriptor_pool_size_data;
+
+        result = RHI::vkCreateDescriptorPool(g_logical_device, &descriptor_pool_create_info, nullptr, &g_descriptor_pool);
+        assert(result == VK_SUCCESS);
+
+        VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
+        descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptor_set_allocate_info.descriptorPool = g_descriptor_pool;
+        descriptor_set_allocate_info.descriptorSetCount = 1;
+        descriptor_set_allocate_info.pSetLayouts = &g_descriptor_set_layout;
+
+        result = RHI::vkAllocateDescriptorSets(g_logical_device, &descriptor_set_allocate_info, &g_descriptor_set);
+        assert(result == VK_SUCCESS);
+
+        VkPushConstantRange push_constant_range = {};
+        push_constant_range.stageFlags = GetNativeShaderStageFlags(RHI::GPUShaderStageFlag::All);
+        push_constant_range.size = g_adapter.max_push_constant_size;
+
+        VkPipelineLayoutCreateInfo layout_info = {};
+        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layout_info.pSetLayouts = &g_descriptor_set_layout;
+        layout_info.setLayoutCount = 1;
+        layout_info.pushConstantRangeCount = 1;
+        layout_info.pPushConstantRanges = &push_constant_range;
+
+        result = RHI::vkCreatePipelineLayout(g_logical_device, &layout_info, nullptr, &g_pipeline_layout);
+        assert(result == VK_SUCCESS);
     }
 
     VulkanRHI::~VulkanRHI()
     {
         RHI::vkDeviceWaitIdle(g_logical_device);
+
+        RHI::vkDestroyDescriptorPool(g_logical_device, g_descriptor_pool, nullptr);
+        RHI::vkDestroyDescriptorSetLayout(g_logical_device, g_descriptor_set_layout, nullptr);
+        RHI::vkDestroyPipelineLayout(g_logical_device, g_pipeline_layout, nullptr);
 
         vmaDestroyAllocator(g_allocator);
 
@@ -559,8 +608,11 @@ namespace RHI
         VulkanGPUTexture* texture = new VulkanGPUTexture();
 
         VkFormat format = GetNativeFormat(texture_desc.format);
-
         VkImageUsageFlags image_usage_flags = 0;
+        VkImageType texture_type = VK_IMAGE_TYPE_2D;
+        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
+        VkImageCreateFlags texture_flags = 0;
+
         if (texture_desc.flags & GPUTextureFlag::RenderTarget) image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (texture_desc.flags & GPUTextureFlag::DepthTarget) image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         if (texture_desc.flags & GPUTextureFlag::SRV) image_usage_flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -568,9 +620,6 @@ namespace RHI
         if (texture_desc.flags & GPUTextureFlag::TransferSrc) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if (texture_desc.flags & GPUTextureFlag::TransferDst) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-        VkImageType texture_type = VK_IMAGE_TYPE_2D;
-        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
-        VkImageCreateFlags texture_flags = 0;
         switch (texture_desc.dimension)
         {
             case GPUTextureDimension::Texture1D:   
@@ -666,81 +715,9 @@ namespace RHI
         return nullptr;
     }
     
-    GPUShaderResources *VulkanRHI::CreateBindGroup(const GPUBindGroupDesc &bind_group_desc)
-    {
-        VulkanGPUShaderResources* bind_group = new VulkanGPUShaderResources();
-
-        VkDescriptorBindingFlags binding_flags[MAX_BIND_GROUP_ENTRIES];
-        std::fill(binding_flags, binding_flags + bind_group_desc.entry_count, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
-
-        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {};
-        binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-        binding_flags_info.bindingCount = bind_group_desc.entry_count;
-        binding_flags_info.pBindingFlags = binding_flags;
-
-        VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[MAX_BIND_GROUP_ENTRIES];
-        memset(descriptor_set_layout_bindings, 0, sizeof(VkDescriptorSetLayoutBinding) * MAX_BIND_GROUP_ENTRIES);
-
-        for (uint32_t index = 0; index < bind_group_desc.entry_count; ++index)
-        {
-            descriptor_set_layout_bindings[index].binding = bind_group_desc.entries[index].position;
-            descriptor_set_layout_bindings[index].descriptorCount = bind_group_desc.entries[index].count;
-            descriptor_set_layout_bindings[index].stageFlags = VK_SHADER_STAGE_ALL;
-
-            switch (bind_group_desc.entries[index].bind_type)
-            {
-                case GPUBindGroupEntryType::StorageBuffer: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; break;
-                case GPUBindGroupEntryType::UniformBuffer: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; break;
-                case GPUBindGroupEntryType::SampledTexture: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE; break;
-                case GPUBindGroupEntryType::StorageTexture: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; break;
-                case GPUBindGroupEntryType::Sampler: descriptor_set_layout_bindings[index].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; break;
-            }
-        }
-
-        VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {};
-        descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descriptor_set_layout_create_info.pNext = &binding_flags_info;
-        descriptor_set_layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-        descriptor_set_layout_create_info.bindingCount = bind_group_desc.entry_count;
-        descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
-
-        VkResult result = RHI::vkCreateDescriptorSetLayout(g_logical_device, &descriptor_set_layout_create_info, nullptr, &bind_group->descriptor_set_layout);
-        assert(result == VK_SUCCESS);
-
-        VkDescriptorPoolSize pool_sizes[] =
-        {
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, g_adapter.max_storage_buffers },
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, g_adapter.max_uniform_buffers },
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, g_adapter.max_sampled_textures },
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, g_adapter.max_storage_textures },
-            { VK_DESCRIPTOR_TYPE_SAMPLER, g_adapter.max_samplers },
-        };
-
-        VkDescriptorPoolCreateInfo pool_info = {};
-        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-        pool_info.maxSets = 1;
-        pool_info.poolSizeCount = std::size(pool_sizes);
-        pool_info.pPoolSizes = pool_sizes;
-
-        result = RHI::vkCreateDescriptorPool(g_logical_device, &pool_info, nullptr, &bind_group->descriptor_pool);
-        assert(result == VK_SUCCESS);
-
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorPool = bind_group->descriptor_pool;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &bind_group->descriptor_set_layout;
-
-        result = RHI::vkAllocateDescriptorSets(g_logical_device, &alloc_info, &bind_group->descriptor_set);
-        assert(result == VK_SUCCESS);
-
-        return bind_group;
-    }
-    
     GPUPipeline *VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)
     {
-        VulkanGPUGraphicsPipeline* graphics_pipeline = (VulkanGPUGraphicsPipeline*)malloc(sizeof(VulkanGPUGraphicsPipeline));
+        VulkanGPUGraphicsPipeline* graphics_pipeline = new VulkanGPUGraphicsPipeline();
         
         const VulkanGPUShader* vertex_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.vertex_shader);
         const VulkanGPUShader* fragment_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.fragment_shader);
@@ -823,27 +800,7 @@ namespace RHI
         {
             rendering_create_info.depthAttachmentFormat = GetNativeFormat(pipeline_desc.depth_format);
         }
-            
-        VkDescriptorSetLayout descriptor_set_layouts[4];
-        for (uint32_t index = 0; index < pipeline_desc.bind_group_count; index++)
-        {
-            descriptor_set_layouts[index] = static_cast<const VulkanGPUShaderResources*>(pipeline_desc.bind_group_data[index])->descriptor_set_layout;
-        }
-
-        VkPushConstantRange push_constant_range = {};
-        push_constant_range.stageFlags = GetNativeShaderStageFlags(pipeline_desc.push_constant_stage_flags);
-        push_constant_range.size = max(pipeline_desc.push_constant_size, 128U);
-
-        VkPipelineLayoutCreateInfo layout_info = {};
-        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.pSetLayouts = descriptor_set_layouts;
-        layout_info.setLayoutCount = pipeline_desc.bind_group_count;
-        layout_info.pushConstantRangeCount = 1;
-        layout_info.pPushConstantRanges = &push_constant_range;
-
-        VkResult result = RHI::vkCreatePipelineLayout(g_logical_device, &layout_info, nullptr, &graphics_pipeline->layout);
-        assert(result == VK_SUCCESS);
-
+           
         VkGraphicsPipelineCreateInfo pipeline_info = {};
         pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipeline_info.pNext = &rendering_create_info;
@@ -857,9 +814,9 @@ namespace RHI
         pipeline_info.pDepthStencilState = &depth_stencil_state_create_info;
         pipeline_info.pColorBlendState = &color_blend_state_create_info;
         pipeline_info.pDynamicState = &dynamic_state_create_info;
-        pipeline_info.layout = graphics_pipeline->layout;
+        pipeline_info.layout = g_pipeline_layout;
 
-        result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline->pipeline);
+        VkResult result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline->pipeline);
         assert(result == VK_SUCCESS);
 
         return graphics_pipeline;
@@ -999,5 +956,34 @@ namespace RHI
     GPUCommandList *VulkanRHI::CreateCommandList()
     {
         return nullptr;
+    }
+    
+    void VulkanRHI::SetTexture(uint32_t index, const GPUTexture* texture)
+    {
+        const VulkanGPUTexture* native_texture = static_cast<const VulkanGPUTexture*>(texture);
+
+        VkDescriptorImageInfo image_info = {};
+        image_info.imageView = native_texture->srv;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = g_descriptor_set;
+        write.dstBinding = BINDING_SAMPLED_IMAGES;
+        write.dstArrayElement = index;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        write.pImageInfo = &image_info;
+
+        RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write, 0, nullptr);
+    }
+    
+    void VulkanRHI::SetBuffer(uint32_t index, const GPUBuffer* buffer)
+    {
+    }
+
+    void VulkanRHI::SetSampler(uint32_t index, const GPUSampler* sampler)
+    {
+
     }
 }
