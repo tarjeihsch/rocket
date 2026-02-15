@@ -61,7 +61,7 @@ namespace RHI
     {
         ~VulkanGPUShader();
 
-        VkShaderModule module = VK_NULL_HANDLE;
+        VkShaderModule module = nullptr;
         VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
     };
 
@@ -71,8 +71,30 @@ namespace RHI
 
         void SetDebugName(const char* debug_name) override;
 
-        VkPipeline       pipeline = VK_NULL_HANDLE;
-        VkPipelineLayout layout = VK_NULL_HANDLE;
+        VkPipeline pipeline = nullptr;
+        VkPipelineLayout layout = nullptr;
+    };
+
+    struct VulkanGPUSwapchain : GPUSwapchain
+    {
+        ~VulkanGPUSwapchain();
+
+        void                    SetDebugName(const char* debug_name)    override;
+        GPUTexture*             GetBackBufferTexture()                  const override;
+        void                    BeginFrame()                            override;
+        void                    PresentFrame()                          override;
+
+        VkSwapchainKHR          swapchain                               = nullptr;
+        VkSurfaceKHR            surface                                 = nullptr;
+        uint32_t                image_count                             = 0;
+        uint32_t                current_image_index                     = 0;
+        uint32_t                current_frame                           = 0;
+        uint32_t                frames_in_flight                        = 0;
+        VulkanGPUTexture*       textures[3]                             = {};
+
+        VkSemaphore             image_available[3]                      = {};
+        VkSemaphore             render_finished[3]                      = {};
+        VkFence                 in_flight_fences[3]                     = {};
     };
 
     class VulkanRHI : public IRHI

@@ -76,6 +76,11 @@ namespace RHI
     struct GPUSwapchain
     {
         virtual ~GPUSwapchain() = default;
+
+        virtual void SetDebugName(const char* debug_name) = 0;
+        virtual GPUTexture* GetBackBufferTexture() const = 0;
+        virtual void BeginFrame() = 0;
+        virtual void PresentFrame() = 0;
     };
 
     struct GPUCommandList

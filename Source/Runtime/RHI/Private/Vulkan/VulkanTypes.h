@@ -140,4 +140,16 @@ namespace RHI
             default: return VK_BLEND_OP_ADD;
         }
     }
+
+    static VkPresentModeKHR GetNativePresentMode(GPUPresentMode mode)
+    {
+        switch (mode)
+        {
+            case GPUPresentMode::Immediate: return VK_PRESENT_MODE_IMMEDIATE_KHR;
+            case GPUPresentMode::FIFO: return VK_PRESENT_MODE_FIFO_KHR;
+            case GPUPresentMode::FIFOAdaptive: return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+            case GPUPresentMode::Mailbox: return VK_PRESENT_MODE_MAILBOX_KHR;
+            default: return VK_PRESENT_MODE_FIFO_KHR;
+        }
+    }
 }

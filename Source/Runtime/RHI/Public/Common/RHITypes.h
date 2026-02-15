@@ -280,13 +280,11 @@ namespace RHI
     
     struct GPUWindowPlatform
     {
-        Display* display = nullptr;
-        Window window = 0;
+        wl_display* wl_display = nullptr;
+        wl_surface* wl_surface = nullptr;
     };
 
 #endif
-
-    using GPUWindow = GPUWindowPlatform;
 
     struct GPUBindGroupEntry
     {
@@ -572,13 +570,13 @@ namespace RHI
 
     struct GPUSwapchainDesc
     {
-        GPUWindow window;
+        GPUWindowPlatform window_platform;
 
         uint32_t backbuffer_width = 0;
         uint32_t backbuffer_height = 0;
         GPUFormat backbuffer_format = GPUFormat::Unknown;
 
-        uint32_t buffer_count = 0;
+        uint32_t backbuffer_count = 0;
         GPUPresentMode present_mode = GPUPresentMode::Unknown;
     };
 
