@@ -43,9 +43,9 @@ namespace RHI
         };
     };
 
-    struct VulkanGPUBindGroup : GPUBindGroup
+    struct VulkanGPUShaderResources : GPUShaderResources
     {
-        ~VulkanGPUBindGroup();
+        ~VulkanGPUShaderResources();
 
         void SetDebugName(const char* debug_name) override;
         void SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index) override;
@@ -55,6 +55,24 @@ namespace RHI
         VkDescriptorSet             descriptor_set              = nullptr;
         VkDescriptorSetLayout       descriptor_set_layout       = nullptr;
         VkDescriptorPool            descriptor_pool             = nullptr;
+    };
+
+    struct VulkanGPUShader : GPUShader
+    {
+        ~VulkanGPUShader();
+
+        VkShaderModule module = VK_NULL_HANDLE;
+        VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
+    };
+
+    struct VulkanGPUGraphicsPipeline : GPUGraphicsPipeline
+    {
+        ~VulkanGPUGraphicsPipeline();
+
+        void SetDebugName(const char* debug_name) override;
+
+        VkPipeline       pipeline = VK_NULL_HANDLE;
+        VkPipelineLayout layout = VK_NULL_HANDLE;
     };
 
     class VulkanRHI : public IRHI
@@ -71,7 +89,7 @@ namespace RHI
         GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) override;
         GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) override;
         GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) override;
-        GPUBindGroup* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) override;
+        GPUShaderResources* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) override;
         GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) override;
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;
         GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) override;

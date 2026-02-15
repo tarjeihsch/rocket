@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <unordered_set>
 #include <string_view>
+#include <algorithm>
 
 #include "VulkanTypes.h"
 #include <unordered_map>
@@ -89,22 +90,22 @@ namespace RHI
         vmaUnmapMemory(g_allocator, allocation);
     }
 
-    VulkanGPUBindGroup::~VulkanGPUBindGroup()
+    VulkanGPUShaderResources::~VulkanGPUShaderResources()
     {
         RHI::vkDestroyDescriptorPool(g_logical_device, descriptor_pool, nullptr);
         RHI::vkDestroyDescriptorSetLayout(g_logical_device, descriptor_set_layout, nullptr);
     }
 
-    void VulkanGPUBindGroup::SetDebugName(const char* debug_name)
+    void VulkanGPUShaderResources::SetDebugName(const char* debug_name)
     {
     }
 
-    void VulkanGPUBindGroup::SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index)
+    void VulkanGPUShaderResources::SetBuffer(const GPUBuffer* buffer, uint32_t position, uint32_t index)
     {
 
     }
 
-    void VulkanGPUBindGroup::SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index)
+    void VulkanGPUShaderResources::SetTexture(const GPUTexture* texture, uint32_t position, uint32_t index)
     {
         const VulkanGPUTexture* native_texture = static_cast<const VulkanGPUTexture*>(texture);
 
@@ -124,8 +125,24 @@ namespace RHI
         RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write, 0, nullptr);
     }
 
-    void VulkanGPUBindGroup::SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index)
+    void VulkanGPUShaderResources::SetSampler(const GPUSampler* sampler, uint32_t position, uint32_t index)
     {
+    }
+
+    VulkanGPUShader::~VulkanGPUShader()
+    {
+        RHI::vkDestroyShaderModule(g_logical_device, module, nullptr);
+    }
+
+    VulkanGPUGraphicsPipeline::~VulkanGPUGraphicsPipeline()
+    {
+        RHI::vkDestroyPipeline(g_logical_device, pipeline, nullptr);
+        RHI::vkDestroyPipelineLayout(g_logical_device, layout, nullptr);
+    }
+
+    void VulkanGPUGraphicsPipeline::SetDebugName(const char* debug_name)
+    {
+        
     }
 
     VulkanRHI::VulkanRHI()
@@ -582,9 +599,9 @@ namespace RHI
         return nullptr;
     }
     
-    GPUBindGroup *VulkanRHI::CreateBindGroup(const GPUBindGroupDesc &bind_group_desc)
+    GPUShaderResources *VulkanRHI::CreateBindGroup(const GPUBindGroupDesc &bind_group_desc)
     {
-        VulkanGPUBindGroup* bind_group = new VulkanGPUBindGroup();
+        VulkanGPUShaderResources* bind_group = new VulkanGPUShaderResources();
 
         VkDescriptorBindingFlags binding_flags[MAX_BIND_GROUP_ENTRIES];
         std::fill(binding_flags, binding_flags + bind_group_desc.entry_count, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
@@ -656,12 +673,144 @@ namespace RHI
     
     GPUPipeline *VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)
     {
-        return nullptr;
+        VulkanGPUGraphicsPipeline* graphics_pipeline = (VulkanGPUGraphicsPipeline*)malloc(sizeof(VulkanGPUGraphicsPipeline));
+        
+        const VulkanGPUShader* vertex_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.vertex_shader);
+        const VulkanGPUShader* fragment_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.fragment_shader);
+
+        VkPipelineShaderStageCreateInfo shader_stages[2] = {};
+        shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        shader_stages[0].module = vertex_shader->module;
+        shader_stages[0].pName = "main";
+        shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        shader_stages[1].module = fragment_shader->module;
+        shader_stages[1].pName = "main";
+
+        // No vertex input - route through vertex pulling
+        VkPipelineVertexInputStateCreateInfo vertex_input_create_info = {};
+        vertex_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+        VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
+        input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        input_assembly_create_info.topology = GetNativeTopology(pipeline_desc.topology);
+
+        VkDynamicState dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
+        dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamic_state_create_info.dynamicStateCount = std::size(dynamic_states);
+        dynamic_state_create_info.pDynamicStates = dynamic_states;
+
+        VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
+        viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewport_state_create_info.viewportCount = 1;
+        viewport_state_create_info.scissorCount = 1;
+
+        VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {};
+        rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterization_state_create_info.cullMode = GetNativeCullMode(pipeline_desc.cull_mode);
+        rasterization_state_create_info.frontFace = GetNativeFrontFace(pipeline_desc.front_face);
+        rasterization_state_create_info.polygonMode = GetNativePolygonMode(pipeline_desc.polygon_mode);
+        rasterization_state_create_info.lineWidth = 1.0f;
+
+        VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {};
+        multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+        VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {};
+        depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depth_stencil_state_create_info.depthTestEnable = pipeline_desc.depth_test_enable;
+        depth_stencil_state_create_info.depthWriteEnable = pipeline_desc.depth_write_enable;
+        depth_stencil_state_create_info.depthCompareOp = GetNativeCompareOp(pipeline_desc.depth_compare_op);
+
+        VkPipelineColorBlendAttachmentState blend_attachment_states[8] = {};
+        for (uint32_t i = 0; i < pipeline_desc.color_format_count; i++)
+        {
+            blend_attachment_states[i].blendEnable = pipeline_desc.blend_enable;
+            blend_attachment_states[i].srcColorBlendFactor = GetNativeBlendFactor(pipeline_desc.src_blend_factor_color);
+            blend_attachment_states[i].dstColorBlendFactor = GetNativeBlendFactor(pipeline_desc.dst_blend_factor_color);
+            blend_attachment_states[i].colorBlendOp = GetNativeBlendOp(pipeline_desc.blend_op_color);
+            blend_attachment_states[i].srcAlphaBlendFactor = GetNativeBlendFactor(pipeline_desc.src_blend_factor_alpha);
+            blend_attachment_states[i].dstAlphaBlendFactor = GetNativeBlendFactor(pipeline_desc.dst_blend_factor_alpha);
+            blend_attachment_states[i].alphaBlendOp = GetNativeBlendOp(pipeline_desc.blend_op_alpha);
+            blend_attachment_states[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        }
+
+        VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
+        color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        color_blend_state_create_info.attachmentCount = pipeline_desc.color_format_count;
+        color_blend_state_create_info.pAttachments = blend_attachment_states;
+
+        VkFormat color_formats[8];
+        for (uint32_t index = 0; index < pipeline_desc.color_format_count; index++)
+        {
+            color_formats[index] = GetNativeFormat(pipeline_desc.color_formats[index]);
+        }
+
+        VkPipelineRenderingCreateInfo rendering_create_info = {};
+        rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        rendering_create_info.colorAttachmentCount = pipeline_desc.color_format_count;
+        rendering_create_info.pColorAttachmentFormats = color_formats;
+        if (pipeline_desc.depth_format != GPUFormat::Unknown)
+        {
+            rendering_create_info.depthAttachmentFormat = GetNativeFormat(pipeline_desc.depth_format);
+        }
+            
+        VkDescriptorSetLayout descriptor_set_layouts[4];
+        for (uint32_t index = 0; index < pipeline_desc.bind_group_count; index++)
+        {
+            descriptor_set_layouts[index] = static_cast<const VulkanGPUShaderResources*>(pipeline_desc.bind_group_data[index])->descriptor_set_layout;
+        }
+
+        VkPushConstantRange push_constant_range = {};
+        push_constant_range.stageFlags = GetNativeShaderStageFlags(pipeline_desc.push_constant_stage_flags);
+        push_constant_range.size = max(pipeline_desc.push_constant_size, 128U);
+
+        VkPipelineLayoutCreateInfo layout_info = {};
+        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layout_info.pSetLayouts = descriptor_set_layouts;
+        layout_info.setLayoutCount = pipeline_desc.bind_group_count;
+        layout_info.pushConstantRangeCount = 1;
+        layout_info.pPushConstantRanges = &push_constant_range;
+
+        VkResult result = RHI::vkCreatePipelineLayout(g_logical_device, &layout_info, nullptr, &graphics_pipeline->layout);
+        assert(result == VK_SUCCESS);
+
+        VkGraphicsPipelineCreateInfo pipeline_info = {};
+        pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipeline_info.pNext = &rendering_create_info;
+        pipeline_info.stageCount = 2;
+        pipeline_info.pStages = shader_stages;
+        pipeline_info.pVertexInputState = &vertex_input_create_info;
+        pipeline_info.pInputAssemblyState = &input_assembly_create_info;
+        pipeline_info.pViewportState = &viewport_state_create_info;
+        pipeline_info.pRasterizationState = &rasterization_state_create_info;
+        pipeline_info.pMultisampleState = &multisample_state_create_info;
+        pipeline_info.pDepthStencilState = &depth_stencil_state_create_info;
+        pipeline_info.pColorBlendState = &color_blend_state_create_info;
+        pipeline_info.pDynamicState = &dynamic_state_create_info;
+        pipeline_info.layout = graphics_pipeline->layout;
+
+        result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline->pipeline);
+        assert(result == VK_SUCCESS);
+
+        return graphics_pipeline;
     }
     
-    GPUShader *VulkanRHI::CreateShader(const GPUShaderDesc &pipeline_desc)
+    GPUShader *VulkanRHI::CreateShader(const GPUShaderDesc &shader_desc)
     {
-        return nullptr;
+        VulkanGPUShader* native_shader = new VulkanGPUShader();
+
+        VkShaderModuleCreateInfo module_info = {};
+        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        module_info.codeSize = shader_desc.bytecode_size;
+        module_info.pCode = static_cast<const uint32_t*>(shader_desc.bytecode);
+
+        VkResult result = RHI::vkCreateShaderModule(g_logical_device, &module_info, nullptr, &native_shader->module);
+        assert(result == VK_SUCCESS);
+
+        return native_shader;
     }
     
     GPUSwapchain *VulkanRHI::CreateSwapchain(const GPUSwapchainDesc &desc)

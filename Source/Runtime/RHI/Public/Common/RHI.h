@@ -57,9 +57,9 @@ namespace RHI
         virtual ~GPUComputePipeline() = default;
     };
 
-    struct GPUBindGroup
+    struct GPUShaderResources
     {
-        virtual ~GPUBindGroup() = default;
+        virtual ~GPUShaderResources() = default;
     
         virtual void SetDebugName(const char* debug_name) = 0;
 
@@ -89,7 +89,7 @@ namespace RHI
         virtual void EndRenderPass() = 0;
 
         virtual void SetPipeline(const GPUPipeline* pipeline) = 0;
-        virtual void SetBindGroup(uint32_t index, const GPUBindGroup* bind_group) = 0;
+        virtual void SetBindGroup(uint32_t index, const GPUShaderResources* bind_group) = 0;
         virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
         virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
         virtual void SetPushConstants(GPUShaderStageFlags stages, const void* data, uint32_t size) = 0;
@@ -129,7 +129,7 @@ namespace RHI
         virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
         virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
-        virtual GPUBindGroup* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) = 0;
+        virtual GPUShaderResources* CreateBindGroup(const GPUBindGroupDesc& bind_group_desc) = 0;
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;

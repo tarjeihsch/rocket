@@ -39,4 +39,105 @@ namespace RHI
 
         return VK_FORMAT_UNDEFINED;
     }
+
+    static VkShaderStageFlags GetNativeShaderStageFlags(GPUShaderStageFlags flags)
+    {
+        VkShaderStageFlags result = 0;
+        if (flags & GPUShaderStageFlag::Vertex)   result |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (flags & GPUShaderStageFlag::Fragment) result |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        if (flags & GPUShaderStageFlag::Compute)  result |= VK_SHADER_STAGE_COMPUTE_BIT;
+        return result;
+    }
+
+    static VkCullModeFlags GetNativeCullMode(GPUCullMode mode)
+    {
+        switch (mode)
+        {
+            case GPUCullMode::None:  return VK_CULL_MODE_NONE;
+            case GPUCullMode::Front: return VK_CULL_MODE_FRONT_BIT;
+            case GPUCullMode::Back:  return VK_CULL_MODE_BACK_BIT;
+            default: return VK_CULL_MODE_NONE;
+        }
+    }
+
+    static VkFrontFace GetNativeFrontFace(GPUFrontFace face)
+    {
+        switch (face)
+        {
+            case GPUFrontFace::Clockwise: return VK_FRONT_FACE_CLOCKWISE;
+            case GPUFrontFace::CounterClockwise: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            default: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        }
+    }
+
+    static VkPolygonMode GetNativePolygonMode(GPUPolygonMode mode)
+    {
+        switch (mode)
+        {
+            case GPUPolygonMode::Fill:  return VK_POLYGON_MODE_FILL;
+            case GPUPolygonMode::Line:  return VK_POLYGON_MODE_LINE;
+            case GPUPolygonMode::Point: return VK_POLYGON_MODE_POINT;
+            default: return VK_POLYGON_MODE_FILL;
+        }
+    }
+
+    static VkPrimitiveTopology GetNativeTopology(GPUPrimitiveTopology topology)
+    {
+        switch (topology)
+        {
+            case GPUPrimitiveTopology::TriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            case GPUPrimitiveTopology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            case GPUPrimitiveTopology::LineList: return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            case GPUPrimitiveTopology::LineStrip: return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            case GPUPrimitiveTopology::PointList: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            default: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        }
+    }
+
+    static VkCompareOp GetNativeCompareOp(GPUCompareOp op)
+    {
+        switch (op)
+        {
+            case GPUCompareOp::Never: return VK_COMPARE_OP_NEVER;
+            case GPUCompareOp::Less: return VK_COMPARE_OP_LESS;
+            case GPUCompareOp::Equal: return VK_COMPARE_OP_EQUAL;
+            case GPUCompareOp::LessOrEqual: return VK_COMPARE_OP_LESS_OR_EQUAL;
+            case GPUCompareOp::Greater: return VK_COMPARE_OP_GREATER;
+            case GPUCompareOp::NotEqual: return VK_COMPARE_OP_NOT_EQUAL;
+            case GPUCompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+            case GPUCompareOp::Always: return VK_COMPARE_OP_ALWAYS;
+            default: return VK_COMPARE_OP_LESS;
+        }
+    }
+
+    static VkBlendFactor GetNativeBlendFactor(GPUBlendFactor factor)
+    {
+        switch (factor)
+        {
+            case GPUBlendFactor::Zero: return VK_BLEND_FACTOR_ZERO;
+            case GPUBlendFactor::One: return VK_BLEND_FACTOR_ONE;
+            case GPUBlendFactor::SrcColor: return VK_BLEND_FACTOR_SRC_COLOR;
+            case GPUBlendFactor::OneMinusSrcColor: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+            case GPUBlendFactor::DstColor: return VK_BLEND_FACTOR_DST_COLOR;
+            case GPUBlendFactor::OneMinusDstColor: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+            case GPUBlendFactor::SrcAlpha: return VK_BLEND_FACTOR_SRC_ALPHA;
+            case GPUBlendFactor::OneMinusSrcAlpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            case GPUBlendFactor::DstAlpha: return VK_BLEND_FACTOR_DST_ALPHA;
+            case GPUBlendFactor::OneMinusDstAlpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            default: return VK_BLEND_FACTOR_ONE;
+        }
+    }
+
+    static VkBlendOp GetNativeBlendOp(GPUBlendOp op)
+    {
+        switch (op)
+        {
+            case GPUBlendOp::Add: return VK_BLEND_OP_ADD;
+            case GPUBlendOp::Subtract: return VK_BLEND_OP_SUBTRACT;
+            case GPUBlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+            case GPUBlendOp::Min: return VK_BLEND_OP_MIN;
+            case GPUBlendOp::Max: return VK_BLEND_OP_MAX;
+            default: return VK_BLEND_OP_ADD;
+        }
+    }
 }

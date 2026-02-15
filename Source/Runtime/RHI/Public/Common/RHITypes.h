@@ -6,7 +6,7 @@
 
 namespace RHI 
 {
-    struct GPUBindGroup;
+    struct GPUShaderResources;
     struct GPUShader;
     struct GPUTexture;
     struct GPUBuffer;
@@ -109,25 +109,33 @@ namespace RHI
     enum class GPUPrimitiveTopology
     {
         Unknown,
-        TriangleList
+        TriangleList,
+        TriangleStrip,
+        LineList,
+        LineStrip,
+        PointList
     };
 
     enum class GPUCullMode
     {
-        Unknown,
+        None,
+        Front,
         Back
     };
 
     enum class GPUFrontFace
     {
         Unknown,
+        Clockwise,
         CounterClockwise
     };
 
     enum class GPUPolygonMode
     {
         Unknown,
-        Fill
+        Fill,
+        Line,
+        Point
     };
 
     enum class GPUPresentMode
@@ -532,7 +540,7 @@ namespace RHI
         const GPUShader* vertex_shader = nullptr;
         const GPUShader* fragment_shader = nullptr;
         
-        const GPUBindGroup* bind_group_data = nullptr;
+        const GPUShaderResources* const* bind_group_data;
         uint32_t bind_group_count = 0;
 
         GPUShaderStageFlags push_constant_stage_flags = GPUShaderStageFlag::None;
@@ -576,7 +584,8 @@ namespace RHI
 
     struct GPUShaderDesc
     {
-        
+        const void* bytecode = nullptr;
+        uint64_t bytecode_size = 0;
+        GPUShaderStageFlag::Bits stage_flag = GPUShaderStageFlag::None;
     };
-
 }
