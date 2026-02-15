@@ -28,6 +28,9 @@ namespace RHI
     static constexpr uint32_t           BINDING_STORAGE_BUFFERS                     = 2U;
     static constexpr uint32_t           BINDING_SAMPLERS                            = 3U;
 
+    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                  = 8;
+    static constexpr uint32_t           MAX_FRAMES_IN_FLIGHT                        = 3;
+
     static VkInstance                   g_instance                                  = nullptr;
     static VkPhysicalDevice             g_physical_device                           = nullptr;
     static VkDevice                     g_logical_device                            = nullptr;
@@ -47,6 +50,11 @@ namespace RHI
     static VkDescriptorPool             g_descriptor_pool                           = nullptr;
 
     static GPUAdapter                   g_adapter                                   = {};
+
+    static uint64_t                     g_frame_counter                             = 0;
+    static VulkanGPUFrameSync           g_frame_sync[3]                             = {};
+
+    #define CURRENT_FRAME               g_frame_counter % MAX_FRAMES_IN_FLIGHT
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
@@ -130,10 +138,6 @@ namespace RHI
 
         for (uint32_t index = 0; index < image_count; index++)
         {
-            RHI::vkDestroySemaphore(g_logical_device, image_available[index], nullptr);
-            RHI::vkDestroySemaphore(g_logical_device, render_finished[index], nullptr);
-            RHI::vkDestroyFence(g_logical_device, in_flight_fences[index], nullptr);
-
             textures[index]->texture = nullptr;
             textures[index]->allocation = nullptr;
 
@@ -150,30 +154,29 @@ namespace RHI
 
     GPUTexture* VulkanGPUSwapchain::GetBackBufferTexture() const
     {
-        return nullptr;
+        return textures[CURRENT_FRAME];
     }
 
-    void VulkanGPUSwapchain::BeginFrame()
+    void VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
-        RHI::vkWaitForFences(g_logical_device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
-        RHI::vkResetFences(g_logical_device, 1, &in_flight_fences[current_frame]);
-
-        RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, image_available[current_frame], VK_NULL_HANDLE, &current_image_index);
+        RHI::vkWaitForFences(g_logical_device, 1, &g_frame_sync[CURRENT_FRAME] .in_flight_fence, VK_TRUE, UINT64_MAX);
+        RHI::vkResetFences(g_logical_device, 1, &g_frame_sync[CURRENT_FRAME].in_flight_fence);
+        RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_frame_sync[CURRENT_FRAME].image_available, VK_NULL_HANDLE, &current_image_index);
     }
 
-    void VulkanGPUSwapchain::PresentFrame()
+    void VulkanGPUSwapchain::PresentBackBuffer()
     {
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &render_finished[current_frame];
+        present_info.pWaitSemaphores = &g_frame_sync[CURRENT_FRAME].render_finished;
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain;
         present_info.pImageIndices = &current_image_index;
 
         RHI::vkQueuePresentKHR(g_graphics_queue, &present_info);
 
-        current_frame = (current_frame + 1) % frames_in_flight;
+        g_frame_counter++;
     }
 
     VulkanRHI::VulkanRHI()
@@ -540,11 +543,33 @@ namespace RHI
 
         result = RHI::vkCreatePipelineLayout(g_logical_device, &layout_info, nullptr, &g_pipeline_layout);
         assert(result == VK_SUCCESS);
+
+        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        {
+            VkSemaphoreCreateInfo semaphore_create_info = {};
+            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_frame_sync[index].image_available);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_frame_sync[index].render_finished);
+
+            VkFenceCreateInfo fence_info = {};
+            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+                
+            RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &g_frame_sync[index].in_flight_fence);
+        }
     }
 
     VulkanRHI::~VulkanRHI()
     {
         RHI::vkDeviceWaitIdle(g_logical_device);
+
+        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        {
+            RHI::vkDestroySemaphore(g_logical_device, g_frame_sync[index].image_available, nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, g_frame_sync[index].render_finished, nullptr);
+            RHI::vkDestroyFence(g_logical_device, g_frame_sync[index].in_flight_fence, nullptr);
+        }
 
         RHI::vkDestroyDescriptorPool(g_logical_device, g_descriptor_pool, nullptr);
         RHI::vkDestroyDescriptorSetLayout(g_logical_device, g_descriptor_set_layout, nullptr);
@@ -561,9 +586,34 @@ namespace RHI
         return GPUAdapter();
     }
     
-    void VulkanRHI::Submit(GPUCommandList *command_list)
+    void VulkanRHI::Submit(GPUCommandList* command_list)
     {
+        VulkanGPUCommandList* native_command_list = static_cast<VulkanGPUCommandList*>(command_list);
 
+        VkCommandBufferSubmitInfo command_buffer_submit_info = {};
+        command_buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        command_buffer_submit_info.commandBuffer = native_command_list->command_buffer[CURRENT_FRAME];
+
+        VkSemaphoreSubmitInfo wait_info = {};
+        wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        wait_info.semaphore = g_frame_sync[CURRENT_FRAME].image_available;
+        wait_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+        VkSemaphoreSubmitInfo signal_info = {};
+        signal_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        signal_info.semaphore = g_frame_sync[CURRENT_FRAME].render_finished;
+        signal_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+
+        VkSubmitInfo2 submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submit_info.commandBufferInfoCount = 1;
+        submit_info.pCommandBufferInfos = &command_buffer_submit_info;
+        submit_info.waitSemaphoreInfoCount = 1;
+        submit_info.pWaitSemaphoreInfos = &wait_info;
+        submit_info.signalSemaphoreInfoCount = 1;
+        submit_info.pSignalSemaphoreInfos = &signal_info;
+
+        RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_frame_sync[CURRENT_FRAME].in_flight_fence);
     }
     
     void VulkanRHI::WaitIdle()
@@ -936,26 +986,35 @@ namespace RHI
             view_info.subresourceRange.layerCount = 1;
 
             RHI::vkCreateImageView(g_logical_device, &view_info, nullptr, &swapchain->textures[i]->rtv);
-
-            VkSemaphoreCreateInfo semaphore_info = {};
-            semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_info, nullptr, &swapchain->image_available[i]);
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_info, nullptr, &swapchain->render_finished[i]);
-
-            VkFenceCreateInfo fence_info = {};
-            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-            RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &swapchain->in_flight_fences[i]);
         }
         
         return swapchain;
     }
     
-    GPUCommandList *VulkanRHI::CreateCommandList()
+    GPUCommandList *VulkanRHI::CreateCommandList(const GPUCommandListDesc& desc)
     {
-        return nullptr;
+        VulkanGPUCommandList* command_list = new VulkanGPUCommandList();
+
+        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        {
+            VkCommandPoolCreateInfo command_pool_create_info = {};
+            command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            command_pool_create_info.queueFamilyIndex = g_graphics_family;
+
+            VkResult result = RHI::vkCreateCommandPool(g_logical_device, &command_pool_create_info, nullptr, &command_list->command_pool[index]);
+            assert(result == VK_SUCCESS);
+
+            VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+            command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            command_buffer_allocate_info.commandPool = command_list->command_pool[index];
+            command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            command_buffer_allocate_info.commandBufferCount = 1;
+
+            result = RHI::vkAllocateCommandBuffers(g_logical_device, &command_buffer_allocate_info, &command_list->command_buffer[index]);
+            assert(result == VK_SUCCESS);
+        }
+
+        return command_list;
     }
     
     void VulkanRHI::SetTexture(uint32_t index, const GPUTexture* texture)
@@ -984,6 +1043,176 @@ namespace RHI
 
     void VulkanRHI::SetSampler(uint32_t index, const GPUSampler* sampler)
     {
+    }
 
+    VulkanGPUCommandList::~VulkanGPUCommandList()
+    {
+        for (uint32_t index = 0; index < MAX_FRAMES_IN_FLIGHT; ++index)
+        {
+            RHI::vkDestroyCommandPool(g_logical_device, command_pool[index], nullptr);
+        }
+    }
+
+    void VulkanGPUCommandList::Begin()
+    {
+        RHI::vkResetCommandPool(g_logical_device, command_pool[CURRENT_FRAME], 0);
+
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        RHI::vkBeginCommandBuffer(command_buffer[CURRENT_FRAME], &begin_info);
+
+        RHI::vkCmdBindDescriptorSets(command_buffer[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
+        RHI::vkCmdBindDescriptorSets(command_buffer[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
+    }
+
+    void VulkanGPUCommandList::End()
+    {
+        RHI::vkEndCommandBuffer(command_buffer[CURRENT_FRAME]);
+    }
+    
+    void VulkanGPUCommandList::BeginRenderPass(GPURenderPass* render_pass)  
+    {
+        VkRenderingAttachmentInfo color_attachment_info_data[MAX_COLOR_ATTACHMENT_COUNT] = {};
+        for (uint32_t index = 0; index < render_pass->color_attachment_count; ++index)
+        {
+            const GPUColorAttachment* color_attachment = render_pass->color_attachments[index];
+            const VulkanGPUTexture* color_attachment_texture = static_cast<const VulkanGPUTexture*>(color_attachment->texture);
+
+            color_attachment_info_data[index].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            color_attachment_info_data[index].imageView = color_attachment_texture->rtv;
+            color_attachment_info_data[index].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            color_attachment_info_data[index].loadOp = color_attachment->load_op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : color_attachment->load_op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            color_attachment_info_data[index].storeOp = color_attachment->store_op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            memcpy(&color_attachment_info_data[index].clearValue.color.float32, &color_attachment->clear_value.color, sizeof(float) * 4);
+        }
+
+        VkRenderingAttachmentInfo depth_attachment_info = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        if (render_pass->depth_attachment)
+        {
+            const GPUDepthAttachment* depth_attachment = render_pass->depth_attachment;
+            const VulkanGPUTexture* native = static_cast<const VulkanGPUTexture*>(depth_attachment->texture);
+
+            depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            depth_attachment_info.imageView = native->dsv;
+            depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            depth_attachment_info.loadOp = depth_attachment->load_op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : depth_attachment->load_op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depth_attachment_info.storeOp = depth_attachment->store_op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            memcpy(&depth_attachment_info.clearValue.depthStencil, &depth_attachment->clear_value.depth_stencil, sizeof(VkClearDepthStencilValue));
+        }
+
+        VkRenderingInfo rendering_info = {};
+        rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        rendering_info.renderArea = { {0, 0}, { render_pass->render_width, render_pass->render_height } };
+        rendering_info.layerCount = 1;
+        rendering_info.colorAttachmentCount = render_pass->color_attachment_count;
+        rendering_info.pColorAttachments = color_attachment_info_data;
+        rendering_info.pDepthAttachment = &depth_attachment_info;
+
+        RHI::vkCmdBeginRendering(command_buffer[CURRENT_FRAME], &rendering_info);
+    }
+    
+    void VulkanGPUCommandList::EndRenderPass()
+    {
+        RHI::vkCmdEndRendering(command_buffer[CURRENT_FRAME]);
+    }
+    
+    void VulkanGPUCommandList::SetPipeline(const GPUPipeline* pipeline)
+    {
+    }
+    
+    void VulkanGPUCommandList::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
+    {
+    }
+    
+    void VulkanGPUCommandList::SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height)
+    {
+    }
+    
+    void VulkanGPUCommandList::SetPushConstants(const void* data, uint32_t size)
+    {
+    }
+    
+    void VulkanGPUCommandList::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
+    {
+    }
+    
+    void VulkanGPUCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
+    {
+    }
+    
+    void VulkanGPUCommandList::DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count)
+    {
+    }
+    void VulkanGPUCommandList::Dispatch(uint32_t x, uint32_t y, uint32_t z)
+    {
+    }
+    void VulkanGPUCommandList::CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset)
+    {
+    }
+    void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer)
+    {
+    }
+    void VulkanGPUCommandList::CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height)
+    {
+        const VulkanGPUTexture* native_src = static_cast<const VulkanGPUTexture*>(src);
+        const VulkanGPUTexture* native_dst = static_cast<const VulkanGPUTexture*>(dst);
+
+        VkImageBlit2 region = {};
+        region.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+        region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.srcSubresource.layerCount = 1;
+        region.srcOffsets[1] = { (int32_t)width, (int32_t)height, 1 };
+        region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.dstSubresource.layerCount = 1;
+        region.dstOffsets[1] = { (int32_t)width, (int32_t)height, 1 };
+
+        VkBlitImageInfo2 blit_info = {};
+        blit_info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+        blit_info.srcImage = native_src->texture;
+        blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        blit_info.dstImage = native_dst->texture;
+        blit_info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        blit_info.regionCount = 1;
+        blit_info.pRegions = &region;
+        blit_info.filter = VK_FILTER_LINEAR;
+
+        RHI::vkCmdBlitImage2(command_buffer[CURRENT_FRAME], &blit_info);
+    }
+
+    void VulkanGPUCommandList::Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count)
+    {
+        VkImageMemoryBarrier2 image_barriers[8] = {};
+        for (uint32_t i = 0; i < texture_barrier_count; i++)
+        {
+            const VulkanGPUTexture* native = static_cast<const VulkanGPUTexture*>(texture_barriers[i].texture);
+
+            VkImageLayout old_layout, new_layout;
+            VkPipelineStageFlags2 src_stage, dst_stage;
+            VkAccessFlags2 src_access, dst_access;
+            GetBarrierInfo(texture_barriers[i].old_layout, old_layout, src_stage, src_access);
+            GetBarrierInfo(texture_barriers[i].new_layout, new_layout, dst_stage, dst_access);
+
+            image_barriers[i].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+            image_barriers[i].oldLayout = old_layout;
+            image_barriers[i].newLayout = new_layout;
+            image_barriers[i].srcStageMask = src_stage;
+            image_barriers[i].srcAccessMask = src_access;
+            image_barriers[i].dstStageMask = dst_stage;
+            image_barriers[i].dstAccessMask = dst_access;
+            image_barriers[i].image = native->texture;
+            image_barriers[i].subresourceRange.aspectMask = new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            image_barriers[i].subresourceRange.baseMipLevel = 0;
+            image_barriers[i].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            image_barriers[i].subresourceRange.baseArrayLayer = 0;
+            image_barriers[i].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        }
+
+        VkDependencyInfo dep = {};
+        dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dep.imageMemoryBarrierCount = texture_barrier_count;
+        dep.pImageMemoryBarriers = image_barriers;
+
+        RHI::vkCmdPipelineBarrier2(command_buffer[CURRENT_FRAME], &dep);
     }
 }

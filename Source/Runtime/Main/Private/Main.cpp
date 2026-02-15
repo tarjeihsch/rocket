@@ -35,7 +35,7 @@ int main()
 	RHI::GPUBufferDesc buffer_desc = RHI::GPUBufferDesc::StorageBuffer(4ULL * 1024 * 1024);
 	RHI::GPUBuffer* buffer = RHI::GetRHI()->CreateBuffer(buffer_desc);
 	
-	RHI::GPUTextureDesc texture_desc = RHI::GPUTextureDesc::Texture2D(RHI::GPUFormat::RGBA32_FLOAT, 1280, 720);
+	RHI::GPUTextureDesc texture_desc = RHI::GPUTextureDesc::RenderTarget(RHI::GPUFormat::BGRA8_SRGB, 1280, 720);
 	RHI::GPUTexture* texture = RHI::GetRHI()->CreateTexture(texture_desc);
 
 	std::vector<char> vertex_shader_bytecode = LoadFile(ROCKET_BINARIES "/Shaders/Shader.vert.spv");
@@ -88,9 +88,62 @@ int main()
 	swapchain_desc.window_platform.hwnd = static_cast<HWND>(window->GetNativeWindowHandle());
 	RHI::GPUSwapchain* swapchain = RHI::GetRHI()->CreateSwapchain(swapchain_desc);
 
+	RHI::GPUCommandListDesc command_list_desc;
+	command_list_desc.queue_flags = RHI::GPUQueueFlag::Graphics;
+	RHI::GPUCommandList* command_list = RHI::GetRHI()->CreateCommandList(command_list_desc);
+
 	while (!GWindowShouldClose)
 	{	
 		Application::Get().PumpMessageQueue();
+
+		swapchain->AcquireNextBackBuffer();
+
+		command_list->Begin();
+
+		RHI::GPUTextureBarrier barriers[2];
+		barriers[0].texture = texture;
+		barriers[0].old_layout = RHI::GPUTextureLayout::Undefined;
+		barriers[0].new_layout = RHI::GPUTextureLayout::ColorAttachment;
+		command_list->Barrier(nullptr, 0, barriers, 1);
+
+		RHI::GPUColorAttachment color_attachment;
+		color_attachment.clear_value.color.r = 0;
+		color_attachment.clear_value.color.g = 1;
+		color_attachment.clear_value.color.b = 0;
+		color_attachment.clear_value.color.a = 1;
+		color_attachment.load_op = RHI::GPULoadOp::Clear;
+		color_attachment.store_op = RHI::GPUStoreOp::Store;
+		color_attachment.texture = texture;
+
+		RHI::GPURenderPass render_pass;
+		render_pass.color_attachments[0] = &color_attachment;
+		render_pass.color_attachment_count = 1;
+		render_pass.render_width = 1280;
+		render_pass.render_height = 720;
+		command_list->BeginRenderPass(&render_pass);
+
+		command_list->EndRenderPass();
+
+		barriers[0].texture = texture;
+		barriers[0].old_layout = RHI::GPUTextureLayout::ColorAttachment;
+		barriers[0].new_layout = RHI::GPUTextureLayout::TransferSrc;
+		barriers[1].texture = swapchain->GetBackBufferTexture();
+		barriers[1].old_layout = RHI::GPUTextureLayout::Undefined;
+		barriers[1].new_layout = RHI::GPUTextureLayout::TransferDst;
+		command_list->Barrier(nullptr, 0, barriers, 2);
+
+		command_list->CopyTextureToTexture(texture, swapchain->GetBackBufferTexture(), 1280, 720);
+
+		barriers[0].texture = swapchain->GetBackBufferTexture();
+		barriers[0].old_layout = RHI::GPUTextureLayout::TransferDst;
+		barriers[0].new_layout = RHI::GPUTextureLayout::Present;
+		command_list->Barrier(nullptr, 0, barriers, 1);
+
+		command_list->End();
+
+		RHI::GetRHI()->Submit(command_list);
+
+		swapchain->PresentBackBuffer();
 	}
 
 	delete buffer;

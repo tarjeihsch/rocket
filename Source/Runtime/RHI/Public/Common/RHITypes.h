@@ -61,7 +61,32 @@ namespace RHI
         D32_FLOAT_S8
     };
 
+    enum class GPUAccessType
+    {
+        None,
+        VertexShaderRead,
+        FragmentShaderRead,
+        ComputeShaderRead,
+        ComputeShaderWrite,
+        TransferRead,
+        TransferWrite,
+        ColorAttachmentWrite,
+        DepthAttachmentRead,
+        DepthAttachmentWrite,
+        Present,
+    };
 
+    enum class GPUTextureLayout
+    {
+        Undefined,
+        General,
+        ColorAttachment,
+        DepthAttachment,
+        ShaderReadOnly,
+        TransferSrc,
+        TransferDst,
+        Present
+    };
 
     enum class GPUHeapType
     {
@@ -249,6 +274,19 @@ namespace RHI
 
     typedef uint32_t GPUShaderStageFlags;
 
+    namespace GPUQueueFlag
+    {
+        enum Bits : uint32_t
+        {
+            None = 0,
+            Graphics = 1U << 0,
+            Compute = 1U << 1,
+            Transfer = 1U << 2
+        };
+    }
+
+    typedef uint32_t GPUQueueFlags;
+
     struct GPUClearValue
     {
         struct ColorClearValue { float r, g, b, a; };
@@ -343,26 +381,13 @@ namespace RHI
 
     struct GPURenderPass
     {
-        const GPUColorAttachment* color_attachments[8];
-        const GPUDepthAttachment* depth_attachment;
+        const GPUColorAttachment* color_attachments[8] = {};
+        uint32_t color_attachment_count = 0;
 
-        uint32_t render_width;
-        uint32_t render_height;
-    };
+        const GPUDepthAttachment* depth_attachment = nullptr;
 
-    enum class GPUAccessType
-    {
-        None,
-        VertexShaderRead,
-        FragmentShaderRead,
-        ComputeShaderRead,
-        ComputeShaderWrite,
-        TransferRead,
-        TransferWrite,
-        ColorAttachmentWrite,
-        DepthAttachmentRead,
-        DepthAttachmentWrite,
-        Present,
+        uint32_t render_width = 0;
+        uint32_t render_height = 0;
     };
 
     struct GPUBufferBarrier
@@ -375,8 +400,8 @@ namespace RHI
     struct GPUTextureBarrier
     {
         GPUTexture* texture = nullptr;
-        GPUAccessType src_access = GPUAccessType::None;
-        GPUAccessType dst_access = GPUAccessType::None;
+        GPUTextureLayout old_layout = GPUTextureLayout::Undefined;
+        GPUTextureLayout new_layout = GPUTextureLayout::Undefined;
     };
 
     struct GPUBufferDesc
@@ -513,12 +538,12 @@ namespace RHI
 
         static GPUTextureDesc RenderTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
         {
-            return Texture2D(format, width, height, GPUTextureFlag::RenderTarget | GPUTextureFlag::SRV, 1, sample_count);
+            return Texture2D(format, width, height, GPUTextureFlag::RenderTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc, 1, sample_count);
         }
 
         static GPUTextureDesc DepthTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
         {
-            return Texture2D(format, width, height, GPUTextureFlag::DepthTarget | GPUTextureFlag::SRV, 1, sample_count);
+            return Texture2D(format, width, height, GPUTextureFlag::DepthTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc, 1, sample_count);
         }
     };
 
@@ -573,5 +598,10 @@ namespace RHI
         const void* bytecode = nullptr;
         uint64_t bytecode_size = 0;
         GPUShaderStageFlag::Bits stage_flag = GPUShaderStageFlag::None;
+    };
+
+    struct GPUCommandListDesc
+    {
+        GPUQueueFlags queue_flags;
     };
 }

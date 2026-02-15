@@ -66,20 +66,39 @@ namespace RHI
 
         void                    SetDebugName(const char* debug_name)    override;
         GPUTexture*             GetBackBufferTexture()                  const override;
-        void                    BeginFrame()                            override;
-        void                    PresentFrame()                          override;
+        void                    AcquireNextBackBuffer()                 override;
+        void                    PresentBackBuffer()                     override;
 
         VkSwapchainKHR          swapchain                               = nullptr;
         VkSurfaceKHR            surface                                 = nullptr;
         uint32_t                image_count                             = 0;
         uint32_t                current_image_index                     = 0;
-        uint32_t                current_frame                           = 0;
-        uint32_t                frames_in_flight                        = 0;
         VulkanGPUTexture*       textures[3]                             = {};
+    };
 
-        VkSemaphore             image_available[3]                      = {};
-        VkSemaphore             render_finished[3]                      = {};
-        VkFence                 in_flight_fences[3]                     = {};
+    struct VulkanGPUCommandList : GPUCommandList
+    {
+        ~VulkanGPUCommandList();
+
+        void Begin() override;
+        void End() override;
+        void BeginRenderPass(GPURenderPass* rendering_info) override;
+        void EndRenderPass() override;
+        void SetPipeline(const GPUPipeline* pipeline) override;
+        void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) override;
+        void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) override;
+        void SetPushConstants(const void* data, uint32_t size) override;
+        void Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) override;
+        void DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) override;
+        void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) override;
+        void Dispatch(uint32_t x, uint32_t y, uint32_t z) override;
+        void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) override;
+        void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) override;
+        void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) override;
+        void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) override;
+
+        VkCommandBuffer command_buffer[3] = {};
+        VkCommandPool command_pool[3] = {};
     };
 
     class VulkanRHI final : public IRHI
@@ -96,7 +115,7 @@ namespace RHI
         GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) override;
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;
         GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) override;
-        GPUCommandList* CreateCommandList() override;
+        GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) override;
 
         void SetTexture(uint32_t index, const GPUTexture* texture) override;
         void SetBuffer(uint32_t index, const GPUBuffer* buffer) override;

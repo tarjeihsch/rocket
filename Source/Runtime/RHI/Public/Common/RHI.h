@@ -68,8 +68,8 @@ namespace RHI
 
         virtual void SetDebugName(const char* debug_name) = 0;
         virtual GPUTexture* GetBackBufferTexture() const = 0;
-        virtual void BeginFrame() = 0;
-        virtual void PresentFrame() = 0;
+        virtual void AcquireNextBackBuffer() = 0;
+        virtual void PresentBackBuffer() = 0;
     };
 
     struct GPUCommandList
@@ -78,25 +78,19 @@ namespace RHI
 
         virtual void Begin() = 0;
         virtual void End() = 0;
-
         virtual void BeginRenderPass(GPURenderPass* rendering_info) = 0;
         virtual void EndRenderPass() = 0;
-
         virtual void SetPipeline(const GPUPipeline* pipeline) = 0;
-        virtual void SetBindGroup(uint32_t index, const GPUShaderResources* bind_group) = 0;
         virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
         virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
         virtual void SetPushConstants(const void* data, uint32_t size) = 0;
-
         virtual void Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) = 0;
         virtual void DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) = 0;
         virtual void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) = 0;
-
         virtual void Dispatch(uint32_t x, uint32_t y, uint32_t z) = 0;
-
         virtual void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) = 0;
         virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) = 0;
-
+        virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
         virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
 
         void Barrier(const GPUBufferBarrier& barrier)
@@ -123,7 +117,7 @@ namespace RHI
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
-        virtual GPUCommandList* CreateCommandList() = 0;
+        virtual GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) = 0;
 
         virtual void SetTexture(uint32_t index, const GPUTexture* texture) = 0;
         virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;

@@ -106,7 +106,7 @@ namespace RHI
     PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage = nullptr;
     PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer = nullptr;
     PFN_vkCmdCopyImage vkCmdCopyImage = nullptr;
-    PFN_vkCmdBlitImage vkCmdBlitImage = nullptr;
+    PFN_vkCmdBlitImage2 vkCmdBlitImage2 = nullptr;
     PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2 = nullptr;
     PFN_vkCreateSemaphore vkCreateSemaphore = nullptr;
     PFN_vkDestroySemaphore vkDestroySemaphore = nullptr;
@@ -267,7 +267,7 @@ namespace RHI
         LOAD_DEVICE(device, vkCmdCopyBufferToImage);
         LOAD_DEVICE(device, vkCmdCopyImageToBuffer);
         LOAD_DEVICE(device, vkCmdCopyImage);
-        LOAD_DEVICE(device, vkCmdBlitImage);
+        LOAD_DEVICE(device, vkCmdBlitImage2);
         LOAD_DEVICE(device, vkCmdPipelineBarrier2);
         LOAD_DEVICE(device, vkCreateSemaphore);
         LOAD_DEVICE(device, vkDestroySemaphore);
