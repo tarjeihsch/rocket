@@ -100,6 +100,8 @@ int main()
 
 		command_list->Begin();
 
+		command_list->SetPipeline(graphics_pipeline);
+
 		RHI::GPUTextureBarrier barriers[2];
 		barriers[0].texture = texture;
 		barriers[0].old_layout = RHI::GPUTextureLayout::Undefined;

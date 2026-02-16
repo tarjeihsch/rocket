@@ -40,40 +40,52 @@ namespace RHI
         return VK_FORMAT_UNDEFINED;
     }
 
-    static void GetAccessFromLayout(GPUTextureLayout layout, VkPipelineStageFlags2& stage, VkAccessFlags2& access)
+    static void GetBarrierInfo(GPUAccessType access_type, VkPipelineStageFlags2& stage, VkAccessFlags2& access)
     {
-        switch (layout)
+        switch (access_type)
         {
-        case GPUTextureLayout::Undefined:
+        case GPUAccessType::Undefined:
             stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
             access = VK_ACCESS_2_NONE;
             break;
-        case GPUTextureLayout::ColorAttachment:
-            stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-            access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            break;
-        case GPUTextureLayout::DepthAttachment:
-            stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-            access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            break;
-        case GPUTextureLayout::ShaderReadOnly:
-            stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-            access = VK_ACCESS_2_SHADER_READ_BIT;
-            break;
-        case GPUTextureLayout::General:
+
+        case GPUAccessType::General:
             stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
             access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
             break;
-        case GPUTextureLayout::TransferSrc:
+
+        case GPUAccessType::VertexShaderRead:
+            stage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+            access = VK_ACCESS_2_SHADER_READ_BIT;
+            break;
+
+        case GPUAccessType::FragmentShaderRead:
+            stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            access = VK_ACCESS_2_SHADER_READ_BIT;
+            break;
+
+        case GPUAccessType::ComputeShaderRead:
+            stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            access = VK_ACCESS_2_SHADER_READ_BIT;
+            break;
+
+        case GPUAccessType::ComputeShaderWrite:
+            stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            access = VK_ACCESS_2_SHADER_WRITE_BIT;
+            break;
+
+        case GPUAccessType::TransferSrc:
             stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
             access = VK_ACCESS_2_TRANSFER_READ_BIT;
             break;
-        case GPUTextureLayout::TransferDst:
+
+        case GPUAccessType::TransferDst:
             stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
             access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
             break;
-        case GPUTextureLayout::Present:
-            stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+
+        default:
+            stage = VK_PIPELINE_STAGE_2_NONE;
             access = VK_ACCESS_2_NONE;
             break;
         }

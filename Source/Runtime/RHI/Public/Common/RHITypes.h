@@ -63,17 +63,14 @@ namespace RHI
 
     enum class GPUAccessType
     {
-        None,
+        Undefined,
+        General,
         VertexShaderRead,
         FragmentShaderRead,
         ComputeShaderRead,
         ComputeShaderWrite,
-        TransferRead,
-        TransferWrite,
-        ColorAttachmentWrite,
-        DepthAttachmentRead,
-        DepthAttachmentWrite,
-        Present,
+        TransferSrc,
+        TransferDst
     };
 
     enum class GPUTextureLayout
@@ -393,8 +390,8 @@ namespace RHI
     struct GPUBufferBarrier
     {
         GPUBuffer* buffer = nullptr;
-        GPUAccessType src_access = GPUAccessType::None;
-        GPUAccessType dst_access = GPUAccessType::None;
+        GPUAccessType src_access = GPUAccessType::Undefined;
+        GPUAccessType dst_access = GPUAccessType::Undefined;
     };
 
     struct GPUTextureBarrier
