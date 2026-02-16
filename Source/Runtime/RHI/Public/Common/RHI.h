@@ -92,7 +92,6 @@ namespace RHI
         virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) = 0;
         virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
         virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
-        virtual void ResetQueries() = 0;
         virtual void BeginTimelineQuery() = 0;
         virtual void EndTimelineQuery() = 0;
         virtual void BeginPipelineQuery() = 0;

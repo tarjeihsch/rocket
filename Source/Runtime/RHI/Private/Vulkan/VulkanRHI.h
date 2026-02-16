@@ -96,7 +96,6 @@ namespace RHI
         void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) override;
         void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) override;
         void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) override;
-        void ResetQueries() override;
         void BeginTimelineQuery() override;
         void EndTimelineQuery() override;
         void BeginPipelineQuery() override;

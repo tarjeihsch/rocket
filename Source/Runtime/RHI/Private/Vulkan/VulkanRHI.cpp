@@ -655,7 +655,8 @@ namespace RHI
 
         uint64_t timestamps[2];
         RHI::vkGetQueryPoolResults(g_logical_device, g_timeline_query_pool_data[CURRENT_FRAME], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-        timing_query_result.gpu_time_ms = (timestamps[1] - timestamps[0]) * g_adapter.timestamp_period / 1000000.0f;
+        timing_query_result.gpu_time_ms = (timestamps[1] - timestamps[0]) * g_adapter.timestamp_period / 1000000.0;
+
         return timing_query_result;
     }
 
@@ -1140,6 +1141,10 @@ namespace RHI
 
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
+
+        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_timeline_query_pool_data[CURRENT_FRAME], 0, 2);
+        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0, 1);
+        g_query_pool_counter[CURRENT_FRAME] = 0;
     }
 
     void VulkanGPUCommandList::End()
@@ -1330,14 +1335,6 @@ namespace RHI
         RHI::vkCmdPipelineBarrier2(command_buffer_data[CURRENT_FRAME], &dependency_info);
     }
 
-    void VulkanGPUCommandList::ResetQueries()
-    {
-        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_timeline_query_pool_data[CURRENT_FRAME], 0, 2);
-        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0, 1);
-        
-        g_query_pool_counter[CURRENT_FRAME] = 0;
-    }
-    
     void VulkanGPUCommandList::BeginTimelineQuery()
     {
         uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;

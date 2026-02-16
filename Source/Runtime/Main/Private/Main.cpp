@@ -98,11 +98,12 @@ int main()
 
 		swapchain->AcquireNextBackBuffer();
 		
-		RHI::GPUTimingQueryResult timing_query_result = RHI::GetRHI()->GetTimingQueryResult();
-		RHI::GPUPipelineQueryResult pipeline_query_result = RHI::GetRHI()->GetPipelineQueryResult();
+		auto timing_query_result = RHI::GetRHI()->GetTimingQueryResult();
+		auto pipeline_query_result = RHI::GetRHI()->GetPipelineQueryResult();
+
+		printf("GPU Time (ms): %f\n", timing_query_result.gpu_time_ms);
 		
 		command_list->Begin();
-		command_list->ResetQueries();
 		command_list->BeginTimelineQuery();
 		command_list->BeginPipelineQuery();
 
