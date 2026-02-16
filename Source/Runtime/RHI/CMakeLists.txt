@@ -38,9 +38,10 @@ target_include_directories(RHI
 )
 
 target_link_libraries(RHI
-    PUBLIC Rocket::Core
-    PRIVATE Rocket::Platform
-    PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>
+    PUBLIC
+        Rocket::Core
+    PRIVATE
+        $<BUILD_INTERFACE:vulkan::vulkan>
 )
 
 set_target_properties(RHI PROPERTIES POSITION_INDEPENDENT_CODE ON)

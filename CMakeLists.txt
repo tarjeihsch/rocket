@@ -69,7 +69,7 @@ configure_package_config_file(
     INSTALL_DESTINATION cmake
 )
 
-install(TARGETS ${ROCKET_EXPORT_LIBS}
+install(TARGETS ${ROCKET_EXPORT_LIBS} glfw
     EXPORT RocketTargets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib

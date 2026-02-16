@@ -461,12 +461,12 @@ namespace RHI
 
         static GPUBufferDesc StorageBuffer(uint64_t size)
         {
-            return DefaultBuffer(size, GPUBufferFlag::Storage);
+            return UploadBuffer(size, GPUBufferFlag::Storage);
         }
 
         static GPUBufferDesc UniformBuffer(uint64_t size)
         {
-            return DefaultBuffer(size, GPUBufferFlag::Uniform);
+            return UploadBuffer(size, GPUBufferFlag::Uniform);
         }
     };
 
