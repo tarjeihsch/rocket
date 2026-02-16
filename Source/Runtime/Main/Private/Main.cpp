@@ -101,8 +101,6 @@ int main()
 		auto timing_query_result = RHI::GetRHI()->GetTimingQueryResult();
 		auto pipeline_query_result = RHI::GetRHI()->GetPipelineQueryResult();
 
-		printf("GPU Time (ms): %f\n", timing_query_result.gpu_time_ms);
-		
 		command_list->Begin();
 		command_list->BeginTimelineQuery();
 		command_list->BeginPipelineQuery();

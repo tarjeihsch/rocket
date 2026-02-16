@@ -53,7 +53,6 @@ add_subdirectory(Source/Runtime/Main)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)
-#add_subdirectory(Source/Runtime/Rendering)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
@@ -62,7 +61,6 @@ set(ROCKET_EXPORT_LIBS
     Core
     Platform
     RHI
-    #    Rendering
 )
 
 configure_package_config_file(
