@@ -16,46 +16,49 @@ RHI::IRHI* CreateVulkanRHI()
 
 namespace RHI
 {
-    static constexpr uint32_t           MAX_SHADER_BINDINGS                             = 4U;
+    static constexpr uint32_t           MAX_SHADER_BINDINGS                                 = 4U;
     
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES            = 64U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES            = 64U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS             = 16U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                    = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES                = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS                 = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                        = 16U;
 
-    static constexpr uint32_t           BINDING_SAMPLED_IMAGES                          = 0U;
-    static constexpr uint32_t           BINDING_STORAGE_IMAGES                          = 1U;
-    static constexpr uint32_t           BINDING_STORAGE_BUFFERS                         = 2U;
-    static constexpr uint32_t           BINDING_SAMPLERS                                = 3U;
+    static constexpr uint32_t           BINDING_SAMPLED_IMAGES                              = 0U;
+    static constexpr uint32_t           BINDING_STORAGE_IMAGES                              = 1U;
+    static constexpr uint32_t           BINDING_STORAGE_BUFFERS                             = 2U;
+    static constexpr uint32_t           BINDING_SAMPLERS                                    = 3U;
 
-    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                      = 8;
-    static constexpr uint32_t           MAX_BARRIER_COUNT                               = 8;
-    static constexpr uint32_t           CONCURRENT_FRAME_COUNT                          = 3;
+    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                          = 8;
+    static constexpr uint32_t           MAX_BARRIER_COUNT                                   = 8;
+    static constexpr uint32_t           CONCURRENT_FRAME_COUNT                              = 3;
 
-    static VkInstance                   g_instance                                      = nullptr;
-    static VkPhysicalDevice             g_physical_device                               = nullptr;
-    static VkDevice                     g_logical_device                                = nullptr;
-    static VmaAllocator                 g_memory_allocator                                     = nullptr;
+    static VkInstance                   g_instance                                          = nullptr;
+    static VkPhysicalDevice             g_physical_device                                   = nullptr;
+    static VkDevice                     g_logical_device                                    = nullptr;
+    static VmaAllocator                 g_memory_allocator                                  = nullptr;
 
-    static uint32_t                     g_graphics_family                               = UINT32_MAX;
-    static uint32_t                     g_compute_family                                = UINT32_MAX;
-    static uint32_t                     g_transfer_family                               = UINT32_MAX;
+    static uint32_t                     g_graphics_family                                   = UINT32_MAX;
+    static uint32_t                     g_compute_family                                    = UINT32_MAX;
+    static uint32_t                     g_transfer_family                                   = UINT32_MAX;
 
-    static VkQueue                      g_graphics_queue                                = nullptr;
-    static VkQueue                      g_compute_queue                                 = nullptr;
-    static VkQueue                      g_transfer_queue                                = nullptr;
+    static VkQueue                      g_graphics_queue                                    = nullptr;
+    static VkQueue                      g_compute_queue                                     = nullptr;
+    static VkQueue                      g_transfer_queue                                    = nullptr;
 
-    static VkPipelineLayout  	        g_pipeline_layout                               = nullptr;
-    static VkDescriptorSetLayout        g_descriptor_set_layout                         = nullptr;
-    static VkDescriptorSet              g_descriptor_set                                = nullptr;
-    static VkDescriptorPool             g_descriptor_pool                               = nullptr;
+    static VkPipelineLayout  	        g_pipeline_layout                                   = nullptr;
+    static VkDescriptorSetLayout        g_descriptor_set_layout                             = nullptr;
+    static VkDescriptorSet              g_descriptor_set                                    = nullptr;
+    static VkDescriptorPool             g_descriptor_pool                                   = nullptr;
 
-    static GPUAdapter                   g_adapter                                       = {};
+    static GPUAdapter                   g_adapter                                           = {};
 
-    static uint64_t                     g_frame_counter                                 = 0;
-    static VkSemaphore                  g_image_available[CONCURRENT_FRAME_COUNT]       = {};
-    static VkSemaphore                  g_render_finished[CONCURRENT_FRAME_COUNT]       = {};
-    static VkFence                      g_in_flight_fence[CONCURRENT_FRAME_COUNT]       = {};
+    static uint64_t                     g_frame_counter                                     = 0;
+    static VkSemaphore                  g_image_available[CONCURRENT_FRAME_COUNT]           = {};
+    static VkSemaphore                  g_render_finished[CONCURRENT_FRAME_COUNT]           = {};
+    static VkFence                      g_in_flight_fence[CONCURRENT_FRAME_COUNT]           = {};
+    static VkQueryPool                  g_timeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
+    static VkQueryPool                  g_pipeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
+    static uint32_t                     g_query_pool_counter[CONCURRENT_FRAME_COUNT]        = {};
 
     #define CURRENT_FRAME               g_frame_counter % CONCURRENT_FRAME_COUNT
 
@@ -324,7 +327,7 @@ namespace RHI
             case 0x1002: g_adapter.vendor = GPUAdapterVendor::AMD;      break;
             case 0x8086: g_adapter.vendor = GPUAdapterVendor::INTEL;    break;
         }
-
+        g_adapter.timestamp_period = physical_device_properties.limits.timestampPeriod;
         g_adapter.max_texture_dimension_2d = physical_device_properties.limits.maxImageDimension2D;
         g_adapter.max_texture_dimension_3d = physical_device_properties.limits.maxImageDimension3D;
         g_adapter.max_texture_array_layers = physical_device_properties.limits.maxImageArrayLayers;
@@ -360,6 +363,7 @@ namespace RHI
         request_device_features_1_2.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
         request_device_features_1_2.timelineSemaphore = VK_TRUE;
         request_device_features_1_2.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+        request_device_features_1_2.hostQueryReset = VK_TRUE;
 
         VkPhysicalDeviceVulkan13Features request_device_features_1_3 = {};
         request_device_features_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
@@ -371,6 +375,7 @@ namespace RHI
         request_device_features.shaderInt64 = VK_TRUE;
         request_device_features.samplerAnisotropy = VK_TRUE;
         request_device_features.multiDrawIndirect = VK_TRUE;
+        request_device_features.pipelineStatisticsQuery = VK_TRUE;
 
         uint32_t queue_family_count = 0;
         RHI::vkGetPhysicalDeviceQueueFamilyProperties(g_physical_device, &queue_family_count, nullptr);
@@ -553,15 +558,28 @@ namespace RHI
         {
             VkSemaphoreCreateInfo semaphore_create_info = {};
             semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
             RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_image_available[index]);
             RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_render_finished[index]);
 
             VkFenceCreateInfo fence_create_info = {};
             fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-                
             RHI::vkCreateFence(g_logical_device, &fence_create_info, nullptr, &g_in_flight_fence[index]);
+
+            VkQueryPoolCreateInfo timeline_query_pool_create_info = {};
+            timeline_query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+            timeline_query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+            timeline_query_pool_create_info.queryCount = 2;
+            RHI::vkCreateQueryPool(g_logical_device, &timeline_query_pool_create_info, nullptr, &g_timeline_query_pool_data[index]);
+            RHI::vkResetQueryPool(g_logical_device, g_timeline_query_pool_data[index], 0, 2);
+
+            VkQueryPoolCreateInfo pipeline_query_pool_create_info = {};
+            pipeline_query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+            pipeline_query_pool_create_info.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+            pipeline_query_pool_create_info.queryCount = 1;
+            pipeline_query_pool_create_info.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT | VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
+            RHI::vkCreateQueryPool(g_logical_device, &pipeline_query_pool_create_info, nullptr, &g_pipeline_query_pool_data[index]);
+            RHI::vkResetQueryPool(g_logical_device, g_pipeline_query_pool_data[index], 0, 1);
         }
     }
 
@@ -572,6 +590,9 @@ namespace RHI
             RHI::vkDestroySemaphore(g_logical_device, g_image_available[index], nullptr);
             RHI::vkDestroySemaphore(g_logical_device, g_render_finished[index], nullptr);
             RHI::vkDestroyFence(g_logical_device, g_in_flight_fence[index], nullptr);
+
+            RHI::vkDestroyQueryPool(g_logical_device, g_timeline_query_pool_data[index], nullptr);
+            RHI::vkDestroyQueryPool(g_logical_device, g_pipeline_query_pool_data[index], nullptr);
         }
 
         RHI::vkDestroyDescriptorPool(g_logical_device, g_descriptor_pool, nullptr);
@@ -622,6 +643,32 @@ namespace RHI
     void VulkanRHI::WaitIdle()
     {
         RHI::vkDeviceWaitIdle(g_logical_device);
+    }
+
+    GPUTimingQueryResult VulkanRHI::GetTimingQueryResult()
+    {
+        GPUTimingQueryResult timing_query_result = {};
+        if (g_frame_counter < CONCURRENT_FRAME_COUNT)
+        {
+            return timing_query_result;
+        }
+
+        uint64_t timestamps[2];
+        RHI::vkGetQueryPoolResults(g_logical_device, g_timeline_query_pool_data[CURRENT_FRAME], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        timing_query_result.gpu_time_ms = (timestamps[1] - timestamps[0]) * g_adapter.timestamp_period / 1000000.0f;
+        return timing_query_result;
+    }
+
+    GPUPipelineQueryResult VulkanRHI::GetPipelineQueryResult()
+    {
+        GPUPipelineQueryResult pipeline_query_result = {};
+        if (g_frame_counter < CONCURRENT_FRAME_COUNT)
+        {
+            return pipeline_query_result;
+        }
+
+        RHI::vkGetQueryPoolResults(g_logical_device, g_pipeline_query_pool_data[CURRENT_FRAME], 0, 1, sizeof(pipeline_query_result), &pipeline_query_result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        return pipeline_query_result;
     }
     
     GPUBuffer *VulkanRHI::CreateBuffer(const GPUBufferDesc &buffer_desc)
@@ -1281,5 +1328,37 @@ namespace RHI
         dependency_info.pBufferMemoryBarriers = buffer_barrier_data;
 
         RHI::vkCmdPipelineBarrier2(command_buffer_data[CURRENT_FRAME], &dependency_info);
+    }
+
+    void VulkanGPUCommandList::ResetQueries()
+    {
+        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_timeline_query_pool_data[CURRENT_FRAME], 0, 2);
+        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0, 1);
+        
+        g_query_pool_counter[CURRENT_FRAME] = 0;
+    }
+    
+    void VulkanGPUCommandList::BeginTimelineQuery()
+    {
+        uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
+        VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
+    }
+
+    void VulkanGPUCommandList::EndTimelineQuery()
+    {
+        uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
+        VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
+    }
+
+    void VulkanGPUCommandList::BeginPipelineQuery()
+    {
+        RHI::vkCmdBeginQuery(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0, 0);
+    }
+    
+    void VulkanGPUCommandList::EndPipelineQuery()
+    {
+        RHI::vkCmdEndQuery(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0);
     }
 }

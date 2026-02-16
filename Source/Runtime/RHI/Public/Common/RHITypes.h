@@ -85,6 +85,12 @@ namespace RHI
         Present
     };
 
+    enum class GPUPipelineStage
+    {
+        Top,
+        Bottom
+    };
+
     enum class GPUHeapType
     {
         // Invalid state
@@ -321,11 +327,18 @@ namespace RHI
 
 #endif
 
-    struct GPUBindGroupEntry
+    struct GPUTimingQueryResult
     {
-        GPUBindGroupEntryType bind_type = GPUBindGroupEntryType::Unknown;
-        uint32_t position = 0;
-        uint32_t count = 0;
+        double gpu_time_ms = 0;
+    };
+
+    struct GPUPipelineQueryResult
+    {
+        uint64_t vertices;
+        uint64_t primitives;
+        uint64_t vertex_invocations;
+        uint64_t fragment_invocations;
+        uint64_t compute_invocations;
     };
 
     struct GPUAdapter final
@@ -333,6 +346,8 @@ namespace RHI
         char device_name[256];
         GPUAdapterVendor vendor = GPUAdapterVendor::Unknown;
         uint32_t device_id;
+
+        float timestamp_period = 0;
 
         uint32_t max_texture_dimension_2d = 0;
         uint32_t max_texture_dimension_3d = 0;

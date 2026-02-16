@@ -92,6 +92,11 @@ namespace RHI
         virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) = 0;
         virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
         virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
+        virtual void ResetQueries() = 0;
+        virtual void BeginTimelineQuery() = 0;
+        virtual void EndTimelineQuery() = 0;
+        virtual void BeginPipelineQuery() = 0;
+        virtual void EndPipelineQuery() = 0;
 
         void Barrier(const GPUBufferBarrier& barrier)
         {
@@ -125,6 +130,9 @@ namespace RHI
 
         virtual void Submit(GPUCommandList* command_list) = 0;
         virtual void WaitIdle() = 0;
+
+        virtual GPUTimingQueryResult GetTimingQueryResult() = 0;
+        virtual GPUPipelineQueryResult GetPipelineQueryResult() = 0;
 	};
 
     void Initialize(GPUDriver driver);

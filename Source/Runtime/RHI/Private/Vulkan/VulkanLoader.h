@@ -118,6 +118,14 @@ namespace RHI
     extern PFN_vkDestroyFence vkDestroyFence;
     extern PFN_vkWaitForFences vkWaitForFences;
     extern PFN_vkResetFences vkResetFences;
+    extern PFN_vkCreateQueryPool vkCreateQueryPool;
+    extern PFN_vkResetQueryPool vkResetQueryPool;
+    extern PFN_vkDestroyQueryPool vkDestroyQueryPool;
+    extern PFN_vkCmdResetQueryPool vkCmdResetQueryPool;
+    extern PFN_vkCmdWriteTimestamp vkCmdWriteTimestamp;
+    extern PFN_vkCmdBeginQuery vkCmdBeginQuery;
+    extern PFN_vkCmdEndQuery vkCmdEndQuery;
+    extern PFN_vkGetQueryPoolResults vkGetQueryPoolResults;
     extern PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
     extern PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT;
     extern PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT;

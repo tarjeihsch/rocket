@@ -97,8 +97,14 @@ int main()
 		Application::Get().PumpMessageQueue();
 
 		swapchain->AcquireNextBackBuffer();
-
+		
+		RHI::GPUTimingQueryResult timing_query_result = RHI::GetRHI()->GetTimingQueryResult();
+		RHI::GPUPipelineQueryResult pipeline_query_result = RHI::GetRHI()->GetPipelineQueryResult();
+		
 		command_list->Begin();
+		command_list->ResetQueries();
+		command_list->BeginTimelineQuery();
+		command_list->BeginPipelineQuery();
 
 		command_list->SetPipeline(graphics_pipeline);
 
@@ -140,7 +146,9 @@ int main()
 		barriers[0].old_layout = RHI::GPUTextureLayout::TransferDst;
 		barriers[0].new_layout = RHI::GPUTextureLayout::Present;
 		command_list->Barrier(nullptr, 0, barriers, 1);
-
+		
+		command_list->EndTimelineQuery();
+		command_list->EndPipelineQuery();
 		command_list->End();
 
 		RHI::GetRHI()->Submit(command_list);
