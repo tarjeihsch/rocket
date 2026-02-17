@@ -85,6 +85,10 @@ struct Vector3
         Vector3<T> result = Vector3<T>(data[0] * inverse_length, data[1] * inverse_length, data[2] * inverse_length);
         return result;
     }
+
+    static Vector3<T> GetForwardVector();
+    static Vector3<T> GetUpVector();
+    static Vector3<T> GetRightVector();
 };
 
 using Vector3d = Vector3<double>;
@@ -120,19 +124,19 @@ inline T AngleBetween(Vector3<T> a, Vector3<T> b)
 }
 
 template<typename T>
-inline Vector3<T> Forward()
+inline Vector3<T> Vector3<T>::GetForwardVector()
 {
     return Vector3<T>(0, 0, T(1));
 }
 
 template<typename T>
-inline Vector3<T> Up()
+inline Vector3<T> Vector3<T>::GetUpVector()
 {
     return Vector3<T>(0, T(1), 0);
 }
 
 template<typename T>
-inline Vector3<T> Right()
+inline Vector3<T> Vector3<T>::GetRightVector()
 {
     return Vector3<T>(T(1), 0, 0);
 }
