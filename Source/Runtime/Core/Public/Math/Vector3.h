@@ -42,6 +42,19 @@ struct Vector3
         return *this;
     }
 
+    inline Vector3<T>& operator-=(const Vector3<T>& other)
+    {
+        T x = data[0] - other.data[0];
+        T y = data[1] - other.data[1];
+        T z = data[2] - other.data[2];
+
+        data[0] = x;
+        data[1] = y;
+        data[2] = z;
+
+        return *this;
+    }
+
     inline Vector3<T>& operator*=(T other)
     {
         T x = data[0] * other;
@@ -85,10 +98,6 @@ struct Vector3
         Vector3<T> result = Vector3<T>(data[0] * inverse_length, data[1] * inverse_length, data[2] * inverse_length);
         return result;
     }
-
-    static Vector3<T> GetForwardVector();
-    static Vector3<T> GetUpVector();
-    static Vector3<T> GetRightVector();
 };
 
 using Vector3d = Vector3<double>;
@@ -123,20 +132,17 @@ inline T AngleBetween(Vector3<T> a, Vector3<T> b)
     return std::acos(theta);
 }
 
-template<typename T>
-inline Vector3<T> Vector3<T>::GetForwardVector()
+inline Vector3<Real> GetForwardVector()
 {
-    return Vector3<T>(0, 0, T(1));
+    return Vector3<Real>(0, 0, Real(1));
 }
 
-template<typename T>
-inline Vector3<T> Vector3<T>::GetUpVector()
+inline Vector3<Real> GetUpVector()
 {
-    return Vector3<T>(0, T(1), 0);
+    return Vector3<Real>(0, Real(1), 0);
 }
 
-template<typename T>
-inline Vector3<T> Vector3<T>::GetRightVector()
+inline Vector3<Real> GetRightVector()
 {
-    return Vector3<T>(T(1), 0, 0);
+    return Vector3<Real>(Real(1), 0, 0);
 }
