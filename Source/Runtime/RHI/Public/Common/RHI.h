@@ -117,6 +117,8 @@ namespace RHI
 
         virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
         virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
+        virtual GPUBuffer* CreateTransientBuffer(const GPUBufferDesc& buffer_desc) = 0;
+        virtual GPUTexture* CreateTransientTexture(const GPUTextureDesc& texture_desc) = 0;
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
@@ -149,4 +151,11 @@ namespace RHI
     {
         return static_cast<T>(GetRHI());
     }
+
+    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT = 8;
+    static constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
+
+    static uint64_t g_frame_counter = 0;
+
+    #define CURRENT_FRAME g_frame_counter % CONCURRENT_FRAME_COUNT
 };

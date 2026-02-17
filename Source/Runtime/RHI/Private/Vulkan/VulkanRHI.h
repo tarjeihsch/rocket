@@ -115,6 +115,8 @@ namespace RHI
 
         GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) override;
         GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) override;
+        GPUBuffer* CreateTransientBuffer(const GPUBufferDesc& buffer_desc) override;
+        GPUTexture* CreateTransientTexture(const GPUTextureDesc& texture_desc) override;
         GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) override;
         GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) override;
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;

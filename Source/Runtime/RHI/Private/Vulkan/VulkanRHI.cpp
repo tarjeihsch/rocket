@@ -28,14 +28,16 @@ namespace RHI
     static constexpr uint32_t           BINDING_STORAGE_BUFFERS                             = 2U;
     static constexpr uint32_t           BINDING_SAMPLERS                                    = 3U;
 
-    static constexpr uint32_t           MAX_COLOR_ATTACHMENT_COUNT                          = 8;
     static constexpr uint32_t           MAX_BARRIER_COUNT                                   = 8;
-    static constexpr uint32_t           CONCURRENT_FRAME_COUNT                              = 3;
 
     static VkInstance                   g_instance                                          = nullptr;
     static VkPhysicalDevice             g_physical_device                                   = nullptr;
     static VkDevice                     g_logical_device                                    = nullptr;
+    
     static VmaAllocator                 g_memory_allocator                                  = nullptr;
+    static VmaPool                      g_memory_pool_data[CONCURRENT_FRAME_COUNT] = {};
+    static std::vector<VulkanGPUBuffer*> g_frame_resource_buffer_data[CONCURRENT_FRAME_COUNT];
+    static std::vector<VulkanGPUTexture*> g_frame_resource_texture_data[CONCURRENT_FRAME_COUNT];
 
     static uint32_t                     g_graphics_family                                   = UINT32_MAX;
     static uint32_t                     g_compute_family                                    = UINT32_MAX;
@@ -52,15 +54,12 @@ namespace RHI
 
     static GPUAdapter                   g_adapter                                           = {};
 
-    static uint64_t                     g_frame_counter                                     = 0;
     static VkSemaphore                  g_image_available[CONCURRENT_FRAME_COUNT]           = {};
     static VkSemaphore                  g_render_finished[CONCURRENT_FRAME_COUNT]           = {};
     static VkFence                      g_in_flight_fence[CONCURRENT_FRAME_COUNT]           = {};
     static VkQueryPool                  g_timeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
     static VkQueryPool                  g_pipeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
     static uint32_t                     g_query_pool_counter[CONCURRENT_FRAME_COUNT]        = {};
-
-    #define CURRENT_FRAME               g_frame_counter % CONCURRENT_FRAME_COUNT
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
@@ -476,6 +475,17 @@ namespace RHI
         result = vmaCreateAllocator(&memory_allocator_create_info, &g_memory_allocator);
         assert(result == VK_SUCCESS);
 
+        VmaPoolCreateInfo transient_memory_pool_create_info = {};
+        transient_memory_pool_create_info.flags = VMA_POOL_CREATE_LINEAR_ALGORITHM_BIT | VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT;
+        transient_memory_pool_create_info.blockSize = 0;
+        transient_memory_pool_create_info.maxBlockCount = 0;
+        
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
+        {
+            result = vmaCreatePool(g_memory_allocator, &transient_memory_pool_create_info, &g_memory_pool_data[index]);
+            assert(result == VK_SUCCESS);
+        }
+
         VkDescriptorBindingFlags descriptor_binding_flags[MAX_SHADER_BINDINGS];
         std::fill(descriptor_binding_flags, descriptor_binding_flags + MAX_SHADER_BINDINGS, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
 
@@ -806,6 +816,155 @@ namespace RHI
             texture_view_create_info.subresourceRange.levelCount = 1;
             RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->uav);
         }
+
+        return texture;
+    }
+
+    GPUBuffer* VulkanRHI::CreateTransientBuffer(const GPUBufferDesc& buffer_desc)
+    {
+        VulkanGPUBuffer* buffer = new VulkanGPUBuffer();
+
+        VkBufferUsageFlags buffer_usage_flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+        if (buffer_desc.flags & GPUBufferFlag::Vertex) buffer_usage_flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Index) buffer_usage_flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Storage) buffer_usage_flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Uniform) buffer_usage_flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+        VkBufferCreateInfo buffer_create_info = {};
+        buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_create_info.size = buffer_desc.size;
+        buffer_create_info.usage = buffer_usage_flags;
+
+        VmaAllocationCreateInfo memory_allocation_info = {};
+        memory_allocation_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+        memory_allocation_info.pool = g_memory_pool_data[CURRENT_FRAME];
+
+        VkResult result = vmaCreateBuffer(g_memory_allocator, &buffer_create_info, &memory_allocation_info, &buffer->buffer, &buffer->allocation, nullptr);
+        assert(result == VK_SUCCESS);
+
+        g_frame_resource_buffer_data[CURRENT_FRAME].push_back(buffer);
+
+        return buffer;
+    }
+
+    GPUTexture* VulkanRHI::CreateTransientTexture(const GPUTextureDesc& texture_desc)
+    {
+        VulkanGPUTexture* texture = new VulkanGPUTexture();
+
+        VkFormat format = GetNativeFormat(texture_desc.format);
+        VkImageUsageFlags image_usage_flags = 0;
+        VkImageType texture_type = VK_IMAGE_TYPE_2D;
+        VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
+        VkImageCreateFlags texture_flags = 0;
+
+        if (texture_desc.flags & GPUTextureFlag::RenderTarget) image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (texture_desc.flags & GPUTextureFlag::DepthTarget) image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (texture_desc.flags & GPUTextureFlag::SRV) image_usage_flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        if (texture_desc.flags & GPUTextureFlag::UAV) image_usage_flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+        if (texture_desc.flags & GPUTextureFlag::TransferSrc) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        if (texture_desc.flags & GPUTextureFlag::TransferDst) image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+        bool is_attachment_only = (texture_desc.flags & (GPUTextureFlag::RenderTarget | GPUTextureFlag::DepthTarget)) != 0 && (texture_desc.flags & (GPUTextureFlag::SRV | GPUTextureFlag::UAV | GPUTextureFlag::TransferSrc | GPUTextureFlag::TransferDst)) == 0;
+
+        if (is_attachment_only)
+        {
+            image_usage_flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+        }
+
+        switch (texture_desc.dimension)
+        {
+            case GPUTextureDimension::Texture1D:
+            {
+                texture_type = VK_IMAGE_TYPE_1D;
+                view_type = VK_IMAGE_VIEW_TYPE_1D;
+                break;
+            }
+            case GPUTextureDimension::Texture2D:
+            {
+                texture_type = VK_IMAGE_TYPE_2D;
+                view_type = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            }
+            case GPUTextureDimension::Texture3D:
+            {
+                texture_type = VK_IMAGE_TYPE_3D;
+                view_type = VK_IMAGE_VIEW_TYPE_3D;
+                break;
+            }
+            case GPUTextureDimension::TextureCube:
+            {
+                texture_type = VK_IMAGE_TYPE_2D;
+                view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+                texture_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+                break;
+            }
+        }
+
+        VkImageCreateInfo texture_create_info = {};
+        texture_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        texture_create_info.format = format;
+        texture_create_info.extent = { texture_desc.width, texture_desc.height, texture_desc.depth };
+        texture_create_info.mipLevels = texture_desc.mip_level_count;
+        texture_create_info.arrayLayers = texture_desc.layer_count;
+        texture_create_info.samples = static_cast<VkSampleCountFlagBits>(texture_desc.sample_count);
+        texture_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        texture_create_info.usage = image_usage_flags;
+        texture_create_info.imageType = texture_type;
+        texture_create_info.flags = texture_flags;
+
+        VmaAllocationCreateInfo memory_allocation_info = {};
+        memory_allocation_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+        memory_allocation_info.pool = g_memory_pool_data[CURRENT_FRAME];
+
+        if (is_attachment_only)
+        {
+            memory_allocation_info.preferredFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+        }
+
+        VkResult result = vmaCreateImage(g_memory_allocator, &texture_create_info, &memory_allocation_info, &texture->texture, &texture->allocation, nullptr);
+        assert(result == VK_SUCCESS);
+
+        VkImageAspectFlags aspect_flag = (texture_desc.flags & GPUTextureFlag::DepthTarget) != 0 ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkImageViewCreateInfo texture_view_create_info = {};
+        texture_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        texture_view_create_info.image = texture->texture;
+        texture_view_create_info.viewType = view_type;
+        texture_view_create_info.format = format;
+        texture_view_create_info.subresourceRange.baseArrayLayer = 0;
+        texture_view_create_info.subresourceRange.layerCount = texture_desc.layer_count;
+        texture_view_create_info.subresourceRange.baseMipLevel = 0;
+
+        if (texture_desc.flags & GPUTextureFlag::RenderTarget)
+        {
+            texture_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            texture_view_create_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->rtv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::DepthTarget)
+        {
+            texture_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            texture_view_create_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->dsv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::SRV)
+        {
+            texture_view_create_info.subresourceRange.aspectMask = aspect_flag;
+            texture_view_create_info.subresourceRange.levelCount = texture_desc.mip_level_count;
+            RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->srv);
+        }
+
+        if (texture_desc.flags & GPUTextureFlag::UAV)
+        {
+            texture_view_create_info.subresourceRange.aspectMask = aspect_flag;
+            texture_view_create_info.subresourceRange.levelCount = 1;
+            RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->uav);
+        }
+
+        g_frame_resource_texture_data[CURRENT_FRAME].push_back(texture);
 
         return texture;
     }
