@@ -109,14 +109,14 @@ struct Matrix4x4
 
         Matrix4x4<T> result_x = Matrix4x4<T>::Identity();
         result_x[1][1] = cos_x;
-        result_x[1][2] = -sin_x;
-        result_x[2][1] = sin_x;
+        result_x[1][2] = sin_x;
+        result_x[2][1] = -sin_x;
         result_x[2][2] = cos_x;
 
         Matrix4x4<T> result_y = Matrix4x4<T>::Identity();
         result_y[0][0] = cos_y;
-        result_y[0][2] = -sin_y;
-        result_y[2][0] = sin_y;
+        result_y[0][2] = sin_y;
+        result_y[2][0] = -sin_y;
         result_y[2][2] = cos_y;
 
         Matrix4x4<T> result_z = Matrix4x4<T>::Identity();
