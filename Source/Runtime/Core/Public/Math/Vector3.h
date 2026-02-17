@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <cmath>
+#include <limits>
 
 template<typename T = Real>
 struct Vector3
@@ -16,6 +17,10 @@ struct Vector3
 
         T data[3] { 0, 0, 0 };
     };
+
+    Vector3()
+    {
+    }
 
     Vector3(T px, T py, T pz)
     {
@@ -68,6 +73,18 @@ struct Vector3
     {
         return std::sqrt(std::pow(data[0], 2) + std::pow(data[1], 2) + std::pow(data[2], 2));
     }
+
+    inline Vector3<T> Normalize() const
+    {
+        const T inverse_length = T(1) / Length();
+        if (inverse_length < std::numeric_limits<T>::epsilon())
+        {
+            return Vector3<T>(0, 0, 0);
+        }
+
+        Vector3<T> result = Vector3<T>(data[0] * inverse_length, data[1] * inverse_length, data[2] * inverse_length);
+        return result;
+    }
 };
 
 using Vector3d = Vector3<double>;
@@ -100,4 +117,22 @@ inline T AngleBetween(Vector3<T> a, Vector3<T> b)
     T length = a.Length() * b.Length();
     T theta = dot / length;
     return std::acos(theta);
+}
+
+template<typename T>
+inline Vector3<T> Forward()
+{
+    return Vector3<T>(0, 0, T(1));
+}
+
+template<typename T>
+inline Vector3<T> Up()
+{
+    return Vector3<T>(0, T(1), 0);
+}
+
+template<typename T>
+inline Vector3<T> Right()
+{
+    return Vector3<T>(T(1), 0, 0);
 }

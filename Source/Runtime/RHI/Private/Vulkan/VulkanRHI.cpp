@@ -113,10 +113,10 @@ namespace RHI
 
     void* VulkanGPUBuffer::Lock()
     {
-        void* mapped = nullptr;
-        VkResult result = vmaMapMemory(g_memory_allocator, allocation, &mapped);
+        void* pointer = nullptr;
+        VkResult result = vmaMapMemory(g_memory_allocator, allocation, &pointer);
         assert(result == VK_SUCCESS);
-        return mapped;
+        return pointer;
     }
 
     void VulkanGPUBuffer::Unlock()
@@ -541,7 +541,7 @@ namespace RHI
         assert(result == VK_SUCCESS);
 
         VkPushConstantRange push_constant_range = {};
-        push_constant_range.stageFlags = GetNativeShaderStageFlags(RHI::GPUShaderStageFlag::All);
+        push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
         push_constant_range.size = g_adapter.max_push_constant_size;
 
         VkPipelineLayoutCreateInfo pipeline_layout_layout_info = {};
@@ -1207,18 +1207,24 @@ namespace RHI
     
     void VulkanGPUCommandList::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
     {
+        VkViewport viewport_data[] = { { x, y, width, height, min_depth, max_depth } };
+        RHI::vkCmdSetViewport(command_buffer_data[CURRENT_FRAME], 0, std::size(viewport_data), viewport_data);
     }
     
     void VulkanGPUCommandList::SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height)
     {
+        VkRect2D scissor_data[] = { { { x, y }, { width, height } } };
+        RHI::vkCmdSetScissor(command_buffer_data[CURRENT_FRAME], 0, std::size(scissor_data), scissor_data);
     }
     
     void VulkanGPUCommandList::SetPushConstants(const void* data, uint32_t size)
     {
+        RHI::vkCmdPushConstants(command_buffer_data[CURRENT_FRAME], g_pipeline_layout, VK_SHADER_STAGE_ALL, 0, size, data);
     }
     
     void VulkanGPUCommandList::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
     {
+        RHI::vkCmdDraw(command_buffer_data[CURRENT_FRAME], vertex_count, instance_count, first_vertex, first_instance);
     }
     
     void VulkanGPUCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)

@@ -4,20 +4,21 @@
 #include "Math/Vector3.h"
 
 #include <memory>
+#include <xmmintrin.h>
 
 template<typename T = Real>
 struct Matrix4x4
 {
     T data[4][4];
 
-    Matrix4x4()
+    Matrix4x4<T>()
     {
         memset(data, 0, sizeof(data));
     }
 
-    static Matrix4x4 Identity()
+    static Matrix4x4<T> Identity()
     {
-        Matrix4x4 result = {};
+        Matrix4x4<T> result = {};
         result.data[0][0] = T(1);
         result.data[1][1] = T(1);
         result.data[2][2] = T(1);
@@ -35,7 +36,7 @@ struct Matrix4x4
         return data[column]; 
     }
 
-    Matrix4x4 operator*(const Matrix4x4& other) const
+    Matrix4x4 operator*(const Matrix4x4<T>& other) const
     {
         Matrix4x4 result;
 
@@ -60,7 +61,34 @@ struct Matrix4x4
         return result;
     }
 
-    static Matrix4x4 Translate(const Vector3<T>& value)
+    Matrix4x4<T> Transpose() const
+    {
+        Matrix4x4<T> result;
+
+        result.data[0][0] = data[0][0];
+        result.data[0][1] = data[1][0];
+        result.data[0][2] = data[2][0];
+        result.data[0][3] = data[3][0];
+        
+        result.data[1][0] = data[0][1];
+        result.data[1][1] = data[1][1];
+        result.data[1][2] = data[2][1];
+        result.data[1][3] = data[3][1];
+        
+        result.data[2][0] = data[0][2];
+        result.data[2][1] = data[1][2];
+        result.data[2][2] = data[2][2];
+        result.data[2][3] = data[3][2];
+        
+        result.data[3][0] = data[0][3];
+        result.data[3][1] = data[1][3];
+        result.data[3][2] = data[2][3];
+        result.data[3][3] = data[3][3];
+
+        return result;
+    }
+
+    static Matrix4x4<T> Translate(const Vector3<T>& value)
     {
         Matrix4x4 result = Matrix4x4::Identity();
         result[3][0] = value.x;
@@ -69,7 +97,7 @@ struct Matrix4x4
         return result;
     }
 
-    static Matrix4x4 Rotate(const Vector3<T>& value)
+    static Matrix4x4<T> Rotate(const Vector3<T>& value)
     {
         const T cos_x = cos(value.x);
         const T cos_y = cos(value.y);
@@ -79,33 +107,36 @@ struct Matrix4x4
         const T sin_y = sin(value.y);
         const T sin_z = sin(value.z);
 
-        Matrix4x4 result_x = Matrix4x4::Identity();
+        Matrix4x4<T> result_x = Matrix4x4<T>::Identity();
         result_x[1][1] = cos_x;
-        result_x[1][2] = sin_x;
-        result_x[2][1] = -sin_x;
+        result_x[1][2] = -sin_x;
+        result_x[2][1] = sin_x;
         result_x[2][2] = cos_x;
 
-        Matrix4x4 result_y = Matrix4x4::Identity();
+        Matrix4x4<T> result_y = Matrix4x4<T>::Identity();
         result_y[0][0] = cos_y;
         result_y[0][2] = -sin_y;
         result_y[2][0] = sin_y;
         result_y[2][2] = cos_y;
 
-        Matrix4x4 result_z = Matrix4x4::Identity();
+        Matrix4x4<T> result_z = Matrix4x4<T>::Identity();
         result_z[0][0] = cos_z;
         result_z[0][1] = sin_z;
         result_z[1][0] = -sin_z;
         result_z[1][1] = cos_z;
 
-        return result_z * result_y * result_x;
+        return result_z * result_x * result_y;
     }
 
-    static Matrix4x4 Scale(const Vector3<T>& value)
+    static Matrix4x4<T> Scale(const Vector3<T>& value)
     {
-        Matrix4x4 result = Matrix4x4::Identity();
+        Matrix4x4<T> result = Matrix4x4<T>::Identity();
         result[0][0] = value.x;
         result[1][1] = value.y;
         result[2][2] = value.z;
         return result;
     }
 };
+
+using Matrix4x4f = Matrix4x4<float>;
+using Matrix4x4d = Matrix4x4<double>;
