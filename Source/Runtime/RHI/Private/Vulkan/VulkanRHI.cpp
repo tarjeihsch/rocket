@@ -162,7 +162,7 @@ namespace RHI
 
     GPUTexture* VulkanGPUSwapchain::GetBackBufferTexture() const
     {
-        return textures[CURRENT_FRAME];
+        return textures[current_image_index];
     }
 
     void VulkanGPUSwapchain::AcquireNextBackBuffer()
