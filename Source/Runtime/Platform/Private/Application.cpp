@@ -122,7 +122,8 @@ void Application::process_deferred_message(const Event& event)
 
         case EventType::WindowResized:
         {
-            M_MessageController->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, false);
+            const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
+            M_MessageController->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
             break;
         }
 

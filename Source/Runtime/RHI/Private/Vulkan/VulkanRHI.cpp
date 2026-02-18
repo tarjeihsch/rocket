@@ -1,4 +1,4 @@
-#include "VulkanRHI.h"
+﻿#include "VulkanRHI.h"
 
 #include <vector>
 #include <assert.h>
@@ -161,11 +161,48 @@ namespace RHI
         return textures[current_image_index];
     }
 
-    void VulkanGPUSwapchain::AcquireNextBackBuffer()
+    bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
+        //VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        //RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
+        //
+        //VkExtent2D extent = surfaceCapabilities.currentExtent;
+        //
+        //if (extent.width == 0 || extent.height == 0)
+        //{
+        //    is_minimized = true;
+        //    return false;
+        //}
+        //else
+        //{
+        //    is_minimized = false;
+        //}
+        //
+        //do
+        //{
+        //    if (!is_minimized)
+        //    {
+        //        RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
+        //        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
+        //    }
+        //
+        //    VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
+        //
+        //    if (result == VK_SUCCESS)
+        //    {
+        //        return true;
+        //    }
+        //    else if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+        //    {
+        //        ResizeBackBuffers();
+        //        continue;
+        //    }
+        //} while (is_minimized);
+
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
         RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
-        RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
+        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
+        return false;
     }
 
     void VulkanGPUSwapchain::PresentBackBuffer()
@@ -181,6 +218,133 @@ namespace RHI
         RHI::vkQueuePresentKHR(g_graphics_queue, &present_info);
 
         g_frame_counter++;
+    }
+
+    void VulkanGPUSwapchain::ResizeBackBuffers()
+    {
+        RHI::vkDeviceWaitIdle(g_logical_device);
+
+        // Destroy old image views and textures
+        for (uint32_t i = 0; i < image_count; ++i)
+        {
+            if (textures[i])
+            {
+                if (textures[i]->rtv != VK_NULL_HANDLE)
+                {
+                    vkDestroyImageView(g_logical_device, textures[i]->rtv, nullptr);
+                }
+                
+                free(textures[i]);
+            }
+        }
+
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
+        
+        VkExtent2D extent = surfaceCapabilities.currentExtent;
+        extent.width = std::clamp(extent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+        extent.height = std::clamp(extent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+
+        uint32_t formatCount = 0;
+        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &formatCount, nullptr);
+        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &formatCount, surfaceFormats.data());
+
+        VkFormat imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+        VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+        for (const auto& fmt : surfaceFormats)
+        {
+            if (fmt.format == VK_FORMAT_B8G8R8A8_SRGB && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            {
+                imageFormat = fmt.format;
+                colorSpace = fmt.colorSpace;
+                break;
+            }
+        }
+
+        uint32_t desiredImageCount = CONCURRENT_FRAME_COUNT;
+        if (desiredImageCount < surfaceCapabilities.minImageCount)
+        {
+            desiredImageCount = surfaceCapabilities.minImageCount;
+        }
+        if (surfaceCapabilities.maxImageCount > 0 && desiredImageCount > surfaceCapabilities.maxImageCount)
+        {
+            desiredImageCount = surfaceCapabilities.maxImageCount;
+        }
+
+        VkSwapchainKHR oldSwapchain = swapchain;
+
+        VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
+        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchainCreateInfo.surface = surface;
+        swapchainCreateInfo.minImageCount = desiredImageCount;
+        swapchainCreateInfo.imageFormat = imageFormat;
+        swapchainCreateInfo.imageColorSpace = colorSpace;
+        swapchainCreateInfo.imageExtent = extent;
+        swapchainCreateInfo.imageArrayLayers = 1;
+        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
+        swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        swapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        swapchainCreateInfo.clipped = VK_TRUE;
+        swapchainCreateInfo.oldSwapchain = oldSwapchain;
+
+        VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchainCreateInfo, nullptr, &swapchain);
+        assert(result == VK_SUCCESS);
+
+        if (oldSwapchain != VK_NULL_HANDLE)
+        {
+            RHI::vkDestroySwapchainKHR(g_logical_device, oldSwapchain, nullptr);
+        }
+
+        RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain, &image_count, nullptr);
+        std::vector<VkImage> images(image_count);
+        RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain, &image_count, images.data());
+
+        for (uint32_t i = 0; i < image_count; ++i)
+        {
+            textures[i] = new VulkanGPUTexture();
+            textures[i]->texture = images[i];
+
+            VkImageViewCreateInfo viewCreateInfo = {};
+            viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            viewCreateInfo.image = images[i];
+            viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewCreateInfo.format = imageFormat;
+            viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewCreateInfo.subresourceRange.baseMipLevel = 0;
+            viewCreateInfo.subresourceRange.levelCount = 1;
+            viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+            viewCreateInfo.subresourceRange.layerCount = 1;
+
+            result = RHI::vkCreateImageView(g_logical_device, &viewCreateInfo, nullptr, &textures[i]->rtv);
+            assert(result == VK_SUCCESS);
+        }
+
+        current_image_index = 0;
+
+        for (uint32_t i = 0; i < CONCURRENT_FRAME_COUNT; ++i)
+        {
+            if (g_image_available[i] != VK_NULL_HANDLE) vkDestroySemaphore(g_logical_device, g_image_available[i], nullptr);
+            if (g_render_finished[i] != VK_NULL_HANDLE) vkDestroySemaphore(g_logical_device, g_render_finished[i], nullptr);
+
+            VkSemaphoreCreateInfo semInfo = {};
+            semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            RHI::vkCreateSemaphore(g_logical_device, &semInfo, nullptr, &g_image_available[i]);
+            RHI::vkCreateSemaphore(g_logical_device, &semInfo, nullptr, &g_render_finished[i]);
+        }
+
+        printf("Swapchain re-created: %d %d\n", extent.width, extent.height);
+    }
+
+    Vector2i VulkanGPUSwapchain::GetBackBufferSize()
+    {
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
+
+        return Vector2i(surfaceCapabilities.currentExtent.width, surfaceCapabilities.currentExtent.height);
     }
 
     VulkanRHI::VulkanRHI()

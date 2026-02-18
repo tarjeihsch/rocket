@@ -6,8 +6,23 @@
 
 bool GWindowShouldClose = false;
 
+RHI::GPUSwapchain* swapchain = nullptr;
+RHI::GPUTexture* texture = nullptr;
+
+static bool window_minimized = false;
+static bool window_size_changed = false;
+static bool window_should_close = false;
+
 class EngineMessageController : public MessageController
 {
+	virtual bool OnWindowSizeChanged(OSWindow* window, int32_t width, int32_t height, bool bWasMinimized)
+	{
+		window_minimized = width == 0 || height == 0;
+		window_size_changed = true;
+		
+		return true;
+	}
+
 	void OnWindowClose(OSWindow* Window) override
 	{
 		GWindowShouldClose = true;
@@ -31,12 +46,6 @@ int main()
 	Application::Get().SetMessageController(&GEngineMessageController);
 
 	RHI::Initialize(RHI::GPUDriver::Vulkan);
-
-	RHI::GPUBufferDesc buffer_desc = RHI::GPUBufferDesc::StorageBuffer(4ULL * 1024 * 1024);
-	RHI::GPUBuffer* buffer = RHI::GetRHI()->CreateBuffer(buffer_desc);
-	
-	RHI::GPUTextureDesc texture_desc = RHI::GPUTextureDesc::RenderTarget(RHI::GPUFormat::BGRA8_SRGB, 1280, 720);
-	RHI::GPUTexture* texture = RHI::GetRHI()->CreateTexture(texture_desc);
 
 	std::vector<char> vertex_shader_bytecode = LoadFile(ROCKET_BINARIES "/Shaders/Shader.vert.spv");
 	std::vector<char> fragment_shader_bytecode = LoadFile(ROCKET_BINARIES "/Shaders/Shader.frag.spv");
@@ -86,17 +95,37 @@ int main()
 	swapchain_desc.backbuffer_height = 720;
 	swapchain_desc.present_mode = RHI::GPUPresentMode::Mailbox;
 	swapchain_desc.window_platform.hwnd = static_cast<HWND>(window->GetNativeWindowHandle());
-	RHI::GPUSwapchain* swapchain = RHI::GetRHI()->CreateSwapchain(swapchain_desc);
+	swapchain = RHI::GetRHI()->CreateSwapchain(swapchain_desc);
+
+	RHI::GPUBufferDesc buffer_desc = RHI::GPUBufferDesc::StorageBuffer(4ULL * 1024 * 1024);
+	RHI::GPUBuffer* buffer = RHI::GetRHI()->CreateBuffer(buffer_desc);
+
+	RHI::GPUTextureDesc texture_desc = RHI::GPUTextureDesc::RenderTarget(RHI::GPUFormat::BGRA8_SRGB, swapchain->GetBackBufferSize().x, swapchain->GetBackBufferSize().y);
+	texture = RHI::GetRHI()->CreateTexture(texture_desc);
 
 	RHI::GPUCommandListDesc command_list_desc;
 	command_list_desc.queue_flags = RHI::GPUQueueFlag::Graphics;
 	RHI::GPUCommandList* command_list = RHI::GetRHI()->CreateCommandList(command_list_desc);
 
 	RHI::GPUTextureBarrier barriers[4];
-
+	
 	while (!GWindowShouldClose)
 	{	
 		Application::Get().PumpMessageQueue();
+
+		if (window_minimized)
+		{
+			continue;
+		}
+
+		if (window_size_changed)
+		{
+			swapchain->ResizeBackBuffers();
+			delete texture;
+			RHI::GPUTextureDesc texture_desc = RHI::GPUTextureDesc::RenderTarget(RHI::GPUFormat::BGRA8_SRGB, swapchain->GetBackBufferSize().x, swapchain->GetBackBufferSize().y);
+			texture = RHI::GetRHI()->CreateTexture(texture_desc);
+			window_size_changed = false;
+		}
 
 		swapchain->AcquireNextBackBuffer();
 		
@@ -126,8 +155,8 @@ int main()
 		RHI::GPURenderPass render_pass;
 		render_pass.color_attachments[0] = &color_attachment;
 		render_pass.color_attachment_count = 1;
-		render_pass.render_width = 1280;
-		render_pass.render_height = 720;
+		render_pass.render_width = swapchain->GetBackBufferSize().x;
+		render_pass.render_height = swapchain->GetBackBufferSize().y;
 		command_list->BeginRenderPass(&render_pass);
 
 		command_list->EndRenderPass();
@@ -140,7 +169,7 @@ int main()
 		barriers[1].new_layout = RHI::GPUTextureLayout::TransferDst;
 		command_list->Barrier(nullptr, 0, barriers, 2);
 
-		command_list->CopyTextureToTexture(texture, swapchain->GetBackBufferTexture(), 1280, 720);
+		command_list->CopyTextureToTexture(texture, swapchain->GetBackBufferTexture(), swapchain->GetBackBufferSize().x, swapchain->GetBackBufferSize().y);
 
 		barriers[0].texture = swapchain->GetBackBufferTexture();
 		barriers[0].old_layout = RHI::GPUTextureLayout::TransferDst;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/RHITypes.h"
+#include <Math/Vector2.h>
 
 namespace RHI
 {
@@ -68,8 +69,10 @@ namespace RHI
 
         virtual void SetDebugName(const char* debug_name) = 0;
         virtual GPUTexture* GetBackBufferTexture() const = 0;
-        virtual void AcquireNextBackBuffer() = 0;
+        virtual bool AcquireNextBackBuffer() = 0;
         virtual void PresentBackBuffer() = 0;
+        virtual void ResizeBackBuffers() = 0;
+        virtual Vector2i GetBackBufferSize() = 0;
     };
 
     struct GPUCommandList
@@ -154,6 +157,8 @@ namespace RHI
     static constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
 
     static uint64_t g_frame_counter = 0;
+
+    static bool is_minimized = false;
 
     #define CURRENT_FRAME g_frame_counter % CONCURRENT_FRAME_COUNT
 };

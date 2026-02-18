@@ -66,8 +66,10 @@ namespace RHI
 
         void                    SetDebugName(const char* debug_name)    override;
         GPUTexture*             GetBackBufferTexture()                  const override;
-        void                    AcquireNextBackBuffer()                 override;
+        bool                    AcquireNextBackBuffer()                 override;
         void                    PresentBackBuffer()                     override;
+        void                    ResizeBackBuffers()                     override;
+        Vector2i                GetBackBufferSize()                     override;
 
         VkSwapchainKHR          swapchain                               = nullptr;
         VkSurfaceKHR            surface                                 = nullptr;
