@@ -117,8 +117,6 @@ namespace RHI
 
         virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
         virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
-        virtual GPUBuffer* CreateTransientBuffer(const GPUBufferDesc& buffer_desc) = 0;
-        virtual GPUTexture* CreateTransientTexture(const GPUTextureDesc& texture_desc) = 0;
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
         virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;

@@ -92,6 +92,8 @@ int main()
 	command_list_desc.queue_flags = RHI::GPUQueueFlag::Graphics;
 	RHI::GPUCommandList* command_list = RHI::GetRHI()->CreateCommandList(command_list_desc);
 
+	RHI::GPUTextureBarrier barriers[4];
+
 	while (!GWindowShouldClose)
 	{	
 		Application::Get().PumpMessageQueue();
@@ -107,7 +109,6 @@ int main()
 
 		command_list->SetPipeline(graphics_pipeline);
 
-		RHI::GPUTextureBarrier barriers[2];
 		barriers[0].texture = texture;
 		barriers[0].old_layout = RHI::GPUTextureLayout::Undefined;
 		barriers[0].new_layout = RHI::GPUTextureLayout::ColorAttachment;
