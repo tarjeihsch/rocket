@@ -49,7 +49,6 @@ add_subdirectory(Source/ThirdParty/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
 
 # Rocket modules
-add_subdirectory(Source/Runtime/Main)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)

@@ -3,9 +3,8 @@
 #include "MathTypes.h"
 #include "Math/Vector3.h"
 
-#include "assert.h"
+#include <assert.h>
 #include <memory>
-#include <xmmintrin.h>
 
 template<typename T = Real>
 struct Matrix4x4
