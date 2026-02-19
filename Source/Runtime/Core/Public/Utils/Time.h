@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <time.h>
 
+#ifdef _WIN32
+	#include <Windows.h>
+#endif
+
 static constexpr uint64_t TICK_NS	= 1ULL;
 static constexpr uint64_t TICK_US	= 1000ULL * TICK_NS;
 static constexpr uint64_t TICK_MS	= 1000ULL * TICK_US;
@@ -97,7 +101,7 @@ struct Stopwatch
 	}
 };
 
-TimeDate TimeDate::FromDate(int P_Year, int P_Month, int P_Day, int P_Hour, int P_Minute, int P_Second)
+inline TimeDate TimeDate::FromDate(int P_Year, int P_Month, int P_Day, int P_Hour, int P_Minute, int P_Second)
 {
 #ifdef _WIN32
 	static constexpr uint64_t EPOCH_OFFSET = 116444736000000000ULL;
@@ -152,7 +156,7 @@ TimeDate TimeDate::FromDate(int P_Year, int P_Month, int P_Day, int P_Hour, int 
 #endif
 }
 
-void TimeDate::ToDate(int& P_Year, int& P_Month, int& P_Day, int& P_Hour, int& P_Minute, int& P_Second) const
+inline void TimeDate::ToDate(int& P_Year, int& P_Month, int& P_Day, int& P_Hour, int& P_Minute, int& P_Second) const
 {
 #ifdef _WIN32
 	static constexpr uint64_t EPOCH_OFFSET = 116444736000000000ULL;
@@ -198,8 +202,6 @@ void TimeDate::ToDate(int& P_Year, int& P_Month, int& P_Day, int& P_Hour, int& P
 }
 
 #ifdef _WIN32
-
-#include <Windows.h>
 
 inline uint64_t Stopwatch::GetTicks()
 {
