@@ -1,6 +1,10 @@
 // Right-hand rule
 
+#include <cmath>
+
 #include "CoreTypes.h"
+#include "Utils/Crypto.h"
+#include "Utils/Time.h"
 
 #define PI 3.14
 #define RAD(x) x * (PI / 180.0)

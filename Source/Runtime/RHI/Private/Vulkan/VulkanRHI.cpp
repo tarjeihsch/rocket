@@ -224,126 +224,116 @@ namespace RHI
     {
         RHI::vkDeviceWaitIdle(g_logical_device);
 
-        // Destroy old image views and textures
-        for (uint32_t i = 0; i < image_count; ++i)
+        for (uint32_t index = 0; index < image_count; ++index)
         {
-            if (textures[i])
-            {
-                if (textures[i]->rtv != VK_NULL_HANDLE)
-                {
-                    vkDestroyImageView(g_logical_device, textures[i]->rtv, nullptr);
-                }
+            vkDestroyImageView(g_logical_device, textures[index]->rtv, nullptr);
                 
-                free(textures[i]);
-            }
+            free(textures[index]);
         }
 
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
+        VkSurfaceCapabilitiesKHR surface_capabilities;
+        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surface_capabilities);
         
-        VkExtent2D extent = surfaceCapabilities.currentExtent;
-        extent.width = std::clamp(extent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-        extent.height = std::clamp(extent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+        VkExtent2D new_surface_extent = surface_capabilities.currentExtent;
+        new_surface_extent.width = std::clamp(new_surface_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+        new_surface_extent.height = std::clamp(new_surface_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
-        uint32_t formatCount = 0;
-        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &formatCount, nullptr);
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &formatCount, surfaceFormats.data());
+        uint32_t available_texture_format_count = 0;
+        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &available_texture_format_count, nullptr);
+        std::vector<VkSurfaceFormatKHR> available_texture_format_data(available_texture_format_count);
+        RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &available_texture_format_count, available_texture_format_data.data());
 
-        VkFormat imageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-        VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        VkFormat texture_format = VK_FORMAT_B8G8R8A8_SRGB;
+        VkColorSpaceKHR texture_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
-        for (const auto& fmt : surfaceFormats)
+        for (const auto& format : available_texture_format_data)
         {
-            if (fmt.format == VK_FORMAT_B8G8R8A8_SRGB && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             {
-                imageFormat = fmt.format;
-                colorSpace = fmt.colorSpace;
+                texture_format = format.format;
+                texture_color_space = format.colorSpace;
                 break;
             }
         }
 
-        uint32_t desiredImageCount = CONCURRENT_FRAME_COUNT;
-        if (desiredImageCount < surfaceCapabilities.minImageCount)
+        uint32_t new_image_count = CONCURRENT_FRAME_COUNT;
+        if (new_image_count < surface_capabilities.minImageCount)
         {
-            desiredImageCount = surfaceCapabilities.minImageCount;
+            new_image_count = surface_capabilities.minImageCount;
         }
-        if (surfaceCapabilities.maxImageCount > 0 && desiredImageCount > surfaceCapabilities.maxImageCount)
+        if (surface_capabilities.maxImageCount > 0 && new_image_count > surface_capabilities.maxImageCount)
         {
-            desiredImageCount = surfaceCapabilities.maxImageCount;
+            new_image_count = surface_capabilities.maxImageCount;
         }
 
-        VkSwapchainKHR oldSwapchain = swapchain;
+        VkSwapchainKHR previous_swapchain = swapchain;
 
-        VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
-        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchainCreateInfo.surface = surface;
-        swapchainCreateInfo.minImageCount = desiredImageCount;
-        swapchainCreateInfo.imageFormat = imageFormat;
-        swapchainCreateInfo.imageColorSpace = colorSpace;
-        swapchainCreateInfo.imageExtent = extent;
-        swapchainCreateInfo.imageArrayLayers = 1;
-        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
-        swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        swapchainCreateInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-        swapchainCreateInfo.clipped = VK_TRUE;
-        swapchainCreateInfo.oldSwapchain = oldSwapchain;
+        VkSwapchainCreateInfoKHR swapchain_create_info = {};
+        swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchain_create_info.surface = surface;
+        swapchain_create_info.minImageCount = new_image_count;
+        swapchain_create_info.imageFormat = texture_format;
+        swapchain_create_info.imageColorSpace = texture_color_space;
+        swapchain_create_info.imageExtent = new_surface_extent;
+        swapchain_create_info.imageArrayLayers = 1;
+        swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchain_create_info.preTransform = surface_capabilities.currentTransform;
+        swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        swapchain_create_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        swapchain_create_info.clipped = VK_TRUE;
+        swapchain_create_info.oldSwapchain = previous_swapchain;
 
-        VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchainCreateInfo, nullptr, &swapchain);
+        VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain);
         assert(result == VK_SUCCESS);
 
-        if (oldSwapchain != VK_NULL_HANDLE)
-        {
-            RHI::vkDestroySwapchainKHR(g_logical_device, oldSwapchain, nullptr);
-        }
+        RHI::vkDestroySwapchainKHR(g_logical_device, previous_swapchain, nullptr);
 
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain, &image_count, nullptr);
         std::vector<VkImage> images(image_count);
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain, &image_count, images.data());
 
-        for (uint32_t i = 0; i < image_count; ++i)
+        for (uint32_t index = 0; index < image_count; ++index)
         {
-            textures[i] = new VulkanGPUTexture();
-            textures[i]->texture = images[i];
+            textures[index] = new VulkanGPUTexture();
+            textures[index]->texture = images[index];
 
-            VkImageViewCreateInfo viewCreateInfo = {};
-            viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            viewCreateInfo.image = images[i];
-            viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            viewCreateInfo.format = imageFormat;
-            viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            viewCreateInfo.subresourceRange.baseMipLevel = 0;
-            viewCreateInfo.subresourceRange.levelCount = 1;
-            viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-            viewCreateInfo.subresourceRange.layerCount = 1;
+            VkImageViewCreateInfo texture_view_create_info = {};
+            texture_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            texture_view_create_info.image = images[index];
+            texture_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            texture_view_create_info.format = texture_format;
+            texture_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            texture_view_create_info.subresourceRange.baseMipLevel = 0;
+            texture_view_create_info.subresourceRange.levelCount = 1;
+            texture_view_create_info.subresourceRange.baseArrayLayer = 0;
+            texture_view_create_info.subresourceRange.layerCount = 1;
 
-            result = RHI::vkCreateImageView(g_logical_device, &viewCreateInfo, nullptr, &textures[i]->rtv);
+            result = RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &textures[index]->rtv);
             assert(result == VK_SUCCESS);
         }
 
         current_image_index = 0;
 
-        for (uint32_t i = 0; i < CONCURRENT_FRAME_COUNT; ++i)
+        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
-            if (g_image_available[i] != VK_NULL_HANDLE) vkDestroySemaphore(g_logical_device, g_image_available[i], nullptr);
-            if (g_render_finished[i] != VK_NULL_HANDLE) vkDestroySemaphore(g_logical_device, g_render_finished[i], nullptr);
+            vkDestroySemaphore(g_logical_device, g_image_available[index], nullptr);
+            vkDestroySemaphore(g_logical_device, g_render_finished[index], nullptr);
 
-            VkSemaphoreCreateInfo semInfo = {};
-            semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            RHI::vkCreateSemaphore(g_logical_device, &semInfo, nullptr, &g_image_available[i]);
-            RHI::vkCreateSemaphore(g_logical_device, &semInfo, nullptr, &g_render_finished[i]);
+            VkSemaphoreCreateInfo semaphore_create_info = {};
+            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_image_available[index]);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_render_finished[index]);
         }
 
-        printf("Swapchain re-created: %d %d\n", extent.width, extent.height);
+        printf("Swapchain re-created: %d %d\n", new_surface_extent.width, new_surface_extent.height);
     }
 
     Vector2i VulkanGPUSwapchain::GetBackBufferSize()
     {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
-
         return Vector2i(surfaceCapabilities.currentExtent.width, surfaceCapabilities.currentExtent.height);
     }
 
@@ -1318,14 +1308,14 @@ namespace RHI
         for (uint32_t index = 0; index < render_pass->color_attachment_count; ++index)
         {
             const GPUColorAttachment* color_attachment = render_pass->color_attachments[index];
-            const VulkanGPUTexture* color_attachment_texture = static_cast<const VulkanGPUTexture*>(color_attachment->texture);
+            const VulkanGPUTexture* color_attachment_texture = static_cast<const VulkanGPUTexture*>(color_attachment->M_Texture);
 
             color_attachment_info_data[index].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
             color_attachment_info_data[index].imageView = color_attachment_texture->rtv;
             color_attachment_info_data[index].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            color_attachment_info_data[index].loadOp = color_attachment->load_op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : color_attachment->load_op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            color_attachment_info_data[index].storeOp = color_attachment->store_op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            memcpy(&color_attachment_info_data[index].clearValue.color.float32, &color_attachment->clear_value.color, sizeof(float) * 4);
+            color_attachment_info_data[index].loadOp = color_attachment->M_Load_Op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : color_attachment->M_Load_Op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            color_attachment_info_data[index].storeOp = color_attachment->M_Store_Op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            memcpy(&color_attachment_info_data[index].clearValue.color.float32, &color_attachment->M_Clear_Value.color, sizeof(float) * 4);
         }
 
         VkRenderingAttachmentInfo depth_attachment_info = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };

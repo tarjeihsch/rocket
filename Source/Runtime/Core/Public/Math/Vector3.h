@@ -22,6 +22,11 @@ struct Vector3
     {
     }
 
+    Vector3(T Value)
+    {
+        std::fill(std::begin(data), std::end(data), Value);
+    }
+
     Vector3(T px, T py, T pz)
     {
         data[0] = px;
@@ -66,6 +71,51 @@ struct Vector3
         data[2] = z;
 
         return *this;
+    }
+
+    inline Vector3<T> operator+(const Vector3<T> P_Other)
+    {
+        Vector3<T> Result;
+
+        T x = data[0] + P_Other.data[0];
+        T y = data[1] + P_Other.data[1];
+        T z = data[2] + P_Other.data[2];
+
+        Result.data[0] = x;
+        Result.data[1] = y;
+        Result.data[2] = z;
+
+        return Result;
+    }
+
+    inline Vector3<T> operator+(const T P_Scalar)
+    {
+        Vector3<T> Result;
+
+        T x = data[0] + P_Scalar;
+        T y = data[1] + P_Scalar;
+        T z = data[2] + P_Scalar;
+
+        Result.data[0] = x;
+        Result.data[1] = y;
+        Result.data[2] = z;
+
+        return Result;
+    }
+
+    inline Vector3<T> operator*(const T P_Scalar)
+    {
+        Vector3<T> Result;
+
+        T x = data[0] * P_Scalar;
+        T y = data[1] * P_Scalar;
+        T z = data[2] * P_Scalar;
+
+        Result.data[0] = x;
+        Result.data[1] = y;
+        Result.data[2] = z;
+
+        return Result;
     }
 
     inline Vector3<T>& operator*=(const Vector3<T>& other)

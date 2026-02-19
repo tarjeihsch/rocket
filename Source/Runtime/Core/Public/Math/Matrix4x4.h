@@ -3,54 +3,55 @@
 #include "MathTypes.h"
 #include "Math/Vector3.h"
 
+#include "assert.h"
 #include <memory>
 #include <xmmintrin.h>
 
 template<typename T = Real>
 struct Matrix4x4
 {
-    T data[4][4];
+    T M_Data[4][4];
 
     Matrix4x4<T>()
     {
-        memset(data, 0, sizeof(data));
+        memset(M_Data, 0, sizeof(M_Data));
     }
 
     static Matrix4x4<T> Identity()
     {
         Matrix4x4<T> result = {};
-        result.data[0][0] = T(1);
-        result.data[1][1] = T(1);
-        result.data[2][2] = T(1);
-        result.data[3][3] = T(1);
+        result.M_Data[0][0] = T(1);
+        result.M_Data[1][1] = T(1);
+        result.M_Data[2][2] = T(1);
+        result.M_Data[3][3] = T(1);
         return result;
     }
 
     T* operator[](uint32_t column) 
     {
-        return data[column];
+        return M_Data[column];
     }
     
     const T* operator[](uint32_t column) const 
     { 
-        return data[column]; 
+        return M_Data[column]; 
     }
 
     Matrix4x4 operator*(const Matrix4x4<T>& other) const
     {
         Matrix4x4 result;
 
-        const T* column_0 = other.data[0];
-        const T* column_1 = other.data[1];
-        const T* column_2 = other.data[2];
-        const T* column_3 = other.data[3];
+        const T* column_0 = other.M_Data[0];
+        const T* column_1 = other.M_Data[1];
+        const T* column_2 = other.M_Data[2];
+        const T* column_3 = other.M_Data[3];
 
         for (uint32_t row = 0; row < 4; ++row)
         {
-            const T value_0 = data[0][row];
-            const T value_1 = data[1][row];
-            const T value_2 = data[2][row];
-            const T value_3 = data[3][row];
+            const T value_0 = M_Data[0][row];
+            const T value_1 = M_Data[1][row];
+            const T value_2 = M_Data[2][row];
+            const T value_3 = M_Data[3][row];
 
             result[0][row] = value_0*column_0[0] + value_1*column_0[1] + value_2*column_0[2] + value_3*column_0[3];
             result[1][row] = value_0*column_1[0] + value_1*column_1[1] + value_2*column_1[2] + value_3*column_1[3];
@@ -65,27 +66,85 @@ struct Matrix4x4
     {
         Matrix4x4<T> result;
 
-        result.data[0][0] = data[0][0];
-        result.data[0][1] = data[1][0];
-        result.data[0][2] = data[2][0];
-        result.data[0][3] = data[3][0];
+        result.M_Data[0][0] = M_Data[0][0];
+        result.M_Data[0][1] = M_Data[1][0];
+        result.M_Data[0][2] = M_Data[2][0];
+        result.M_Data[0][3] = M_Data[3][0];
         
-        result.data[1][0] = data[0][1];
-        result.data[1][1] = data[1][1];
-        result.data[1][2] = data[2][1];
-        result.data[1][3] = data[3][1];
+        result.M_Data[1][0] = M_Data[0][1];
+        result.M_Data[1][1] = M_Data[1][1];
+        result.M_Data[1][2] = M_Data[2][1];
+        result.M_Data[1][3] = M_Data[3][1];
         
-        result.data[2][0] = data[0][2];
-        result.data[2][1] = data[1][2];
-        result.data[2][2] = data[2][2];
-        result.data[2][3] = data[3][2];
+        result.M_Data[2][0] = M_Data[0][2];
+        result.M_Data[2][1] = M_Data[1][2];
+        result.M_Data[2][2] = M_Data[2][2];
+        result.M_Data[2][3] = M_Data[3][2];
         
-        result.data[3][0] = data[0][3];
-        result.data[3][1] = data[1][3];
-        result.data[3][2] = data[2][3];
-        result.data[3][3] = data[3][3];
+        result.M_Data[3][0] = M_Data[0][3];
+        result.M_Data[3][1] = M_Data[1][3];
+        result.M_Data[3][2] = M_Data[2][3];
+        result.M_Data[3][3] = M_Data[3][3];
 
         return result;
+    }
+
+    Matrix4x4<T> InverseAffine() const
+    {
+        assert(M_Data[0][3] == T(0) && M_Data[1][3] == T(0) && M_Data[2][3] == T(0) && M_Data[3][3] == T(1));
+
+        Matrix4x4<T> Result;
+
+        // Read upper-left 3x3
+        const T C0_R0 = M_Data[0][0]; 
+        const T C0_R1 = M_Data[0][1]; 
+        const T C0_R2 = M_Data[0][2];
+
+        const T C1_R0 = M_Data[1][0]; 
+        const T C1_R1 = M_Data[1][1]; 
+        const T C1_R2 = M_Data[1][2];
+
+        const T C2_R0 = M_Data[2][0]; 
+        const T C2_R1 = M_Data[2][1]; 
+        const T C2_R2 = M_Data[2][2];
+        
+        const T C3_R0 = M_Data[3][0];
+        const T C3_R1 = M_Data[3][1];
+        const T C3_R2 = M_Data[3][2];
+
+        const T Cofactor_C0_R0 = C1_R1 * C2_R2 - C1_R2 * C2_R1;
+        const T Cofactor_C0_R1 = C1_R2 * C2_R0 - C1_R0 * C2_R2;
+        const T Cofactor_C0_R2 = C1_R0 * C2_R1 - C1_R1 * C2_R0;
+
+        const T Cofactor_C1_R0 = C0_R2 * C2_R1 - C0_R1 * C2_R2;
+        const T Cofactor_C1_R1 = C0_R0 * C2_R2 - C0_R2 * C2_R0;
+        const T Cofactor_C1_R2 = C0_R1 * C2_R0 - C0_R0 * C2_R1;
+
+        const T Cofactor_C2_R0 = C0_R1 * C1_R2 - C0_R2 * C1_R1;
+        const T Cofactor_C2_R1 = C0_R2 * C1_R0 - C0_R0 * C1_R2;
+        const T Cofactor_C2_R2 = C0_R0 * C1_R1 - C0_R1 * C1_R0;
+
+        const T Determinant = C0_R0 * Cofactor_C0_R0 + C0_R1 * Cofactor_C0_R1 + C0_R2 * Cofactor_C0_R2;
+        assert(std::abs(Determinant) > T(1e-6));
+        const T Inverse_Determinant = T(1) / Determinant;
+
+        Result.M_Data[0][0] = Cofactor_C0_R0 * Inverse_Determinant;
+        Result.M_Data[0][1] = Cofactor_C1_R0 * Inverse_Determinant;
+        Result.M_Data[0][2] = Cofactor_C2_R0 * Inverse_Determinant;
+
+        Result.M_Data[1][0] = Cofactor_C0_R1 * Inverse_Determinant;
+        Result.M_Data[1][1] = Cofactor_C1_R1 * Inverse_Determinant;
+        Result.M_Data[1][2] = Cofactor_C2_R1 * Inverse_Determinant;
+
+        Result.M_Data[2][0] = Cofactor_C0_R2 * Inverse_Determinant;
+        Result.M_Data[2][1] = Cofactor_C1_R2 * Inverse_Determinant;
+        Result.M_Data[2][2] = Cofactor_C2_R2 * Inverse_Determinant;
+
+        Result.M_Data[3][0] = -(Cofactor_C0_R0 * C3_R0 + Cofactor_C0_R1 * C3_R1 + Cofactor_C0_R2 * C3_R2) * Inverse_Determinant;
+        Result.M_Data[3][1] = -(Cofactor_C1_R0 * C3_R0 + Cofactor_C1_R1 * C3_R1 + Cofactor_C1_R2 * C3_R2) * Inverse_Determinant;
+        Result.M_Data[3][2] = -(Cofactor_C2_R0 * C3_R0 + Cofactor_C2_R1 * C3_R1 + Cofactor_C2_R2 * C3_R2) * Inverse_Determinant;
+
+        return Result;
     }
 
     static Matrix4x4<T> Translate(const Vector3<T>& value)

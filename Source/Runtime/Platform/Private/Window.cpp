@@ -134,6 +134,11 @@ void OSWindow::SetTitle(const ANSICHAR* title)
     glfwSetWindowTitle(static_cast<GLFWwindow*>(WindowHandle), title);
 }
 
+void OSWindow::WaitEvents()
+{
+    glfwWaitEvents();
+}
+
 Vector2i OSWindow::GetSize() const
 {
     if (!IsValid())

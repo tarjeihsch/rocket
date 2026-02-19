@@ -31,6 +31,8 @@ public:
 
     void SetTitle(const ANSICHAR* title);
 
+    void WaitEvents();
+
     Vector2i GetSize() const;
     Vector2i GetPosition() const;
 

@@ -214,6 +214,7 @@ void Application::process_deferred_message(const Event& event)
 
         case EventType::MouseMove:
         {
+            M_MessageController->OnMouseMove(event.axis.position.x, event.axis.position.x);
             M_MessageController->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
             break;
         }

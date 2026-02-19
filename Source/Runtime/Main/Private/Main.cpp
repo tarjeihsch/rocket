@@ -3,7 +3,7 @@
 #include "MessageController.h"
 #include "Common/RHI.h"
 #include "Utils/File.h"
-
+#include "Utils/Time.h"
 bool GWindowShouldClose = false;
 
 RHI::GPUSwapchain* swapchain = nullptr;
@@ -108,9 +108,16 @@ int main()
 	RHI::GPUCommandList* command_list = RHI::GetRHI()->CreateCommandList(command_list_desc);
 
 	RHI::GPUTextureBarrier barriers[4];
-	
+
+	uint64_t Last_Frame_Time = Stopwatch::GetTicks();
+
 	while (!GWindowShouldClose)
-	{	
+	{
+			uint64_t New_Frame_Time = Stopwatch::GetTicks();
+			Timespan Delta_Frame_Time = Stopwatch::GetDelta(Last_Frame_Time, New_Frame_Time);
+			float Delta_Time = static_cast<float>(Delta_Frame_Time.ToSeconds());
+			Last_Frame_Time = New_Frame_Time;
+
 		Application::Get().PumpMessageQueue();
 
 		if (window_minimized)
@@ -144,13 +151,13 @@ int main()
 		command_list->Barrier(nullptr, 0, barriers, 1);
 
 		RHI::GPUColorAttachment color_attachment;
-		color_attachment.clear_value.color.r = 0;
-		color_attachment.clear_value.color.g = 1;
-		color_attachment.clear_value.color.b = 0;
-		color_attachment.clear_value.color.a = 1;
-		color_attachment.load_op = RHI::GPULoadOp::Clear;
-		color_attachment.store_op = RHI::GPUStoreOp::Store;
-		color_attachment.texture = texture;
+		color_attachment.M_Clear_Value.color.r = 0;
+		color_attachment.M_Clear_Value.color.g = 1;
+		color_attachment.M_Clear_Value.color.b = 0;
+		color_attachment.M_Clear_Value.color.a = 1;
+		color_attachment.M_Load_Op = RHI::GPULoadOp::Clear;
+		color_attachment.M_Store_Op = RHI::GPUStoreOp::Store;
+		color_attachment.M_Texture = texture;
 
 		RHI::GPURenderPass render_pass;
 		render_pass.color_attachments[0] = &color_attachment;

@@ -300,6 +300,20 @@ namespace RHI
             ColorClearValue color;
             DepthClearValue depth_stencil;
         };
+
+        static GPUClearValue Color(float P_Red = 1.0f, float P_Green = 1.0f, float P_Blue = 1.0f, float P_Alpha = 1.0f)
+        {
+            GPUClearValue Value;
+            Value.color = { P_Red, P_Green, P_Blue, P_Alpha };
+            return Value;
+        }
+
+        static GPUClearValue Depth(float P_Depth = 1.0f, uint32_t P_Stencil = 0)
+        {
+            GPUClearValue Value;
+            Value.depth_stencil = { P_Depth, P_Stencil };
+            return Value;
+        }
     };
 
 #if defined(_WIN32)
@@ -376,11 +390,11 @@ namespace RHI
     };
 
     struct GPUColorAttachment
-    {
-        GPUTexture* texture = nullptr;
-        GPUClearValue clear_value;
-        GPULoadOp load_op = GPULoadOp::Load;
-        GPUStoreOp store_op = GPUStoreOp::Unknown;
+    {        
+        GPUTexture* M_Texture;
+        GPUClearValue M_Clear_Value;
+        GPULoadOp M_Load_Op;
+        GPUStoreOp M_Store_Op;
     };
 
     struct GPUDepthAttachment
