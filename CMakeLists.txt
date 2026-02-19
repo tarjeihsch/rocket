@@ -53,6 +53,10 @@ add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)
 
+enable_testing()
+add_subdirectory(Source/Tests/Core)
+add_test(NAME CoreTest COMMAND CoreTest)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")
 
