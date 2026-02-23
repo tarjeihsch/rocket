@@ -3,17 +3,17 @@
 #include <cmath>
 
 #include "CoreTypes.h"
-#include "Utils/Crypto.h"
-#include "Utils/Time.h"
-
-#define PI 3.14
-#define RAD(x) x * (PI / 180.0)
-#define DEG(x) x * (180.0 / PI)
 
 #ifdef MATH_REAL_64
     using Real = double;
+    #define PI 3.14
+    #define RAD(x) x * (PI / 180.0)
+    #define DEG(x) x * (180.0 / PI)
 #else
     using Real = float;
+    #define PI 3.14f
+    #define RAD(x) x * (PI / 180.0f)
+    #define DEG(x) x * (180.0f / PI)
 #endif
 
 namespace Math

@@ -210,6 +210,8 @@ void Application::process_deferred_message(const Event& event)
                 M_MessageController->OnKeyChar(Codepoint, repeat);
                 break;
             }
+
+            break;
         }
 
         case EventType::MouseMove:

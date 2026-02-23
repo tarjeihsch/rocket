@@ -1,4 +1,7 @@
 #include "Utils/Thread.h"
+#include "Math/Vector.h"
+#include "Math/Matrix.h"
+#include "Math/MathUtils.h"
 
 #if 0
 
@@ -51,8 +54,20 @@ static uint64_t G_Frame_Counter = 0;
 
 int main()
 {
+    Matrix4x4 mat = Matrix4x4::Identity();
+
+    mat.Data[0][2] = 3;
+    mat.Data[3][2] = 8;
+    mat.Data[1][1] = 5;
+    mat.Data[1][2] = 1;
+    mat.Data[0][3] = 7;
+
+    mat = mat.Transpose();
+
     for (;;)
     {
         G_Frame_Counter++;
+
+        mat;
     }
 }
