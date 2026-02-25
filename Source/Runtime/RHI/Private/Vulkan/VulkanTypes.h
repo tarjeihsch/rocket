@@ -250,4 +250,43 @@ namespace RHI
             default: return VK_PRESENT_MODE_FIFO_KHR;
         }
     }
+
+    static VkSamplerAddressMode GetAddressMode(GPUSamplerAddressMode addressMode)
+    {
+        switch (addressMode)
+        {
+            case GPUSamplerAddressMode::Repeat: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case GPUSamplerAddressMode::MirroredRepeat: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            case GPUSamplerAddressMode::ClampToEdge: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case GPUSamplerAddressMode::ClampToBorder: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            default: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        }
+    }
+
+    static VkCompareOp GetCompareOp(GPUCompareOp compareOp)
+    {
+        switch (compareOp)
+        {
+            case GPUCompareOp::Never: return VK_COMPARE_OP_NEVER;
+            case GPUCompareOp::Less: return VK_COMPARE_OP_LESS;
+            case GPUCompareOp::Equal: return VK_COMPARE_OP_EQUAL;
+            case GPUCompareOp::LessOrEqual: return VK_COMPARE_OP_LESS_OR_EQUAL;
+            case GPUCompareOp::Greater: return VK_COMPARE_OP_GREATER;
+            case GPUCompareOp::NotEqual: return VK_COMPARE_OP_NOT_EQUAL;
+            case GPUCompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
+            case GPUCompareOp::Always: return VK_COMPARE_OP_ALWAYS;
+            default: return VK_COMPARE_OP_NEVER;
+        }
+    }
+
+    static VkBorderColor GetBorderColor(GPUBorderColor borderColor)
+    {
+        switch (borderColor)
+        {
+            case GPUBorderColor::TransparentBlack: return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            case GPUBorderColor::OpaqueBlack: return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+            case GPUBorderColor::OpaqueWhite: return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            default: return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+        }    
+    }
 }

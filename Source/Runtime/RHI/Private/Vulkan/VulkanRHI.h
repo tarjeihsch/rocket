@@ -43,6 +43,15 @@ namespace RHI
         };
     };
 
+    struct VulkanGPUSampler : GPUSampler
+    {
+        ~VulkanGPUSampler();
+
+        void SetDebugName(const char* debugName) override;
+
+        VkSampler sampler;
+    };
+
     struct VulkanGPUShader : GPUShader
     {
         ~VulkanGPUShader();

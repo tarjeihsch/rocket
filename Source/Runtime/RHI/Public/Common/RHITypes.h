@@ -233,6 +233,27 @@ namespace RHI
         DontCare,
     };
 
+    enum class GPUFilter
+    {
+        Nearest,
+        Linear
+    };
+
+    enum class GPUSamplerAddressMode
+    {
+        Repeat,
+        MirroredRepeat,
+        ClampToEdge,
+        ClampToBorder
+    };
+
+    enum class GPUBorderColor
+    {
+        TransparentBlack,
+        OpaqueBlack,
+        OpaqueWhite
+    };
+    
     namespace GPUBufferFlag
     {
         enum Bits : uint32_t
@@ -308,7 +329,7 @@ namespace RHI
             return Value;
         }
 
-        static GPUClearValue Depth(float P_Depth = 1.0f, uint32_t P_Stencil = 0)
+        static GPUClearValue Depth(float P_Depth = 0.0f, uint32_t P_Stencil = 0)
         {
             GPUClearValue Value;
             Value.depth_stencil = { P_Depth, P_Stencil };
@@ -564,18 +585,71 @@ namespace RHI
 
         static GPUTextureDesc RenderTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
         {
-            return Texture2D(format, width, height, GPUTextureFlag::RenderTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc, 1, sample_count);
+            return Texture2D(format, width, height, GPUTextureFlag::RenderTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc | GPUTextureFlag::TransferDst, 1, sample_count);
         }
 
         static GPUTextureDesc DepthTarget(GPUFormat format, uint32_t width, uint32_t height, uint32_t sample_count = 1)
         {
-            return Texture2D(format, width, height, GPUTextureFlag::DepthTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc, 1, sample_count);
+            return Texture2D(format, width, height, GPUTextureFlag::DepthTarget | GPUTextureFlag::SRV | GPUTextureFlag::TransferSrc | GPUTextureFlag::TransferDst, 1, sample_count);
         }
     };
 
     struct GPUSamplerDesc
     {
+        GPUFilter minFilter = GPUFilter::Nearest;
+        GPUFilter magFilter = GPUFilter::Nearest;
+        GPUFilter mipFilter = GPUFilter::Nearest;
 
+        GPUSamplerAddressMode addressU = GPUSamplerAddressMode::Repeat;
+        GPUSamplerAddressMode addressV = GPUSamplerAddressMode::Repeat;
+        GPUSamplerAddressMode addressW = GPUSamplerAddressMode::Repeat;
+
+        float mipLodBias = 0.0f;
+        float minLod = 0.0f;
+        float maxLod = 0.0f;
+        float maxAnisotropy = 1.0f;
+
+        GPUCompareOp compareOp = GPUCompareOp::Never;
+        GPUBorderColor borderColor = GPUBorderColor::TransparentBlack; 
+
+        uint8_t anisotropyEnable : 1 = false;
+        uint8_t compareEnable : 1 = false;
+
+        static GPUSamplerDesc PointClamp()
+        {
+            GPUSamplerDesc samplerDesc;
+            memset(&samplerDesc, 0, sizeof(GPUSamplerDesc));
+            samplerDesc.minFilter = GPUFilter::Nearest;
+            samplerDesc.magFilter = GPUFilter::Nearest;
+            samplerDesc.mipFilter = GPUFilter::Nearest;
+            samplerDesc.addressU  = GPUSamplerAddressMode::ClampToEdge;
+            samplerDesc.addressV  = GPUSamplerAddressMode::ClampToEdge;
+            samplerDesc.addressW  = GPUSamplerAddressMode::ClampToEdge;
+            return samplerDesc;
+        }
+
+        static GPUSamplerDesc LinearClamp()
+        {
+            GPUSamplerDesc samplerDesc;
+            memset(&samplerDesc, 0, sizeof(GPUSamplerDesc));
+            samplerDesc.minFilter = GPUFilter::Linear;
+            samplerDesc.magFilter = GPUFilter::Linear;
+            samplerDesc.mipFilter = GPUFilter::Linear;
+            samplerDesc.addressU  = GPUSamplerAddressMode::ClampToEdge;
+            samplerDesc.addressV  = GPUSamplerAddressMode::ClampToEdge;
+            samplerDesc.addressW  = GPUSamplerAddressMode::ClampToEdge;
+            return samplerDesc;
+        }
+
+        static GPUSamplerDesc LinearRepeat()
+        {
+            GPUSamplerDesc samplerDesc;
+            memset(&samplerDesc, 0, sizeof(GPUSamplerDesc));
+            samplerDesc.minFilter = GPUFilter::Linear;
+            samplerDesc.magFilter = GPUFilter::Linear;
+            samplerDesc.mipFilter = GPUFilter::Linear;
+            return samplerDesc;
+        }
     };
 
     struct GPUGraphicsPipelineDesc

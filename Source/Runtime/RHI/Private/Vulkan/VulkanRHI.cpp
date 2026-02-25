@@ -98,6 +98,16 @@ namespace RHI
     {
         SetDebugNameInternal(VK_OBJECT_TYPE_IMAGE, reinterpret_cast<uint64_t>(texture), debug_name);
     }
+
+    VulkanGPUSampler::~VulkanGPUSampler()
+    {
+        RHI::vkDestroySampler(g_logical_device, sampler, nullptr);
+    }
+
+    void VulkanGPUSampler::SetDebugName(const char *debugName)
+    {
+        SetDebugNameInternal(VK_OBJECT_TYPE_SAMPLER, reinterpret_cast<uint64_t>(sampler), debugName);
+    }
     
     uint64_t VulkanGPUBuffer::GetVirtualAddress() const
     {
@@ -526,6 +536,7 @@ namespace RHI
         request_device_features.samplerAnisotropy = VK_TRUE;
         request_device_features.multiDrawIndirect = VK_TRUE;
         request_device_features.pipelineStatisticsQuery = VK_TRUE;
+        request_device_features.fillModeNonSolid = VK_TRUE;
 
         uint32_t queue_family_count = 0;
         RHI::vkGetPhysicalDeviceQueueFamilyProperties(g_physical_device, &queue_family_count, nullptr);
@@ -960,9 +971,31 @@ namespace RHI
         return texture;
     }
 
-    GPUSampler* VulkanRHI::CreateSampler(const GPUSamplerDesc& sampler_desc)
+    GPUSampler* VulkanRHI::CreateSampler(const GPUSamplerDesc& samplerDesc)
     {
-        return nullptr;
+        VkSamplerCreateInfo samplerCreateInfo = {};
+        samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerCreateInfo.minFilter = samplerDesc.minFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+        samplerCreateInfo.minFilter = samplerDesc.minFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+        samplerCreateInfo.mipmapMode = samplerDesc.minFilter == GPUFilter::Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerCreateInfo.addressModeU = GetAddressMode(samplerDesc.addressU);
+        samplerCreateInfo.addressModeV = GetAddressMode(samplerDesc.addressV);
+        samplerCreateInfo.addressModeW = GetAddressMode(samplerDesc.addressW);
+        samplerCreateInfo.mipLodBias = samplerDesc.mipLodBias;
+        samplerCreateInfo.minLod = samplerDesc.minLod;
+        samplerCreateInfo.maxLod = samplerDesc.maxLod;
+        samplerCreateInfo.anisotropyEnable = samplerDesc.anisotropyEnable ? VK_TRUE : VK_FALSE;
+        samplerCreateInfo.maxAnisotropy = samplerDesc.maxAnisotropy;
+        samplerCreateInfo.compareEnable = samplerDesc.compareEnable ? VK_TRUE : VK_FALSE;
+        samplerCreateInfo.compareOp = GetCompareOp(samplerDesc.compareOp);
+        samplerCreateInfo.borderColor = GetBorderColor(samplerDesc.borderColor);
+        
+        VulkanGPUSampler* vkSampler = new VulkanGPUSampler();
+
+        VkResult result = RHI::vkCreateSampler(g_logical_device, &samplerCreateInfo, nullptr, &vkSampler->sampler);
+        assert(result == VK_SUCCESS);
+
+        return vkSampler;
     }
     
     GPUPipeline *VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)
@@ -976,12 +1009,12 @@ namespace RHI
         pipeline_shader_stage_create_info[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pipeline_shader_stage_create_info[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
         pipeline_shader_stage_create_info[0].module = native_vertex_shader->module;
-        pipeline_shader_stage_create_info[0].pName = "main";
+        pipeline_shader_stage_create_info[0].pName = "VSMain";
         
         pipeline_shader_stage_create_info[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pipeline_shader_stage_create_info[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         pipeline_shader_stage_create_info[1].module = native_fragment_shader->module;
-        pipeline_shader_stage_create_info[1].pName = "main";
+        pipeline_shader_stage_create_info[1].pName = "PSMain";
 
         // No vertex input - route through vertex pulling
         VkPipelineVertexInputStateCreateInfo pipeline_vertex_input_create_info = {};
@@ -1270,6 +1303,19 @@ namespace RHI
 
     void VulkanRHI::SetSampler(uint32_t index, const GPUSampler* sampler)
     {
+        VkDescriptorImageInfo descriptorImageInfo = {};
+        descriptorImageInfo.sampler = static_cast<const VulkanGPUSampler*>(sampler)->sampler;
+        
+        VkWriteDescriptorSet writeDescriptorSet = {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstSet = g_descriptor_set;
+        writeDescriptorSet.dstBinding = BINDING_SAMPLERS;
+        writeDescriptorSet.dstArrayElement = index;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        writeDescriptorSet.pImageInfo = &descriptorImageInfo;
+
+        RHI::vkUpdateDescriptorSets(g_logical_device, 1, &writeDescriptorSet, 0, nullptr);
     }
 
     VulkanGPUCommandList::~VulkanGPUCommandList()

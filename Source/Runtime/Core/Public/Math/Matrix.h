@@ -49,7 +49,7 @@ namespace Math
 			{
 				for (uint32_t Column = 0; Column < 4; Column++)
 				{
-					Result[Row][Column] = Data[Row][0]*Other.Data[0][Column]
+					Result.Data[Row][Column] = Data[Row][0]*Other.Data[0][Column]
 						+ Data[Row][1]*Other.Data[1][Column]
 						+ Data[Row][2]*Other.Data[2][Column]
 						+ Data[Row][3]*Other.Data[3][Column];
@@ -57,6 +57,24 @@ namespace Math
 			}
 
 			return Result;
+		}
+
+		static Matrix<T, 4, 4> Translate(Vector<T, 3> translate)
+		{
+			Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();
+			result.Data[3][0] = translate.x;
+			result.Data[3][1] = translate.y;
+			result.Data[3][2] = translate.z;
+			return result;
+		}
+
+		static Matrix<T, 4, 4> Scale(Vector<T, 3> scale)
+		{
+			Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();
+			result.Data[0][0] = scale.x;
+			result.Data[1][1] = scale.y;
+			result.Data[2][2] = scale.z;
+			return result;
 		}
 
 		Matrix<T, 4, 4> Transpose() const

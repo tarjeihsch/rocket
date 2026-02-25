@@ -10,79 +10,99 @@ namespace Math
     {
         union 
         {
-            struct { T x, y, z, w; };
+            struct
+            {
+                T w;
+                T wi;
+                T wj;
+                T wk;
+            };
+
             T Data[4];
         };
 
         Quaternion() 
-            : x(0)
-            , y(0)
-            , z(0)
-            , w(1) 
+            : w(1) 
+            , wi(0)
+            , wj(0)
+            , wk(0)
         {
         }
     
-        Quaternion(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) 
+        Quaternion(T pW, T pX, T pY, T pZ) 
+            : w(pW) 
+            , wi(pX)
+            , wj(pY)
+            , wk(pZ)
         {
         }
 
-        static Quaternion<T> Identity()
+        T Magnitude() const
         {
-            return Quaternion<T>(0, 0, 0, 1);
+            return std::sqrt(w*w + wi*wi + wj*wj + wk*wk);
         }
 
-        // Standard Hamilton product (Order: Q1 * Q2)
-        Quaternion<T> operator*(const Quaternion<T>& Other) const
+        Quaternion<T> Normalize() const
+        {
+            T magnitude = Magnitude();
+            if (magnitude < T(1e-6))
+            {
+                return Quaternion<T>::Identity();
+            }
+            return Quaternion<T>(w / magnitude, wi / magnitude, wj / magnitude, wk / magnitude);
+        }
+
+        Quaternion<T> Conjugate() const
+        {
+            return Quaternion<T>(w, -wi, -wj, -wk);
+        }
+
+        Vector<T, 3> Rotate(const Vector<T, 3>& vector) const
+        {
+            Vector<T, 3> q(wi, wj, wk);
+            return vector + (q.Cross(q.Cross(vector) + vector * w)) * T(2);
+        }
+
+        Quaternion<T> operator*(const Quaternion<T>& other) const
         {
             return Quaternion<T>(
-                w * Other.x + x * Other.w + y * Other.z - z * Other.y,
-                w * Other.y - x * Other.z + y * Other.w + z * Other.x,
-                w * Other.z + x * Other.y - y * Other.x + z * Other.w,
-                w * Other.w - x * Other.x - y * Other.y - z * Other.z
+                w * other.w - wi * other.wi - wj * other.wj - wk * other.wk,
+                w * other.wi + wi * other.w + wj * other.wk - wk * other.wj,
+                w * other.wj - wi * other.wk + wj * other.w + wk * other.wi,
+                w * other.wk + wi * other.wj - wj * other.wi + wk * other.w
             );
-        }
-
-        static Quaternion<T> FromEuler(const Vector<T, 3>& Euler)
-        {
-            T cx = std::cos(Euler.x * T(0.5));
-            T sx = std::sin(Euler.x * T(0.5));
-            T cy = std::cos(Euler.y * T(0.5));
-            T sy = std::sin(Euler.y * T(0.5));
-            T cz = std::cos(Euler.z * T(0.5));
-            T sz = std::sin(Euler.z * T(0.5));
-
-            Quaternion<T> q;
-            // Order: Y (Yaw) -> X (Pitch) -> Z (Roll)
-            q.x = sx * cy * cz - cx * sy * sz; // Flipped sign here
-            q.y = cx * sy * cz + sx * cy * sz; // Flipped sign here
-            q.z = cx * cy * sz - sx * sy * cz;
-            q.w = cx * cy * cz + sx * sy * sz;
-            return q;
         }
 
         Matrix<T, 4, 4> ToMatrix() const
         {
-            Matrix<T, 4, 4> Result = Matrix<T, 4, 4>::Identity();
-            T xx = x * x; T xy = x * y; T xz = x * z; T xw = x * w;
-            T yy = y * y; T yz = y * z; T yw = y * w;
-            T zz = z * z; T zw = z * w;
+            Quaternion<T> quaternion = Normalize();
+            Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();
 
-            // Column 0
-            Result.Data[0][0] = T(1) - T(2) * (yy + zz);
-            Result.Data[0][1] = T(2) * (xy + zw);
-            Result.Data[0][2] = T(2) * (xz - yw);
+            result.Data[0][0] = T(1) - T(2) * (quaternion.wj * quaternion.wj + quaternion.wk * quaternion.wk);
+            result.Data[0][1] = T(2) * (quaternion.wi * quaternion.wj - quaternion.wk * quaternion.w);
+            result.Data[0][2] = T(2) * (quaternion.wi * quaternion.wk + quaternion.wj * quaternion.w);
 
-            // Column 1
-            Result.Data[1][0] = T(2) * (xy - zw);
-            Result.Data[1][1] = T(1) - T(2) * (xx + zz);
-            Result.Data[1][2] = T(2) * (yz + xw);
+            result.Data[1][0] = T(2) * (quaternion.wi * quaternion.wj + quaternion.wk * quaternion.w);
+            result.Data[1][1] = T(1) - T(2) * (quaternion.wi * quaternion.wi + quaternion.wk * quaternion.wk);
+            result.Data[1][2] = T(2) * (quaternion.wj * quaternion.wk - quaternion.wi * quaternion.w);
 
-            // Column 2
-            Result.Data[2][0] = T(2) * (xz + yw);
-            Result.Data[2][1] = T(2) * (yz - xw);
-            Result.Data[2][2] = T(1) - T(2) * (xx + yy);
+            result.Data[2][0] = T(2) * (quaternion.wi * quaternion.wk - quaternion.wj * quaternion.w);
+            result.Data[2][1] = T(2) * (quaternion.wj * quaternion.wk + quaternion.wi * quaternion.w);
+            result.Data[2][2] = T(1) - T(2) * (quaternion.wi * quaternion.wi + quaternion.wj * quaternion.wj);
 
-            return Result;
+            return result;
+        }
+
+        static Quaternion<T> Identity()
+        {
+            return Quaternion<T>(1, 0, 0, 0);
+        }
+
+        static Quaternion<T> FromAxisAngle(const Vector<T, 3>& axis, T angle)
+        {
+            const T halfAngle = angle * T(0.5);
+            const T s = std::sin(halfAngle);
+            return Quaternion<T>(std::cos(halfAngle), axis.x * s, axis.y * s, axis.z * s).Normalize();
         }
     };
 }
