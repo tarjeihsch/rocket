@@ -1520,7 +1520,7 @@ namespace RHI
             texture_barrier_data[index].dstStageMask = dst_stage;
             texture_barrier_data[index].dstAccessMask = dst_access;
             texture_barrier_data[index].image = native->texture;
-            texture_barrier_data[index].subresourceRange.aspectMask = new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            texture_barrier_data[index].subresourceRange.aspectMask = (old_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
             texture_barrier_data[index].subresourceRange.baseMipLevel = 0;
             texture_barrier_data[index].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
             texture_barrier_data[index].subresourceRange.baseArrayLayer = 0;
