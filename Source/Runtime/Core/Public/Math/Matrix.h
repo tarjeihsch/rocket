@@ -91,6 +91,54 @@ namespace Math
 
 			return Result;
 		}
+
+		Matrix<T, 4, 4> Inverse() const
+		{
+			Matrix<T, 4, 4> result;
+
+			const T* m = &Data[0][0];
+
+			T s0 = m[0] * m[5] - m[1] * m[4];
+			T s1 = m[0] * m[6] - m[2] * m[4];
+			T s2 = m[0] * m[7] - m[3] * m[4];
+			T s3 = m[1] * m[6] - m[2] * m[5];
+			T s4 = m[1] * m[7] - m[3] * m[5];
+			T s5 = m[2] * m[7] - m[3] * m[6];
+
+			T c0 = m[8] * m[13] - m[9] * m[12];
+			T c1 = m[8] * m[14] - m[10] * m[12];
+			T c2 = m[8] * m[15] - m[11] * m[12];
+			T c3 = m[9] * m[14] - m[10] * m[13];
+			T c4 = m[9] * m[15] - m[11] * m[13];
+			T c5 = m[10] * m[15] - m[11] * m[14];
+
+			T det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+			T inv = T(1) / det;
+
+			T* r = &result.Data[0][0];
+
+			r[0] = (m[5] * c5 - m[6] * c4 + m[7] * c3) * inv;
+			r[1] = (-m[1] * c5 + m[2] * c4 - m[3] * c3) * inv;
+			r[2] = (m[13] * s5 - m[14] * s4 + m[15] * s3) * inv;
+			r[3] = (-m[9] * s5 + m[10] * s4 - m[11] * s3) * inv;
+
+			r[4] = (-m[4] * c5 + m[6] * c2 - m[7] * c1) * inv;
+			r[5] = (m[0] * c5 - m[2] * c2 + m[3] * c1) * inv;
+			r[6] = (-m[12] * s5 + m[14] * s2 - m[15] * s1) * inv;
+			r[7] = (m[8] * s5 - m[10] * s2 + m[11] * s1) * inv;
+
+			r[8] = (m[4] * c4 - m[5] * c2 + m[7] * c0) * inv;
+			r[9] = (-m[0] * c4 + m[1] * c2 - m[3] * c0) * inv;
+			r[10] = (m[12] * s4 - m[13] * s2 + m[15] * s0) * inv;
+			r[11] = (-m[8] * s4 + m[9] * s2 - m[11] * s0) * inv;
+
+			r[12] = (-m[4] * c3 + m[5] * c1 - m[6] * c0) * inv;
+			r[13] = (m[0] * c3 - m[1] * c1 + m[2] * c0) * inv;
+			r[14] = (-m[12] * s3 + m[13] * s1 - m[14] * s0) * inv;
+			r[15] = (m[8] * s3 - m[9] * s1 + m[10] * s0) * inv;
+
+			return result;
+		}
 	};
 }
 
