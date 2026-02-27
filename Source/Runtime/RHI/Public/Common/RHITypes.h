@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <wtypes.h>
 
+#include "Math/Vector.h"
+
 namespace RHI 
 {
     struct GPUShaderResources;

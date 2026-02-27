@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "Platform.h"
+#include "Math/MathTypes.h"
 
 enum class ThreadState
 {

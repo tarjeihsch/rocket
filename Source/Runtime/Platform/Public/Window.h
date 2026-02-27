@@ -3,6 +3,7 @@
 #include "CoreTypes.h"
 #include "PlatformTypes.h"
 #include "Event.h"
+#include "Math/Vector.h"
 
 struct WindowCreateInfo
 {

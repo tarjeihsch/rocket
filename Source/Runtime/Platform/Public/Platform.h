@@ -13,7 +13,6 @@
 #endif
 
 #include "Application.h"
-#include "Math/Vector2.h"
 
 namespace Platform
 {

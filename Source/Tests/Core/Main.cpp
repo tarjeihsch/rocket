@@ -62,6 +62,10 @@ int main()
     mat.Data[1][2] = 1;
     mat.Data[0][3] = 7;
 
+    Vector2 vec;
+    Vector2 vec2(20.0f, 20.0f);
+    vec.x = 2;
+    vec.CrossProduct(vec2);
     mat = mat.Transpose();
 
     for (;;)

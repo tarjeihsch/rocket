@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreTypes.h"
-#include "Math/Vector2.h"
+#include "Math/Vector.h"
 
 #define KEY_SPACE              32
 #define KEY_APOSTROPHE         39  /* ' */

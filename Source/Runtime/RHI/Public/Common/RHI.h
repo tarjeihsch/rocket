@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common/RHITypes.h"
-#include <Math/Vector2.h>
 
 namespace RHI
 {
