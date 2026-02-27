@@ -212,6 +212,7 @@ namespace RHI
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
         RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
         VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
+        assert(result == VK_SUCCESS);
         return false;
     }
 
@@ -633,6 +634,7 @@ namespace RHI
         memory_allocator_create_info.instance = g_instance;
         memory_allocator_create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         memory_allocator_create_info.pVulkanFunctions = &allocator_functions;
+        memory_allocator_create_info.preferredLargeHeapBlockSize = 32 * 1024 * 1024; // e.g. 64MB instead of 256MB
 
         result = vmaCreateAllocator(&memory_allocator_create_info, &g_memory_allocator);
         assert(result == VK_SUCCESS);
