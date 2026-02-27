@@ -287,6 +287,51 @@ namespace Math
     };
 
     template<typename T>
+    struct Vector<T, 4>
+    {
+        union
+        {
+            struct { T x; T y; T z; T w; };
+            struct { T r; T g; T b; T a; };
+
+            T data[4] = { 0, 0, 0, 0 };
+        };
+
+        Vector<T, 4>()
+        {
+        }
+
+        Vector<T, 4>(T scalar)
+        {
+            data[0] = scalar;
+            data[1] = scalar;
+            data[2] = scalar;
+            data[3] = scalar;
+        }
+
+        Vector<T, 4>(T scalarX, T scalarY, T scalarZ, T scalarW)
+        {
+            data[0] = scalarX;
+            data[1] = scalarY;
+            data[2] = scalarZ;
+            data[3] = scalarW;
+        }
+
+        Vector<T, 4>(const Vector<T, 3>& vector, T scalarW)
+        {
+            data[0] = vector.M_Data[0];
+            data[1] = vector.M_Data[1];
+            data[2] = vector.M_Data[2];
+            data[3] = scalarW;
+        }
+
+        static Vector<T, 4> Identity() 
+        {
+            return Vector<T, 4>(T(0), T(0), T(0), T(1));
+        }
+    };
+
+    template<typename T>
     inline T DotProduct(const Vector<T, 3>& A, const Vector<T, 3>& B)
     {
         return A.Dot(B);
@@ -346,3 +391,8 @@ using Vector3 = Math::Vector<Real, 3>;
 using Vector3f = Math::Vector<float, 3>;
 using Vector3d = Math::Vector<double, 3>;
 using Vector3i = Math::Vector<int32_t, 3>;
+
+using Vector4 = Math::Vector<Real, 4>;
+using Vectot4f = Math::Vector<float, 4>;
+using Vectot4d = Math::Vector<double, 4>;
+using Vectot4i = Math::Vector<int32_t, 4>;

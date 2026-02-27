@@ -59,6 +59,16 @@ namespace Math
 			return Result;
 		}
 
+		Vector<T, 4> operator*(const Vector<T, 4>& vector)
+		{
+			Vector4 result;
+			result.x = vector.x * Data[0][0] + vector.y * Data[1][0] + vector.z * Data[2][0] + vector.w * Data[3][0];
+			result.y = vector.x * Data[0][1] + vector.y * Data[1][1] + vector.z * Data[2][1] + vector.w * Data[3][1];
+			result.z = vector.x * Data[0][2] + vector.y * Data[1][2] + vector.z * Data[2][2] + vector.w * Data[3][2];
+			result.w = vector.x * Data[0][3] + vector.y * Data[1][3] + vector.z * Data[2][3] + vector.w * Data[3][3];
+			return result;
+		}
+
 		static Matrix<T, 4, 4> Translate(Vector<T, 3> translate)
 		{
 			Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();

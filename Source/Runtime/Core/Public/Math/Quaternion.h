@@ -75,20 +75,20 @@ namespace Math
 
         Matrix<T, 4, 4> ToMatrix() const
         {
-            Quaternion<T> quaternion = Normalize();
+            Quaternion<T> q = Normalize();
             Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();
 
-            result.Data[0][0] = T(1) - T(2) * (quaternion.wj * quaternion.wj + quaternion.wk * quaternion.wk);
-            result.Data[0][1] = T(2) * (quaternion.wi * quaternion.wj - quaternion.wk * quaternion.w);
-            result.Data[0][2] = T(2) * (quaternion.wi * quaternion.wk + quaternion.wj * quaternion.w);
+            result.Data[0][0] = T(1) - T(2) * (q.wj * q.wj + q.wk * q.wk);
+            result.Data[0][1] = T(2) * (q.wi * q.wj + q.wk * q.w);
+            result.Data[0][2] = T(2) * (q.wi * q.wk - q.wj * q.w);
 
-            result.Data[1][0] = T(2) * (quaternion.wi * quaternion.wj + quaternion.wk * quaternion.w);
-            result.Data[1][1] = T(1) - T(2) * (quaternion.wi * quaternion.wi + quaternion.wk * quaternion.wk);
-            result.Data[1][2] = T(2) * (quaternion.wj * quaternion.wk - quaternion.wi * quaternion.w);
+            result.Data[1][0] = T(2) * (q.wi * q.wj - q.wk * q.w);
+            result.Data[1][1] = T(1) - T(2) * (q.wi * q.wi + q.wk * q.wk);
+            result.Data[1][2] = T(2) * (q.wj * q.wk + q.wi * q.w);
 
-            result.Data[2][0] = T(2) * (quaternion.wi * quaternion.wk - quaternion.wj * quaternion.w);
-            result.Data[2][1] = T(2) * (quaternion.wj * quaternion.wk + quaternion.wi * quaternion.w);
-            result.Data[2][2] = T(1) - T(2) * (quaternion.wi * quaternion.wi + quaternion.wj * quaternion.wj);
+            result.Data[2][0] = T(2) * (q.wi * q.wk + q.wj * q.w);
+            result.Data[2][1] = T(2) * (q.wj * q.wk - q.wi * q.w);
+            result.Data[2][2] = T(1) - T(2) * (q.wi * q.wi + q.wj * q.wj);
 
             return result;
         }
