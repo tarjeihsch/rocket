@@ -711,4 +711,32 @@ namespace RHI
     {
         GPUQueueFlags queue_flags;
     };
+
+    constexpr uint32_t GetFormatBytesPerPixel(GPUFormat format)
+    {
+        switch (format)
+        {
+            case GPUFormat::D16_UNORM:          return 2;
+            case GPUFormat::R16_FLOAT:          return 2;
+            case GPUFormat::RGBA8_UNORM:        return 4;
+            case GPUFormat::RGBA8_SRGB:         return 4;
+            case GPUFormat::BGRA8_UNORM:        return 4;
+            case GPUFormat::BGRA8_SRGB:         return 4;
+            case GPUFormat::RG16_FLOAT:         return 4;
+            case GPUFormat::R32_FLOAT:          return 4;
+            case GPUFormat::R32_UINT:           return 4;
+            case GPUFormat::D32_FLOAT:          return 4;
+            case GPUFormat::D24_UNORM_S8:       return 4;
+            case GPUFormat::D32_FLOAT_S8:       return 5;
+            case GPUFormat::RG32_FLOAT:         return 8;
+            case GPUFormat::RGBA16_FLOAT:       return 8;
+            case GPUFormat::RGB32_FLOAT:        return 12;
+            case GPUFormat::RGB32_UINT:         return 12;
+            case GPUFormat::RGB32_SINT:         return 12;
+            case GPUFormat::RGBA32_FLOAT:       return 16;
+            case GPUFormat::RGBA32_UINT:        return 16;
+            case GPUFormat::RGBA32_SINT:        return 16;
+            default:                            return 0;
+        }
+    }
 }

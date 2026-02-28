@@ -5,7 +5,7 @@
 
 namespace RHI
 {
-    static VkFormat GetNativeFormat(GPUFormat format)
+    static VkFormat GetVkFormat(GPUFormat format)
     {
         switch (format)
         {

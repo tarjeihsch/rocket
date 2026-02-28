@@ -183,46 +183,14 @@ namespace RHI
 
     bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
-        //VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        //RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
-        //
-        //VkExtent2D extent = surfaceCapabilities.currentExtent;
-        //
-        //if (extent.width == 0 || extent.height == 0)
-        //{
-        //    is_minimized = true;
-        //    return false;
-        //}
-        //else
-        //{
-        //    is_minimized = false;
-        //}
-        //
-        //do
-        //{
-        //    if (!is_minimized)
-        //    {
-        //        RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
-        //        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
-        //    }
-        //
-        //    VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
-        //
-        //    if (result == VK_SUCCESS)
-        //    {
-        //        return true;
-        //    }
-        //    else if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-        //    {
-        //        ResizeBackBuffers();
-        //        continue;
-        //    }
-        //} while (is_minimized);
-
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
         RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
-        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
+
+        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[image_available_index], VK_NULL_HANDLE, &current_image_index);
         assert(result == VK_SUCCESS);
+        
+        image_available_index = (image_available_index + 1) % std::size(g_image_available);
+        
         return false;
     }
 
@@ -881,7 +849,7 @@ namespace RHI
     {
         VulkanGPUTexture* texture = new VulkanGPUTexture();
 
-        VkFormat format = GetNativeFormat(texture_desc.format);
+        VkFormat format = GetVkFormat(texture_desc.format);
         VkImageUsageFlags image_usage_flags = 0;
         VkImageType texture_type = VK_IMAGE_TYPE_2D;
         VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
@@ -1085,14 +1053,14 @@ namespace RHI
         VkFormat color_formats[MAX_COLOR_ATTACHMENT_COUNT];
         for (uint32_t index = 0; index < pipeline_desc.color_format_count; index++)
         {
-            color_formats[index] = GetNativeFormat(pipeline_desc.color_formats[index]);
+            color_formats[index] = GetVkFormat(pipeline_desc.color_formats[index]);
         }
 
         VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {};
         pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         pipeline_rendering_create_info.colorAttachmentCount = pipeline_desc.color_format_count;
         pipeline_rendering_create_info.pColorAttachmentFormats = color_formats;
-        pipeline_rendering_create_info.depthAttachmentFormat = GetNativeFormat(pipeline_desc.depth_format);
+        pipeline_rendering_create_info.depthAttachmentFormat = GetVkFormat(pipeline_desc.depth_format);
            
         VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
         graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1155,14 +1123,14 @@ namespace RHI
     
     GPUSwapchain *VulkanRHI::CreateSwapchain(const GPUSwapchainDesc &swapchain_desc)
     {
-        VulkanGPUSwapchain* native_swapchain = new VulkanGPUSwapchain();
+        VulkanGPUSwapchain* swapchain = new VulkanGPUSwapchain();
 
 #if defined(_WIN32)
         VkWin32SurfaceCreateInfoKHR surface_info = {};
         surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         surface_info.hwnd = swapchain_desc.window_platform.hwnd;
         surface_info.hinstance = GetModuleHandle(nullptr);
-        VkResult result = RHI::vkCreateWin32SurfaceKHR(g_instance, &surface_info, nullptr, &native_swapchain->surface);
+        VkResult result = RHI::vkCreateWin32SurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
 #elif defined(__linux__)
         VkWaylandSurfaceCreateInfoKHR surface_info = {};
         surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
@@ -1173,18 +1141,18 @@ namespace RHI
         assert(result == VK_SUCCESS);
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
-        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, native_swapchain->surface, &surface_capabilities);
+        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, swapchain->surface, &surface_capabilities);
 
-        native_swapchain->image_count = swapchain_desc.backbuffer_count;
+        swapchain->image_count = swapchain_desc.backbuffer_count;
 
-        if (native_swapchain->image_count < surface_capabilities.minImageCount)
+        if (swapchain->image_count < surface_capabilities.minImageCount)
         {
-            native_swapchain->image_count = surface_capabilities.minImageCount;
+            swapchain->image_count = surface_capabilities.minImageCount;
         }
 
-        if (surface_capabilities.maxImageCount > 0 && native_swapchain->image_count > surface_capabilities.maxImageCount)
+        if (surface_capabilities.maxImageCount > 0 && swapchain->image_count > surface_capabilities.maxImageCount)
         {
-            native_swapchain->image_count = surface_capabilities.maxImageCount;
+            swapchain->image_count = surface_capabilities.maxImageCount;
         }
 
         VkExtent2D extent;
@@ -1199,14 +1167,14 @@ namespace RHI
         }
 
         uint32_t presentation = 0U;
-        RHI::vkGetPhysicalDeviceSurfaceSupportKHR(g_physical_device, g_graphics_family, native_swapchain->surface, &presentation);
+        RHI::vkGetPhysicalDeviceSurfaceSupportKHR(g_physical_device, g_graphics_family, swapchain->surface, &presentation);
         assert(presentation != 0U);
 
         uint32_t present_mode_count = 0;
-        RHI::vkGetPhysicalDeviceSurfacePresentModesKHR(g_physical_device, native_swapchain->surface, &present_mode_count, nullptr);
+        RHI::vkGetPhysicalDeviceSurfacePresentModesKHR(g_physical_device, swapchain->surface, &present_mode_count, nullptr);
 
         std::vector<VkPresentModeKHR> available_present_modes(present_mode_count);
-        RHI::vkGetPhysicalDeviceSurfacePresentModesKHR(g_physical_device, native_swapchain->surface, &present_mode_count, available_present_modes.data());
+        RHI::vkGetPhysicalDeviceSurfacePresentModesKHR(g_physical_device, swapchain->surface, &present_mode_count, available_present_modes.data());
 
         std::unordered_set<VkPresentModeKHR> supported_present_modes(available_present_modes.begin(), available_present_modes.end());
         VkPresentModeKHR desired_mode = GetNativePresentMode(swapchain_desc.present_mode);
@@ -1214,9 +1182,9 @@ namespace RHI
 
         VkSwapchainCreateInfoKHR swapchain_create_info = {};
         swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        swapchain_create_info.surface = native_swapchain->surface;
-        swapchain_create_info.minImageCount = native_swapchain->image_count;
-        swapchain_create_info.imageFormat = GetNativeFormat(swapchain_desc.backbuffer_format);
+        swapchain_create_info.surface = swapchain->surface;
+        swapchain_create_info.minImageCount = swapchain->image_count;
+        swapchain_create_info.imageFormat = GetVkFormat(swapchain_desc.backbuffer_format);
         swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
         swapchain_create_info.imageExtent = extent;
         swapchain_create_info.imageArrayLayers = 1;
@@ -1227,34 +1195,36 @@ namespace RHI
         swapchain_create_info.presentMode = present_mode;
         swapchain_create_info.clipped = VK_TRUE;
 
-        result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &native_swapchain->swapchain);
+        result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain->swapchain);
         assert(result == VK_SUCCESS);
 
-        RHI::vkGetSwapchainImagesKHR(g_logical_device, native_swapchain->swapchain, &native_swapchain->image_count, nullptr);
-        VkImage images[3];
-        RHI::vkGetSwapchainImagesKHR(g_logical_device, native_swapchain->swapchain, &native_swapchain->image_count, images);
+        RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain->swapchain, &swapchain->image_count, nullptr);
+        std::vector<VkImage> images(swapchain->image_count);
+        RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain->swapchain, &swapchain->image_count, images.data());
 
-        for (uint32_t index = 0; index < native_swapchain->image_count; ++index)
+        for (uint32_t index = 0; index < swapchain->image_count; ++index)
         {
-            native_swapchain->textures[index] = new VulkanGPUTexture();
-            native_swapchain->textures[index]->texture = images[index];
-            native_swapchain->textures[index]->allocation = nullptr;
+            swapchain->textures[index] = new VulkanGPUTexture();
+            swapchain->textures[index]->texture = images[index];
+            swapchain->textures[index]->allocation = nullptr;
 
             VkImageViewCreateInfo image_view_create_info = {};
             image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             image_view_create_info.image = images[index];
             image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            image_view_create_info.format = GetNativeFormat(swapchain_desc.backbuffer_format);
+            image_view_create_info.format = GetVkFormat(swapchain_desc.backbuffer_format);
             image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             image_view_create_info.subresourceRange.baseMipLevel = 0;
             image_view_create_info.subresourceRange.levelCount = 1;
             image_view_create_info.subresourceRange.baseArrayLayer = 0;
             image_view_create_info.subresourceRange.layerCount = 1;
 
-            RHI::vkCreateImageView(g_logical_device, &image_view_create_info, nullptr, &native_swapchain->textures[index]->rtv);
+            RHI::vkCreateImageView(g_logical_device, &image_view_create_info, nullptr, &swapchain->textures[index]->rtv);
         }
+
+        std::printf("Swapchain:\n\tImage Count: %d\n\tFrame Count: %d\n", swapchain->image_count, CONCURRENT_FRAME_COUNT);
         
-        return native_swapchain;
+        return swapchain;
     }
     
     GPUCommandList *VulkanRHI::CreateCommandList(const GPUCommandListDesc& desc)
