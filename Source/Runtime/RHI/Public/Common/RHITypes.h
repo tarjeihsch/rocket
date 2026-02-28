@@ -683,6 +683,11 @@ namespace RHI
         uint8_t blend_enable : 1 = false;
     };
 
+    struct GPUComputePipelineDesc
+    {
+        const GPUShader* computeShader = nullptr;
+    };
+
     struct GPUSwapchainDesc
     {
         GPUWindowPlatform window_platform;

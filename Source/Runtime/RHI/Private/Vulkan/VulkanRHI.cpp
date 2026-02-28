@@ -145,6 +145,16 @@ namespace RHI
         SetDebugNameInternal(VK_OBJECT_TYPE_PIPELINE, reinterpret_cast<uint64_t>(pipeline), debug_name);
     }
 
+    VulkanGPUComputePipeline::~VulkanGPUComputePipeline()
+    {
+        RHI::vkDestroyPipeline(g_logical_device, pipeline, nullptr);
+    }
+
+    void VulkanGPUComputePipeline::SetDebugName(const char* debug_name)
+    {
+        SetDebugNameInternal(VK_OBJECT_TYPE_PIPELINE, reinterpret_cast<uint64_t>(pipeline), debug_name);
+    }
+
     VulkanGPUSwapchain::~VulkanGPUSwapchain()
     {
         RHI::vkDeviceWaitIdle(g_logical_device);
@@ -634,7 +644,7 @@ namespace RHI
         memory_allocator_create_info.instance = g_instance;
         memory_allocator_create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         memory_allocator_create_info.pVulkanFunctions = &allocator_functions;
-        memory_allocator_create_info.preferredLargeHeapBlockSize = 32 * 1024 * 1024; // e.g. 64MB instead of 256MB
+        memory_allocator_create_info.preferredLargeHeapBlockSize = 128 * 1024 * 1024; // e.g. 64MB instead of 256MB
 
         result = vmaCreateAllocator(&memory_allocator_create_info, &g_memory_allocator);
         assert(result == VK_SUCCESS);
@@ -1000,9 +1010,9 @@ namespace RHI
         return vkSampler;
     }
     
-    GPUPipeline *VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)
+    GPUGraphicsPipeline* VulkanRHI::CreateGraphicsPipeline(const GPUGraphicsPipelineDesc &pipeline_desc)
     {
-        VulkanGPUGraphicsPipeline* native_graphics_pipeline = new VulkanGPUGraphicsPipeline();
+        VulkanGPUGraphicsPipeline* graphicsPipeline = new VulkanGPUGraphicsPipeline();
         
         const VulkanGPUShader* native_vertex_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.vertex_shader);
         const VulkanGPUShader* native_fragment_shader = static_cast<const VulkanGPUShader*>(pipeline_desc.fragment_shader);
@@ -1099,10 +1109,33 @@ namespace RHI
         graphics_pipeline_create_info.pDynamicState = &pipeline_dynamic_state_create_info;
         graphics_pipeline_create_info.layout = g_pipeline_layout;
 
-        VkResult result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &native_graphics_pipeline->pipeline);
+        VkResult result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &graphicsPipeline->pipeline);
         assert(result == VK_SUCCESS);
 
-        return native_graphics_pipeline;
+        return graphicsPipeline;
+    }
+
+    GPUComputePipeline* VulkanRHI::CreateComputePipeline(const GPUComputePipelineDesc& pipelineDesc)
+    {
+        VulkanGPUComputePipeline* computePipeline = new VulkanGPUComputePipeline();
+
+        const VulkanGPUShader* computeShader = static_cast<const VulkanGPUShader*>(pipelineDesc.computeShader);
+
+        VkPipelineShaderStageCreateInfo pipelineShaderStageCreateInfo = {};
+        pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipelineShaderStageCreateInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        pipelineShaderStageCreateInfo.module = computeShader->module;
+        pipelineShaderStageCreateInfo.pName = "CSMain";
+
+        VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+        computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        computePipelineCreateInfo.stage = pipelineShaderStageCreateInfo;
+        computePipelineCreateInfo.layout = g_pipeline_layout;
+
+        VkResult result = RHI::vkCreateComputePipelines(g_logical_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &computePipeline->pipeline);
+        assert(result == VK_SUCCESS);
+
+        return computePipeline;
     }
     
     GPUShader *VulkanRHI::CreateShader(const GPUShaderDesc &shader_desc)
@@ -1281,6 +1314,26 @@ namespace RHI
 
         RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write_descriptor_set, 0, nullptr);
     }
+
+    void VulkanRHI::SetRWTexture(uint32_t index, const GPUTexture* texture)
+    {
+        const VulkanGPUTexture* vulkan_texture = static_cast<const VulkanGPUTexture*>(texture);
+
+        VkDescriptorImageInfo descriptor_texture_info = {};
+        descriptor_texture_info.imageView = vulkan_texture->uav;
+        descriptor_texture_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        VkWriteDescriptorSet write_descriptor_set = {};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = g_descriptor_set;
+        write_descriptor_set.dstBinding = BINDING_STORAGE_IMAGES;
+        write_descriptor_set.dstArrayElement = index;
+        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        write_descriptor_set.pImageInfo = &descriptor_texture_info;
+
+        RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write_descriptor_set, 0, nullptr);
+    }
     
     void VulkanRHI::SetBuffer(uint32_t index, const GPUBuffer* buffer)
     {
@@ -1396,11 +1449,14 @@ namespace RHI
         RHI::vkCmdEndRendering(command_buffer_data[CURRENT_FRAME]);
     }
     
-    void VulkanGPUCommandList::SetPipeline(const GPUPipeline* pipeline)
+    void VulkanGPUCommandList::SetGraphicsPipeline(const GPUGraphicsPipeline* pipeline)
     {
-        const VulkanGPUGraphicsPipeline* native_graphics_pipeline = static_cast<const VulkanGPUGraphicsPipeline*>(pipeline);
+        RHI::vkCmdBindPipeline(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<const VulkanGPUGraphicsPipeline*>(pipeline)->pipeline);
+    }
 
-        RHI::vkCmdBindPipeline(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, native_graphics_pipeline->pipeline);
+    void VulkanGPUCommandList::SetComputePipeline(const GPUComputePipeline* computePipeline)
+    {
+        RHI::vkCmdBindPipeline(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<const VulkanGPUComputePipeline*>(computePipeline)->pipeline);
     }
     
     void VulkanGPUCommandList::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
@@ -1435,6 +1491,7 @@ namespace RHI
 
     void VulkanGPUCommandList::Dispatch(uint32_t x, uint32_t y, uint32_t z)
     {
+        RHI::vkCmdDispatch(command_buffer_data[CURRENT_FRAME], x, y, z);
     }
 
     void VulkanGPUCommandList::CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset)

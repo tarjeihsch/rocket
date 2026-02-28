@@ -82,7 +82,8 @@ namespace RHI
         virtual void End() = 0;
         virtual void BeginRenderPass(GPURenderPass* rendering_info) = 0;
         virtual void EndRenderPass() = 0;
-        virtual void SetPipeline(const GPUPipeline* pipeline) = 0;
+        virtual void SetGraphicsPipeline(const GPUGraphicsPipeline* pipeline) = 0;
+        virtual void SetComputePipeline(const GPUComputePipeline* computePipeline) = 0;
         virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
         virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
         virtual void SetPushConstants(const void* data, uint32_t size) = 0;
@@ -120,12 +121,14 @@ namespace RHI
         virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
         virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
         virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
-        virtual GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
+        virtual GPUGraphicsPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
+        virtual GPUComputePipeline* CreateComputePipeline(const GPUComputePipelineDesc& pipeline_desc) = 0;
         virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
         virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
         virtual GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) = 0;
 
         virtual void SetTexture(uint32_t index, const GPUTexture* texture) = 0;
+        virtual void SetRWTexture(uint32_t index, const GPUTexture* texture) = 0;
         virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;
         virtual void SetSampler(uint32_t index, const GPUSampler* sampler) = 0;
 

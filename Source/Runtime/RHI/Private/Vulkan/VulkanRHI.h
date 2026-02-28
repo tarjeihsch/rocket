@@ -69,6 +69,15 @@ namespace RHI
         VkPipeline pipeline = nullptr;
     };
 
+    struct VulkanGPUComputePipeline : GPUComputePipeline
+    {
+        ~VulkanGPUComputePipeline();
+
+        void SetDebugName(const char* debug_name) override;
+
+        VkPipeline pipeline = nullptr;
+    };
+
     struct VulkanGPUSwapchain : GPUSwapchain
     {
         ~VulkanGPUSwapchain();
@@ -95,7 +104,8 @@ namespace RHI
         void End() override;
         void BeginRenderPass(GPURenderPass* rendering_info) override;
         void EndRenderPass() override;
-        void SetPipeline(const GPUPipeline* pipeline) override;
+        void SetGraphicsPipeline(const GPUGraphicsPipeline* pipeline) override;
+        void SetComputePipeline(const GPUComputePipeline* computePipeline) override;
         void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) override;
         void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) override;
         void SetPushConstants(const void* data, uint32_t size) override;
@@ -127,12 +137,14 @@ namespace RHI
         GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) override;
         GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) override;
         GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) override;
-        GPUPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) override;
+        GPUGraphicsPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) override;
+        GPUComputePipeline* CreateComputePipeline(const GPUComputePipelineDesc& pipeline_desc) override;
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;
         GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) override;
         GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) override;
 
         void SetTexture(uint32_t index, const GPUTexture* texture) override;
+        void SetRWTexture(uint32_t index, const GPUTexture* texture) override;
         void SetBuffer(uint32_t index, const GPUBuffer* buffer) override;
         void SetSampler(uint32_t index, const GPUSampler* sampler) override;
 
