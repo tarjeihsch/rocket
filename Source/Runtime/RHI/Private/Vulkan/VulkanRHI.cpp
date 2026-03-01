@@ -184,12 +184,12 @@ namespace RHI
     bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
-        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
 
-        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[image_available_index], VK_NULL_HANDLE, &current_image_index);
+        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
         assert(result == VK_SUCCESS);
         
-        image_available_index = (image_available_index + 1) % std::size(g_image_available);
+        // Reset fence to unsignaled - this frame will happen.
+        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
         
         return false;
     }
@@ -211,11 +211,11 @@ namespace RHI
 
     void VulkanGPUSwapchain::ResizeBackBuffers()
     {
-        RHI::vkDeviceWaitIdle(g_logical_device);
+        RHI::vkWaitForFences(g_logical_device, CONCURRENT_FRAME_COUNT, g_in_flight_fence, VK_TRUE, UINT64_MAX);
 
         for (uint32_t index = 0; index < image_count; ++index)
         {
-            vkDestroyImageView(g_logical_device, textures[index]->rtv, nullptr);
+            RHI::vkDestroyImageView(g_logical_device, textures[index]->rtv, nullptr);
                 
             free(textures[index]);
         }
@@ -245,7 +245,7 @@ namespace RHI
             }
         }
 
-        uint32_t new_image_count = CONCURRENT_FRAME_COUNT;
+        uint32_t new_image_count = image_count;
         if (new_image_count < surface_capabilities.minImageCount)
         {
             new_image_count = surface_capabilities.minImageCount;
@@ -300,20 +300,6 @@ namespace RHI
 
             result = RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &textures[index]->rtv);
             assert(result == VK_SUCCESS);
-        }
-
-        current_image_index = 0;
-
-        for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
-        {
-            vkDestroySemaphore(g_logical_device, g_image_available[index], nullptr);
-            vkDestroySemaphore(g_logical_device, g_render_finished[index], nullptr);
-
-            VkSemaphoreCreateInfo semaphore_create_info = {};
-            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_image_available[index]);
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_render_finished[index]);
         }
 
         printf("Swapchain re-created: %d %d\n", new_surface_extent.width, new_surface_extent.height);
@@ -612,7 +598,6 @@ namespace RHI
         memory_allocator_create_info.instance = g_instance;
         memory_allocator_create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         memory_allocator_create_info.pVulkanFunctions = &allocator_functions;
-        memory_allocator_create_info.preferredLargeHeapBlockSize = 128 * 1024 * 1024; // e.g. 64MB instead of 256MB
 
         result = vmaCreateAllocator(&memory_allocator_create_info, &g_memory_allocator);
         assert(result == VK_SUCCESS);
@@ -753,11 +738,9 @@ namespace RHI
     
     void VulkanRHI::Submit(GPUCommandList* command_list)
     {
-        VulkanGPUCommandList* native_command_list = static_cast<VulkanGPUCommandList*>(command_list);
-
         VkCommandBufferSubmitInfo command_buffer_submit_info = {};
         command_buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-        command_buffer_submit_info.commandBuffer = native_command_list->command_buffer_data[CURRENT_FRAME];
+        command_buffer_submit_info.commandBuffer = static_cast<VulkanGPUCommandList*>(command_list)->command_buffer_data[CURRENT_FRAME];
 
         VkSemaphoreSubmitInfo wait_semaphore_info = {};
         wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -778,7 +761,8 @@ namespace RHI
         submit_info.signalSemaphoreInfoCount = 1;
         submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
 
-        RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
+        VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
+        assert(result == VK_SUCCESS);
     }
     
     void VulkanRHI::WaitIdle()
@@ -1267,10 +1251,8 @@ namespace RHI
     
     void VulkanRHI::SetTexture(uint32_t index, const GPUTexture* texture)
     {
-        const VulkanGPUTexture* native_texture = static_cast<const VulkanGPUTexture*>(texture);
-
         VkDescriptorImageInfo descriptor_texture_info = {};
-        descriptor_texture_info.imageView = native_texture->srv;
+        descriptor_texture_info.imageView = static_cast<const VulkanGPUTexture*>(texture)->srv;
         descriptor_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkWriteDescriptorSet write_descriptor_set = {};
@@ -1287,10 +1269,8 @@ namespace RHI
 
     void VulkanRHI::SetRWTexture(uint32_t index, const GPUTexture* texture)
     {
-        const VulkanGPUTexture* vulkan_texture = static_cast<const VulkanGPUTexture*>(texture);
-
         VkDescriptorImageInfo descriptor_texture_info = {};
-        descriptor_texture_info.imageView = vulkan_texture->uav;
+        descriptor_texture_info.imageView = static_cast<const VulkanGPUTexture*>(texture)->uav;
         descriptor_texture_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
         VkWriteDescriptorSet write_descriptor_set = {};
@@ -1307,10 +1287,8 @@ namespace RHI
     
     void VulkanRHI::SetBuffer(uint32_t index, const GPUBuffer* buffer)
     {
-        const VulkanGPUBuffer* native_buffer = static_cast<const VulkanGPUBuffer*>(buffer);
-
         VkDescriptorBufferInfo descriptor_buffer_info = {};
-        descriptor_buffer_info.buffer = native_buffer->buffer;
+        descriptor_buffer_info.buffer = static_cast<const VulkanGPUBuffer*>(buffer)->buffer;
         descriptor_buffer_info.offset = 0;
         descriptor_buffer_info.range = VK_WHOLE_SIZE;
 
@@ -1375,32 +1353,30 @@ namespace RHI
     
     void VulkanGPUCommandList::BeginRenderPass(GPURenderPass* render_pass)  
     {
-        VkRenderingAttachmentInfo color_attachment_info_data[MAX_COLOR_ATTACHMENT_COUNT] = {};
+        VkRenderingAttachmentInfo colorAttachmentInfoData[MAX_COLOR_ATTACHMENT_COUNT] = {};
         for (uint32_t index = 0; index < render_pass->color_attachment_count; ++index)
         {
-            const GPUColorAttachment* color_attachment = render_pass->color_attachments[index];
-            const VulkanGPUTexture* color_attachment_texture = static_cast<const VulkanGPUTexture*>(color_attachment->M_Texture);
+            const GPUColorAttachment* colorAttachment = render_pass->color_attachments[index];
 
-            color_attachment_info_data[index].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-            color_attachment_info_data[index].imageView = color_attachment_texture->rtv;
-            color_attachment_info_data[index].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            color_attachment_info_data[index].loadOp = color_attachment->M_Load_Op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : color_attachment->M_Load_Op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            color_attachment_info_data[index].storeOp = color_attachment->M_Store_Op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            memcpy(&color_attachment_info_data[index].clearValue.color.float32, &color_attachment->M_Clear_Value.color, sizeof(float) * 4);
+            colorAttachmentInfoData[index].sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            colorAttachmentInfoData[index].imageView = static_cast<const VulkanGPUTexture*>(colorAttachment->M_Texture)->rtv;
+            colorAttachmentInfoData[index].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            colorAttachmentInfoData[index].loadOp = colorAttachment->loadOp == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : colorAttachment->loadOp == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorAttachmentInfoData[index].storeOp = colorAttachment->storeOp == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            memcpy(&colorAttachmentInfoData[index].clearValue.color.float32, &colorAttachment->M_Clear_Value.color, sizeof(float) * 4);
         }
 
-        VkRenderingAttachmentInfo depth_attachment_info = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        VkRenderingAttachmentInfo depthAttachmentInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         if (render_pass->depth_attachment)
         {
-            const GPUDepthAttachment* depth_attachment = render_pass->depth_attachment;
-            const VulkanGPUTexture* native = static_cast<const VulkanGPUTexture*>(depth_attachment->texture);
+            const GPUDepthAttachment* depthAttachment = render_pass->depth_attachment;
 
-            depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-            depth_attachment_info.imageView = native->dsv;
-            depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-            depth_attachment_info.loadOp = depth_attachment->load_op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : depth_attachment->load_op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depth_attachment_info.storeOp = depth_attachment->store_op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            memcpy(&depth_attachment_info.clearValue.depthStencil, &depth_attachment->clear_value.depth_stencil, sizeof(VkClearDepthStencilValue));
+            depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            depthAttachmentInfo.imageView = static_cast<const VulkanGPUTexture*>(depthAttachment->texture)->dsv;
+            depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            depthAttachmentInfo.loadOp = depthAttachment->load_op == GPULoadOp::Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : depthAttachment->load_op == GPULoadOp::Load ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthAttachmentInfo.storeOp = depthAttachment->store_op == GPUStoreOp::Store ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            memcpy(&depthAttachmentInfo.clearValue.depthStencil, &depthAttachment->clear_value.depth_stencil, sizeof(VkClearDepthStencilValue));
         }
 
         VkRenderingInfo rendering_info = {};
@@ -1408,8 +1384,8 @@ namespace RHI
         rendering_info.renderArea = { {0, 0}, { render_pass->render_width, render_pass->render_height } };
         rendering_info.layerCount = 1;
         rendering_info.colorAttachmentCount = render_pass->color_attachment_count;
-        rendering_info.pColorAttachments = color_attachment_info_data;
-        rendering_info.pDepthAttachment = &depth_attachment_info;
+        rendering_info.pColorAttachments = colorAttachmentInfoData;
+        rendering_info.pDepthAttachment = &depthAttachmentInfo;
 
         RHI::vkCmdBeginRendering(command_buffer_data[CURRENT_FRAME], &rendering_info);
     }

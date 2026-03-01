@@ -80,7 +80,7 @@ struct TimeDate
 	static TimeDate Now()
 	{
 		timespec Time_Now;
-		timespec_get(&Time_Now, TIME_UTC);
+		int result = timespec_get(&Time_Now, TIME_UTC);
 		return TimeDate(static_cast<uint64_t>(Time_Now.tv_sec) * TICK_S + static_cast<uint64_t>(Time_Now.tv_nsec));
 	}
 
@@ -89,7 +89,7 @@ struct TimeDate
 	void ToDate(int &P_Year, int &P_Month, int &P_Day, int &P_Hour, int &P_Minute, int &P_Second) const;
 };
 
-struct Stopwatch
+struct Clock
 {
 	static uint64_t GetTicks();
 	static uint64_t GetFrequency();
@@ -203,14 +203,14 @@ inline void TimeDate::ToDate(int& P_Year, int& P_Month, int& P_Day, int& P_Hour,
 
 #ifdef _WIN32
 
-inline uint64_t Stopwatch::GetTicks()
+inline uint64_t Clock::GetTicks()
 {
 	LARGE_INTEGER Ticks;
 	QueryPerformanceCounter(&Ticks);
 	return static_cast<uint64_t>(Ticks.QuadPart);
 }
 
-inline uint64_t Stopwatch::GetFrequency()
+inline uint64_t Clock::GetFrequency()
 {
 	LARGE_INTEGER Frequency;
 	QueryPerformanceFrequency(&Frequency);

@@ -416,8 +416,8 @@ namespace RHI
     {        
         GPUTexture* M_Texture;
         GPUClearValue M_Clear_Value;
-        GPULoadOp M_Load_Op;
-        GPUStoreOp M_Store_Op;
+        GPULoadOp loadOp;
+        GPUStoreOp storeOp;
     };
 
     struct GPUDepthAttachment

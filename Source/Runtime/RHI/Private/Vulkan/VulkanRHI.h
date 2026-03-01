@@ -93,7 +93,7 @@ namespace RHI
         VkSurfaceKHR            surface                                 = nullptr;
         uint32_t                image_count                             = 0;
         uint32_t                current_image_index                     = 0;
-        uint32_t                image_available_index                 = 0;
+        uint32_t                image_available_index                   = 0;
         VulkanGPUTexture*       textures[3]                             = {};
     };
 
