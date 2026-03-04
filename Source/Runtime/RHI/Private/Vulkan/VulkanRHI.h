@@ -115,7 +115,7 @@ namespace RHI
         void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) override;
         void Dispatch(uint32_t x, uint32_t y, uint32_t z) override;
         void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) override;
-        void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) override;
+        void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) override;
         void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) override;
         void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) override;
         void BeginTimelineQuery() override;

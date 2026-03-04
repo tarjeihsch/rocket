@@ -940,7 +940,7 @@ namespace RHI
         VkSamplerCreateInfo samplerCreateInfo = {};
         samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerCreateInfo.minFilter = samplerDesc.minFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-        samplerCreateInfo.minFilter = samplerDesc.minFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+        samplerCreateInfo.magFilter = samplerDesc.magFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
         samplerCreateInfo.mipmapMode = samplerDesc.minFilter == GPUFilter::Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
         samplerCreateInfo.addressModeU = GetAddressMode(samplerDesc.addressU);
         samplerCreateInfo.addressModeV = GetAddressMode(samplerDesc.addressV);
@@ -1444,15 +1444,33 @@ namespace RHI
     {
     }
 
-    void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer)
+    void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer)
     {
+        VkBufferImageCopy2 region = {};
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = mip;
+        region.imageSubresource.baseArrayLayer = layer;
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = { width, height, 1 };
+
+        VkCopyBufferToImageInfo2 copyInfo = {};
+        copyInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2;
+        copyInfo.srcBuffer = static_cast<const VulkanGPUBuffer*>(src)->buffer;
+        copyInfo.dstImage = static_cast<const VulkanGPUTexture*>(dst)->texture;
+        copyInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        copyInfo.regionCount = 1;
+        copyInfo.pRegions = &region;
+
+        RHI::vkCmdCopyBufferToImage2(command_buffer_data[CURRENT_FRAME], &copyInfo);
     }
 
     void VulkanGPUCommandList::CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height)
     {
-        const VulkanGPUTexture* native_src = static_cast<const VulkanGPUTexture*>(src);
-        const VulkanGPUTexture* native_dst = static_cast<const VulkanGPUTexture*>(dst);
-
         VkImageBlit2 region = {};
         region.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
         region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1464,9 +1482,9 @@ namespace RHI
 
         VkBlitImageInfo2 blit_info = {};
         blit_info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
-        blit_info.srcImage = native_src->texture;
+        blit_info.srcImage = static_cast<const VulkanGPUTexture*>(src)->texture;
         blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        blit_info.dstImage = native_dst->texture;
+        blit_info.dstImage = static_cast<const VulkanGPUTexture*>(dst)->texture;
         blit_info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         blit_info.regionCount = 1;
         blit_info.pRegions = &region;
