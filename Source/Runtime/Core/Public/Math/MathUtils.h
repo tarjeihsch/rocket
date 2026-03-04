@@ -33,4 +33,28 @@ namespace Math
         Result.Data[3][2] = NearPlane;
         return Result;
     }
+
+    template<typename T>
+    static Matrix<T, 4, 4> Orthographic(T left, T right, T bottom, T top, T nearPlane, T farPlane)
+    {
+        Matrix<T, 4, 4> Result;
+        
+        // X-axis
+        Result.Data[0][0] = T(2) / (right - left);
+        
+        // Y-axis
+        Result.Data[1][1] = T(2) / (top - bottom);
+
+        // Z-axis
+        Result.Data[2][2] = T(1) / (nearPlane - farPlane);
+        
+        // Translation
+        Result.Data[3][0] = -(right + left) / (right - left);
+        Result.Data[3][1] = -(top + bottom) / (top - bottom);
+
+        Result.Data[3][2] = -farPlane / (nearPlane - farPlane);
+        Result.Data[3][3] = T(1);
+        
+        return Result;
+    }
 }
