@@ -92,7 +92,7 @@ namespace RHI
         virtual void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) = 0;
         virtual void Dispatch(uint32_t x, uint32_t y, uint32_t z) = 0;
         virtual void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) = 0;
-        virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t mip, uint32_t layer) = 0;
+        virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) = 0;
         virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
         virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
         virtual void BeginTimelineQuery() = 0;
