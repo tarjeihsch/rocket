@@ -158,9 +158,12 @@ namespace RHI
     static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT = 8;
     static constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
 
-    static uint64_t g_frame_counter = 0;
-
-    static bool is_minimized = false;
+    extern uint64_t g_frame_counter;
 
     #define CURRENT_FRAME g_frame_counter % CONCURRENT_FRAME_COUNT
+
+    inline static uint32_t GetCurrentFrame()
+    {
+        return g_frame_counter % CONCURRENT_FRAME_COUNT;
+    }
 };
