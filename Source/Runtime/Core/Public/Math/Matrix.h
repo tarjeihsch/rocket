@@ -102,7 +102,7 @@ namespace Math
 			return Result;
 		}
 
-		Matrix<T, 4, 4> Inverse() const
+		Matrix<T, 4, 4> Inverse_RH_NO() const
 		{
 			Matrix<T, 4, 4> result;
 

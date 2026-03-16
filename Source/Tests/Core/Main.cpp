@@ -50,8 +50,6 @@ void Test_ThreadPool()
 
 #endif
 
-static uint64_t G_Frame_Counter = 0;
-
 int main()
 {
     Matrix4x4 mat = Matrix4x4::Identity();
@@ -70,8 +68,5 @@ int main()
 
     for (;;)
     {
-        G_Frame_Counter++;
-
-        mat;
     }
 }
