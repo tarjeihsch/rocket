@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <string>
 
 #include "MathTypes.h"
 
@@ -10,7 +11,7 @@ namespace Math
     template<typename T, size_t N>
     struct Vector
     {
-        T M_Data[N] = {};
+        T data[N] = {};
 
         Vector()
         {
@@ -18,12 +19,12 @@ namespace Math
 
         Vector(T Value)
         {
-            std::fill(M_Data, M_Data + N, Value);
+            std::fill(data, data + N, Value);
         }
 
         void Zero()
         {
-            memset(M_Data, 0, sizeof(T) * N);
+            memset(data, 0, sizeof(T) * N);
         }
     };
 
@@ -101,159 +102,159 @@ namespace Math
             struct { T r; T g; T b; };
             struct { T u; T v; T w; };
 
-            T M_Data[3] = { 0, 0, 0 };
+            T data[3] = { 0, 0, 0 };
         };
 
         Vector()
         {
         }
 
-        Vector(T P_Value)
+        Vector(T value)
         {
-            M_Data[0] = P_Value;
-            M_Data[1] = P_Value;
-            M_Data[2] = P_Value;
+            data[0] = value;
+            data[1] = value;
+            data[2] = value;
         }
 
         Vector(T P_X, T P_Y, T P_Z)
         {
-            M_Data[0] = P_X;
-            M_Data[1] = P_Y;
-            M_Data[2] = P_Z;
+            data[0] = P_X;
+            data[1] = P_Y;
+            data[2] = P_Z;
         }
 
-        inline Vector<T, 3>& operator+=(const Vector<T, 3>& P_Other)
+        inline Vector<T, 3>& operator+=(const Vector<T, 3>& other)
         {
-            M_Data[0] += P_Other.M_Data[0];
-            M_Data[1] += P_Other.M_Data[1];
-            M_Data[2] += P_Other.M_Data[2];
+            data[0] += other.data[0];
+            data[1] += other.data[1];
+            data[2] += other.data[2];
             return *this;
         }
 
-        inline Vector<T, 3>& operator-=(const Vector<T, 3>& P_Other)
+        inline Vector<T, 3>& operator-=(const Vector<T, 3>& other)
         {
-            M_Data[0] -= P_Other.M_Data[0];
-            M_Data[1] -= P_Other.M_Data[1];
-            M_Data[2] -= P_Other.M_Data[2];
+            data[0] -= other.data[0];
+            data[1] -= other.data[1];
+            data[2] -= other.data[2];
             return *this;
         }
 
-        inline Vector<T, 3>& operator*=(const Vector<T, 3>& P_Other)
+        inline Vector<T, 3>& operator*=(const Vector<T, 3>& other)
         {
-            M_Data[0] *= P_Other.M_Data[0];
-            M_Data[1] *= P_Other.M_Data[1];
-            M_Data[2] *= P_Other.M_Data[2];
+            data[0] *= other.data[0];
+            data[1] *= other.data[1];
+            data[2] *= other.data[2];
             return *this;
         }
 
-        inline Vector<T, 3>& operator/=(const Vector<T, 3>& P_Other)
+        inline Vector<T, 3>& operator/=(const Vector<T, 3>& other)
         {
-            M_Data[0] /= P_Other.M_Data[0];
-            M_Data[1] /= P_Other.M_Data[1];
-            M_Data[2] /= P_Other.M_Data[2];
+            data[0] /= other.data[0];
+            data[1] /= other.data[1];
+            data[2] /= other.data[2];
             return *this;
         }
 
-        inline Vector<T, 3>& operator+=(T P_Scalar)
+        inline Vector<T, 3>& operator+=(T scalar)
         {
-            M_Data[0] += P_Scalar;
-            M_Data[1] += P_Scalar;
-            M_Data[2] += P_Scalar;
+            data[0] += scalar;
+            data[1] += scalar;
+            data[2] += scalar;
             return *this;
         }
 
-        inline Vector<T, 3>& operator-=(T P_Scalar)
+        inline Vector<T, 3>& operator-=(T scalar)
         {
-            M_Data[0] -= P_Scalar;
-            M_Data[1] -= P_Scalar;
-            M_Data[2] -= P_Scalar;
+            data[0] -= scalar;
+            data[1] -= scalar;
+            data[2] -= scalar;
             return *this;
         }
 
-        inline Vector<T, 3>& operator*=(T P_Scalar)
+        inline Vector<T, 3>& operator*=(T scalar)
         {
-            M_Data[0] *= P_Scalar;
-            M_Data[1] *= P_Scalar;
-            M_Data[2] *= P_Scalar;
+            data[0] *= scalar;
+            data[1] *= scalar;
+            data[2] *= scalar;
             return *this;
         }
 
-        inline Vector<T, 3>& operator/=(T P_Scalar)
+        inline Vector<T, 3>& operator/=(T scalar)
         {
-            T inv = T(1) / P_Scalar;
-            M_Data[0] *= inv;
-            M_Data[1] *= inv;
-            M_Data[2] *= inv;
+            T inv = T(1) / scalar;
+            data[0] *= inv;
+            data[1] *= inv;
+            data[2] *= inv;
             return *this;
         }
 
-        inline Vector<T, 3> operator+(const Vector<T, 3>& P_Other) const
+        inline Vector<T, 3> operator+(const Vector<T, 3>& other) const
         {
-            return Vector<T, 3>(M_Data[0] + P_Other.M_Data[0], M_Data[1] + P_Other.M_Data[1], M_Data[2] + P_Other.M_Data[2]);
+            return Vector<T, 3>(data[0] + other.data[0], data[1] + other.data[1], data[2] + other.data[2]);
         }
 
-        inline Vector<T, 3> operator-(const Vector<T, 3>& P_Other) const
+        inline Vector<T, 3> operator-(const Vector<T, 3>& other) const
         {
-            return Vector<T, 3>(M_Data[0] - P_Other.M_Data[0], M_Data[1] - P_Other.M_Data[1], M_Data[2] - P_Other.M_Data[2]);
+            return Vector<T, 3>(data[0] - other.data[0], data[1] - other.data[1], data[2] - other.data[2]);
         }
 
-        inline Vector<T, 3> operator*(const Vector<T, 3>& P_Other) const
+        inline Vector<T, 3> operator*(const Vector<T, 3>& other) const
         {
-            return Vector<T, 3>(M_Data[0] * P_Other.M_Data[0], M_Data[1] * P_Other.M_Data[1], M_Data[2] * P_Other.M_Data[2]);
+            return Vector<T, 3>(data[0] * other.data[0], data[1] * other.data[1], data[2] * other.data[2]);
         }
 
-        inline Vector<T, 3> operator/(const Vector<T, 3>& P_Other) const
+        inline Vector<T, 3> operator/(const Vector<T, 3>& other) const
         {
-            return Vector<T, 3>(M_Data[0] / P_Other.M_Data[0], M_Data[1] / P_Other.M_Data[1], M_Data[2] / P_Other.M_Data[2]);
+            return Vector<T, 3>(data[0] / other.data[0], data[1] / other.data[1], data[2] / other.data[2]);
         }
 
-        inline Vector<T, 3> operator+(T P_Scalar) const
+        inline Vector<T, 3> operator+(T scalar) const
         {
-            return Vector<T, 3>(M_Data[0] + P_Scalar, M_Data[1] + P_Scalar, M_Data[2] + P_Scalar);
+            return Vector<T, 3>(data[0] + scalar, data[1] + scalar, data[2] + scalar);
         }
 
-        inline Vector<T, 3> operator-(T P_Scalar) const
+        inline Vector<T, 3> operator-(T scalar) const
         {
-            return Vector<T, 3>(M_Data[0] - P_Scalar, M_Data[1] - P_Scalar, M_Data[2] - P_Scalar);
+            return Vector<T, 3>(data[0] - scalar, data[1] - scalar, data[2] - scalar);
         }
 
-        inline Vector<T, 3> operator*(T P_Scalar) const
+        inline Vector<T, 3> operator*(T scalar) const
         {
-            return Vector<T, 3>(M_Data[0] * P_Scalar, M_Data[1] * P_Scalar, M_Data[2] * P_Scalar);
+            return Vector<T, 3>(data[0] * scalar, data[1] * scalar, data[2] * scalar);
         }
 
-        inline Vector<T, 3> operator/(T P_Scalar) const
+        inline Vector<T, 3> operator/(T scalar) const
         {
-            return Vector<T, 3>(M_Data[0] / P_Scalar, M_Data[1] / P_Scalar, M_Data[2] / P_Scalar);
+            return Vector<T, 3>(data[0] / scalar, data[1] / scalar, data[2] / scalar);
         }
 
         inline Vector<T, 3> operator-() const
         {
-            return Vector<T, 3>(-M_Data[0], -M_Data[1], -M_Data[2]);
+            return Vector<T, 3>(-data[0], -data[1], -data[2]);
         }
 
-        inline T Dot(const Vector<T, 3>& P_Other) const
+        inline T Dot(const Vector<T, 3>& other) const
         {
-            return M_Data[0] * P_Other.M_Data[0] + M_Data[1] * P_Other.M_Data[1] + M_Data[2] * P_Other.M_Data[2];
+            return data[0] * other.data[0] + data[1] * other.data[1] + data[2] * other.data[2];
         }
 
-        inline Vector<T, 3> Cross(const Vector<T, 3>& P_Other) const
+        inline Vector<T, 3> Cross(const Vector<T, 3>& other) const
         {
             return Vector<T, 3>(
-                M_Data[1] * P_Other.M_Data[2] - M_Data[2] * P_Other.M_Data[1],
-                M_Data[2] * P_Other.M_Data[0] - M_Data[0] * P_Other.M_Data[2],
-                M_Data[0] * P_Other.M_Data[1] - M_Data[1] * P_Other.M_Data[0]
+                data[1] * other.data[2] - data[2] * other.data[1],
+                data[2] * other.data[0] - data[0] * other.data[2],
+                data[0] * other.data[1] - data[1] * other.data[0]
             );
         }
 
         inline T Length() const
         {
-            return std::sqrt(M_Data[0] * M_Data[0] + M_Data[1] * M_Data[1] + M_Data[2] * M_Data[2]);
+            return std::sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
         }
 
         inline T LengthSquared() const
         {
-            return M_Data[0] * M_Data[0] + M_Data[1] * M_Data[1] + M_Data[2] * M_Data[2];
+            return data[0] * data[0] + data[1] * data[1] + data[2] * data[2];
         }
 
         inline Vector<T, 3> Normalize() const
@@ -266,24 +267,26 @@ namespace Math
             }
 
             T reciprocal = T(1) / length;
-            return Vector<T, 3>(M_Data[0] * reciprocal, M_Data[1] * reciprocal, M_Data[2] * reciprocal);
+            return Vector<T, 3>(data[0] * reciprocal, data[1] * reciprocal, data[2] * reciprocal);
         }
 
         void Zero()
         {
-            M_Data[0] = T(0);
-            M_Data[1] = T(0);
-            M_Data[2] = T(0);
+            data[0] = T(0);
+            data[1] = T(0);
+            data[2] = T(0);
         }
 
         bool IsZero() const
         {
-            return M_Data[0] == T(0) && M_Data[1] == T(0) && M_Data[2] == T(0);
+            return data[0] == T(0) && data[1] == T(0) && data[2] == T(0);
         }
 
-        static Vector<T, 3> Forward()   { return Vector<T, 3>(T(0), T(0), T(-1)); }
-        static Vector<T, 3> Up()        { return Vector<T, 3>(T(0), T(1), T(0)); }
-        static Vector<T, 3> Right()     { return Vector<T, 3>(T(1), T(0), T(0)); }
+        static Vector<T, 3> Forward() { return Vector<T, 3>(T(0), T(0), T(-1)); }
+        static Vector<T, 3> Up() { return Vector<T, 3>(T(0), T(1), T(0)); }
+        static Vector<T, 3> Right() { return Vector<T, 3>(T(1), T(0), T(0)); }
+        static Vector<T, 3> OneVector() { return Vector<T, 3>(T(1), T(1), T(1)); }
+        static Vector<T, 3> ZeroVector() { return Vector<T, 3>(T(0), T(0), T(0)); }
     };
 
     template<typename T>
@@ -319,10 +322,30 @@ namespace Math
 
         Vector<T, 4>(const Vector<T, 3>& vector, T scalarW)
         {
-            data[0] = vector.M_Data[0];
-            data[1] = vector.M_Data[1];
-            data[2] = vector.M_Data[2];
+            data[0] = vector.data[0];
+            data[1] = vector.data[1];
+            data[2] = vector.data[2];
             data[3] = scalarW;
+        }
+
+        inline Vector<T, 4>& operator/=(T scalar)
+        {
+            T inv = T(1) / scalar;
+            data[0] *= inv;
+            data[1] *= inv;
+            data[2] *= inv;
+            data[3] *= inv;
+            return *this;
+        }
+
+        inline Vector<T, 4> operator-(const Vector<T, 3>& other) const
+        {
+            return Vector<T, 4>(data[0] - other.data[0], data[1] - other.data[1], data[2] - other.data[2], data[3] - other.data[3]);
+        }
+
+        inline Vector<T, 4> operator-(T scalar) const
+        {
+            return Vector<T, 4>(data[0] - scalar, data[1] - scalar, data[2] - scalar);
         }
 
         static Vector<T, 4> Identity() 
@@ -331,6 +354,12 @@ namespace Math
         }
     };
 
+    template<typename T>
+    inline Vector<T, 3> operator*(T scalar, const Vector<T, 3>& vector)
+    {
+        return Vector<T, 3>(scalar * vector.x, scalar * vector.y, scalar * vector.z);
+    }
+    
     template<typename T>
     inline T DotProduct(const Vector<T, 3>& A, const Vector<T, 3>& B)
     {
@@ -393,6 +422,6 @@ using Vector3d = Math::Vector<double, 3>;
 using Vector3i = Math::Vector<int32_t, 3>;
 
 using Vector4 = Math::Vector<Real, 4>;
-using Vectot4f = Math::Vector<float, 4>;
-using Vectot4d = Math::Vector<double, 4>;
-using Vectot4i = Math::Vector<int32_t, 4>;
+using Vector4f = Math::Vector<float, 4>;
+using Vector4d = Math::Vector<double, 4>;
+using Vector4i = Math::Vector<int32_t, 4>;

@@ -46,12 +46,12 @@ public:
         return false; 
     }
 
-    virtual bool OnMouseDown(OSWindow* Window, Button Button)
+    virtual bool OnMouseDown(OSWindow* window, Button button)
     { 
         return false; 
     }
     
-    virtual bool OnMouseUp(Button Button) 
+    virtual bool OnMouseUp(OSWindow* window, Button button) 
     { 
         return false; 
     }

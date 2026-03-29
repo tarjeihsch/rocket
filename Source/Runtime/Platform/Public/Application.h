@@ -33,6 +33,8 @@ public:
 
     void process_deferred_message(const Event& event);
 
+    MessageController* GetMessageController() const;
+
     void SetMessageController(MessageController* messageController);
 
     /* Creates a new window with set flags */
@@ -46,7 +48,7 @@ public:
 private:
     std::vector<std::unique_ptr<OSWindow>> M_Windows;
 
-    MessageController* M_MessageController;
+    MessageController* message_controller;
 
     bool M_IsValid;
 };

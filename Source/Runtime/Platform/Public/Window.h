@@ -43,6 +43,7 @@ public:
     RNativeWindowHandle GetNativeWindowHandle() const;
 
     bool IsValid() const;
+    bool ShouldClose() const;
 
 private:
     void* WindowHandle;

@@ -22,8 +22,9 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
 }
 
 OSWindow::OSWindow()
-    : WindowHandle(nullptr), 
-    WindowHandleID(0)
+    : WindowHandle(nullptr)
+    ,WindowHandleID(0)
+    ,should_close(false)
 {
 }
 
@@ -82,9 +83,9 @@ bool OSWindow::Create(const WindowCreateInfo& createInfo)
         windowInfo.instance = nullptr;
 #endif
 
-    //RK_LOG_INFO("[Platform] Spawn window");
-    //RK_LOG_INFO("[Platform] \t\tExtent: {}x{}", createInfo.width, createInfo.height);
-    //RK_LOG_INFO("[Platform] \t\tBackend: {}", static_cast<uint8_t>(NativeBackend));
+    std::printf("[Platform] Spawn Window\n");
+    std::printf("[Platform] \t\tExtent: %ix%i\n", createInfo.width, createInfo.height);
+    std::printf("[Platform] \t\tBackend: %i\n", static_cast<uint8_t>(NativeBackend));
 
     return true;
 }
@@ -186,4 +187,9 @@ RNativeWindowHandle OSWindow::GetNativeWindowHandle() const
 bool OSWindow::IsValid() const
 {
     return WindowHandle != nullptr;
+}
+
+bool OSWindow::ShouldClose() const
+{
+    return should_close;
 }

@@ -41,7 +41,7 @@ namespace Math
 			return Result;
 		}
 
-		Matrix<T, 4, 4> operator*(const Matrix<T, 4, 4>& Other)
+		Matrix<T, 4, 4> operator*(const Matrix<T, 4, 4>& Other) const
 		{
 			Matrix<T, 4, 4> Result;
 
@@ -59,7 +59,7 @@ namespace Math
 			return Result;
 		}
 
-		Vector<T, 4> operator*(const Vector<T, 4>& vector)
+		Vector<T, 4> operator*(const Vector<T, 4>& vector) const
 		{
 			Vector4 result;
 			result.x = vector.x * Data[0][0] + vector.y * Data[1][0] + vector.z * Data[2][0] + vector.w * Data[3][0];
@@ -102,7 +102,7 @@ namespace Math
 			return Result;
 		}
 
-		Matrix<T, 4, 4> Inverse_RH_NO() const
+		Matrix<T, 4, 4> Inverse() const
 		{
 			Matrix<T, 4, 4> result;
 
@@ -150,6 +150,17 @@ namespace Math
 			return result;
 		}
 	};
+
+	template<typename T>
+	inline Vector<T,4> operator*(const Vector<T,4>& v, const Matrix<T,4,4>& m)
+	{
+		return Vector<T,4>(
+			v.x * m.Data[0][0] + v.y * m.Data[1][0] + v.z * m.Data[2][0] + v.w * m.Data[3][0], // Column 0
+			v.x * m.Data[0][1] + v.y * m.Data[1][1] + v.z * m.Data[2][1] + v.w * m.Data[3][1], // Column 1
+			v.x * m.Data[0][2] + v.y * m.Data[1][2] + v.z * m.Data[2][2] + v.w * m.Data[3][2], // Column 2
+			v.x * m.Data[0][3] + v.y * m.Data[1][3] + v.z * m.Data[2][3] + v.w * m.Data[3][3]  // Column 3
+		);
+	}
 }
 
 using Matrix4x4 = Math::Matrix<Real, 4, 4>;

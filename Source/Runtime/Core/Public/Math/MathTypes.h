@@ -53,4 +53,10 @@ namespace Math
     {
         return Max(Low, Min(Value, High));
     }
+
+    template<typename T>
+    inline constexpr T Abs(T value) 
+    {
+        return value < T(0) ? -value : value;
+    }
 }

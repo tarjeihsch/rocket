@@ -1,4 +1,6 @@
-add_executable(CoreTest Main.cpp)
+add_executable(CoreTest 
+    Color.cpp
+)
 
 target_link_libraries(CoreTest 
     PRIVATE 

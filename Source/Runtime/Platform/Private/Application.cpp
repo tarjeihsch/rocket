@@ -1,6 +1,5 @@
 #include "Application.h"
 
-//#include "Assertion.h"
 #include "CoreTypes.h"
 #include "Event.h"
 #include "Window.h"
@@ -50,7 +49,7 @@ static EventQueue eventQueue;
 
 Application::Application()
 {
-    M_MessageController = nullptr;
+    message_controller = nullptr;
     M_IsValid = false;
 }
 
@@ -110,38 +109,38 @@ void Application::process_deferred_message(const Event& event)
     {
         case EventType::Quit:
         {
-            M_MessageController->OnExit();
+            message_controller->OnExit();
             break;
         }
 
         case EventType::WindowCloseRequested:
         {
-            M_MessageController->OnWindowClose(window);
+            message_controller->OnWindowClose(window);
             break;
         }
 
         case EventType::WindowResized:
         {
             const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
-            M_MessageController->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
+            message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
             break;
         }
 
         case EventType::WindowMoved:
         {
-            M_MessageController->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
+            message_controller->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
             break;
         }
 
         case EventType::WindowFocusGained:
         {
-            M_MessageController->OnWindowFocusGained();
+            message_controller->OnWindowFocusGained();
             break;
         }
 
         case EventType::WindowFocusLost:
         {
-            M_MessageController->OnWindowFocusLost();
+            message_controller->OnWindowFocusLost();
             break;
         }
 
@@ -150,15 +149,15 @@ void Application::process_deferred_message(const Event& event)
             const bool repeat = event.key.repeat;
             const uint32_t charcode = 0;
 
-            M_MessageController->OnKeyDown(event.key.value, charcode, repeat);
+            message_controller->OnKeyDown(event.key.value, charcode, repeat);
 
             if (event.key.value == Key::Backspace)
             {
-                M_MessageController->OnKeyChar('\b', repeat);
+                message_controller->OnKeyChar('\b', repeat);
             }
             else if (event.key.value == Key::Enter) 
             {
-                M_MessageController->OnKeyChar('\r', repeat);
+                message_controller->OnKeyChar('\r', repeat);
             }
             break;
         }
@@ -166,7 +165,7 @@ void Application::process_deferred_message(const Event& event)
         case EventType::KeyUp:
         {
             const uint32_t charcode = 0;
-            M_MessageController->OnKeyUp(event.key.value, charcode, false);
+            message_controller->OnKeyUp(event.key.value, charcode, false);
             break;
         }
 
@@ -207,7 +206,7 @@ void Application::process_deferred_message(const Event& event)
                     continue;
                 }
 
-                M_MessageController->OnKeyChar(Codepoint, repeat);
+                message_controller->OnKeyChar(Codepoint, repeat);
                 break;
             }
 
@@ -216,27 +215,27 @@ void Application::process_deferred_message(const Event& event)
 
         case EventType::MouseMove:
         {
-            M_MessageController->OnMouseMove(event.axis.position.x, event.axis.position.x);
-            M_MessageController->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
+            message_controller->OnMouseMove(event.axis.position.x, event.axis.position.y);
+            message_controller->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
             break;
         }
 
         case EventType::MouseButtonDown:
         {
-            M_MessageController->OnMouseDown(window, event.button.value);
+            message_controller->OnMouseDown(window, event.button.value);
             break;
         }
 
         case EventType::MouseButtonUp:
         {
-            M_MessageController->OnMouseUp(event.button.value);
+            message_controller->OnMouseUp(window, event.button.value);
             break;
         }
 
         case EventType::MouseWheel:
         {
             const float amount = event.wheel.value.y * 1.0f;
-            M_MessageController->OnMouseWheel(amount);
+            message_controller->OnMouseWheel(amount);
             break;
         }
 
@@ -247,9 +246,14 @@ void Application::process_deferred_message(const Event& event)
     }
 }
 
-void Application::SetMessageController(MessageController* messageController)
+MessageController *Application::GetMessageController() const
 {
-    M_MessageController = messageController;
+    return message_controller;
+}
+
+void Application::SetMessageController(MessageController* new_message_controller)
+{
+    message_controller = new_message_controller;
 }
 
 OSWindow* Application::InitWindow(WindowCreateInfo windowCreateInfo)
