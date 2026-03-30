@@ -11,10 +11,11 @@ namespace Math
     template<typename T, size_t N>
     struct Vector
     {
-        T data[N] = {};
+        T data[N];
 
         Vector()
         {
+            memset(&data, 0, sizeof(T) * N);
         }
 
         Vector(T Value)
@@ -37,11 +38,12 @@ namespace Math
             struct { T r; T g; };
             struct { T u; T v; };
 
-            T data[2] = { 0, 0 };
+            T data[2];
         };
 
         Vector()
         {
+            memset(&data, 0, sizeof(T) * 2);
         }
 
         Vector(T pScalar)
@@ -77,13 +79,11 @@ namespace Math
             return result;
         }
 
-        template<typename T>
         inline Vector<T, 2> DotProduct(const Vector<T, 2>& other)
         {
             return data[0] * other.data[0] + data[1] * other.data[1];
         }
 
-        template<typename T>
         inline Vector<T, 2> CrossProduct(const Vector<T, 2>& other)
         {
             return data[0] * other.data[1] - data[1] * other.data[0];
@@ -102,11 +102,12 @@ namespace Math
             struct { T r; T g; T b; };
             struct { T u; T v; T w; };
 
-            T data[3] = { 0, 0, 0 };
+            T data[3];
         };
 
         Vector()
         {
+            memset(&data, 0, sizeof(T) * 3);
         }
 
         Vector(T value)
@@ -297,14 +298,15 @@ namespace Math
             struct { T x; T y; T z; T w; };
             struct { T r; T g; T b; T a; };
 
-            T data[4] = { 0, 0, 0, 0 };
+            T data[4];
         };
 
-        Vector<T, 4>()
+        Vector()
         {
+            memset(&data, 0, sizeof(T) * 4);
         }
 
-        Vector<T, 4>(T scalar)
+        Vector(T scalar)
         {
             data[0] = scalar;
             data[1] = scalar;
@@ -312,7 +314,7 @@ namespace Math
             data[3] = scalar;
         }
 
-        Vector<T, 4>(T scalarX, T scalarY, T scalarZ, T scalarW)
+        Vector(T scalarX, T scalarY, T scalarZ, T scalarW)
         {
             data[0] = scalarX;
             data[1] = scalarY;
@@ -320,7 +322,7 @@ namespace Math
             data[3] = scalarW;
         }
 
-        Vector<T, 4>(const Vector<T, 3>& vector, T scalarW)
+        Vector(const Vector<T, 3>& vector, T scalarW)
         {
             data[0] = vector.data[0];
             data[1] = vector.data[1];

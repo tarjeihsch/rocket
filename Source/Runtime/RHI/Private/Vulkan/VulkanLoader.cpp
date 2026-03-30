@@ -7,6 +7,10 @@
 
 #include <cassert>
 
+#if defined(__linux__)
+    #include <dlfcn.h>
+#endif
+
 namespace RHI
 {
     static void* g_dynamic_library = nullptr;

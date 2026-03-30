@@ -2,28 +2,38 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <wtypes.h>
+
+#ifdef _WIN32
+    #include <wtypes.h>
+#endif
+
+#if defined(__linux__)
+    struct wl_display;
+    struct wl_surface;
+
+    #include <cstring>
+#endif
 
 #include "Math/Vector.h"
 
 namespace RHI 
 {
-    struct GPUShaderResources;
-    struct GPUShader;
-    struct GPUTexture;
-    struct GPUBuffer;
+struct GPUShaderResources;
+struct GPUShader;
+struct GPUTexture;
+struct GPUBuffer;
 
-    enum class GPUDriver
-    {
-        Unknown,
+enum class GPUDriver
+{
+    Unknown,
 
-        OpenGL,
+    OpenGL,
 
-        Vulkan,
+    Vulkan,
 
-        Direct3D12,
+    Direct3D12,
 
-        Metal,
+    Metal,
 
         WebGPU
     };
@@ -346,20 +356,12 @@ namespace RHI
         HWND hwnd = nullptr;
     };
 
-#elif defined(__APPLE__)
-
-    struct GPUWindowPlatform
-    {
-        NSWindow* window = nullptr;
-        CAMetalLayer* layer = nullptr;
-    };
-
 #elif defined(__linux__)
     
     struct GPUWindowPlatform
     {
-        wl_display* wl_display = nullptr;
-        wl_surface* wl_surface = nullptr;
+        wl_display* display = nullptr;
+        wl_surface* surface = nullptr;
     };
 
 #endif

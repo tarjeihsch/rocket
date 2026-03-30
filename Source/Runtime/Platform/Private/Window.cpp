@@ -23,8 +23,7 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
 
 OSWindow::OSWindow()
     : WindowHandle(nullptr)
-    ,WindowHandleID(0)
-    ,should_close(false)
+    , WindowHandleID(0)
 {
 }
 
@@ -187,9 +186,4 @@ RNativeWindowHandle OSWindow::GetNativeWindowHandle() const
 bool OSWindow::IsValid() const
 {
     return WindowHandle != nullptr;
-}
-
-bool OSWindow::ShouldClose() const
-{
-    return should_close;
 }

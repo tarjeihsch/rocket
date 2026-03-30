@@ -5,9 +5,13 @@
 #include <unordered_set>
 #include <string_view>
 #include <algorithm>
+#include <unordered_map>
+
+#if defined(__linux__)
+    #include <wayland-client.h>
+#endif
 
 #include "VulkanTypes.h"
-#include <unordered_map>
 
 RHI::IRHI* CreateVulkanRHI()
 {
@@ -333,8 +337,12 @@ namespace RHI
         std::vector<const char*> instance_extensions =
         {
             VK_KHR_SURFACE_EXTENSION_NAME,
-            VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-            VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#if defined(_WIN_32)
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(__LINUX__)
+            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+#endif
         };
 
         std::vector<const char*> validation_extensions = 
@@ -1118,9 +1126,9 @@ namespace RHI
 #elif defined(__linux__)
         VkWaylandSurfaceCreateInfoKHR surface_info = {};
         surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-        surface_info.display = swapchain_desc.window_platform.wl_display;
-        surface_info.surface = swapchain_desc.window_platform.wl_surface;
-        VkResult result = RHI::vkCreateWaylandSurfaceKHR(g_instance, &surface_info, nullptr, &surface);
+        surface_info.display = (wl_display*)swapchain_desc.window_platform.display;
+        surface_info.surface = (wl_surface*)swapchain_desc.window_platform.surface;
+        VkResult result = RHI::vkCreateWaylandSurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
 #endif
         assert(result == VK_SUCCESS);
 
