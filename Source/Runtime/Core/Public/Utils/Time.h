@@ -182,7 +182,7 @@ inline void TimeDate::ToDate(int& P_Year, int& P_Month, int& P_Day, int& P_Hour,
 #endif
 
 #ifdef __linux__
-	time_t Epoch = static_cast<time_t>(M_Ticks / TICKS_PER_SECOND);
+	time_t Epoch = static_cast<time_t>(M_Ticks / TICK_S);
 	tm Time_Result = {};
 
 	if (!gmtime_r(&Epoch, &Time_Result))
@@ -223,16 +223,16 @@ inline uint64_t Clock::GetFrequency()
 
 #include <time.h>
 
-inline uint64_t Stopwatch::GetTicks()
+inline uint64_t Clock::GetTicks()
 {
 	timespec Ticks;
 	clock_gettime(CLOCK_MONOTONIC, &Ticks);
-	return static_cast<uint64_t>(Ticks.tv_sec) * TICKS_PER_SECOND + Ticks.tv_nsec;
+	return static_cast<uint64_t>(Ticks.tv_sec) * TICK_S + Ticks.tv_nsec;
 }
 
-inline uint64_t Stopwatch::GetFrequency()
+inline uint64_t Clock::GetFrequency()
 {
-	return TICKS_PER_SECOND;
+	return TICK_S;
 }
 
 #endif

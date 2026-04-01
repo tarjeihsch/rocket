@@ -340,7 +340,7 @@ namespace RHI
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #if defined(_WIN_32)
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-#elif defined(__LINUX__)
+#elif defined(__linux__)
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
 #endif
         };
@@ -460,6 +460,7 @@ namespace RHI
             case 0x1002: g_adapter.vendor = GPUAdapterVendor::AMD;      break;
             case 0x8086: g_adapter.vendor = GPUAdapterVendor::INTEL;    break;
         }
+
         g_adapter.timestamp_period = physical_device_properties.limits.timestampPeriod;
         g_adapter.max_texture_dimension_2d = physical_device_properties.limits.maxImageDimension2D;
         g_adapter.max_texture_dimension_3d = physical_device_properties.limits.maxImageDimension3D;
@@ -543,7 +544,22 @@ namespace RHI
         VkDeviceQueueCreateInfo queue_create_infos[3] = {};
         uint32_t queue_create_count = 0;
 
-        std::unordered_set<uint32_t> unique_queue_families = { g_graphics_family, g_compute_family, g_transfer_family };
+        std::unordered_set<uint32_t> unique_queue_families;
+
+        if (g_graphics_family != UINT32_MAX)
+        {
+            unique_queue_families.insert(g_graphics_family);
+        }
+
+        if (g_compute_family != UINT32_MAX)
+        {
+            unique_queue_families.insert(g_compute_family);
+        }
+
+        if (g_transfer_family != UINT32_MAX)
+        {
+            unique_queue_families.insert(g_transfer_family);
+        }
         
         for (uint32_t queue_family : unique_queue_families)
         {

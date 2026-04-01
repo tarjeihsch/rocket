@@ -3,18 +3,24 @@
 #include <vector>
 #include <assert.h>
 
-static std::vector<char> LoadFile(const char* path)
+inline std::vector<char> LoadFile(const char* path)
 {
-    FILE* file = fopen(path, "rb");
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
     assert(file);
 
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    std::streamsize file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-    std::vector<char> buffer(size);
-    fread(buffer.data(), 1, size, file);
-    fclose(file);
+    std::vector<char> buffer(file_size);
+    file.read(buffer.data(), file_size);
 
     return buffer;
+}
+
+inline void SaveFile(const char* path, const std::vector<uint8_t>& data)
+{
+    std::ofstream file(path, std::ios::binary);
+    assert(file);
+
+    file.write(reinterpret_cast<const char*>(data.data()), data.size());
 }

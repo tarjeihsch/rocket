@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <string>
+#include <cstring>
 
 #include "MathTypes.h"
 
