@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <assert.h>
+#include <fstream>
 
 inline std::vector<char> LoadFile(const char* path)
 {

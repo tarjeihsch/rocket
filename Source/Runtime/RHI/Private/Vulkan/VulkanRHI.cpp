@@ -338,7 +338,7 @@ namespace RHI
         {
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#if defined(_WIN_32)
+#if defined(_WIN32)
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #elif defined(__linux__)
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
