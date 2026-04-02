@@ -2,12 +2,12 @@
 
 #include "Math/MathTypes.h"
 #include "Math/Matrix.h"
-
 #include "Math/Quaternion.h"
+
 namespace Math
 {
     template<typename T>
-    static Matrix<T, 4, 4> Perspective(T FOV_Y, T AspectRatio, T NearPlane, T FarPlane)
+    inline Matrix<T, 4, 4> Perspective(T FOV_Y, T AspectRatio, T NearPlane, T FarPlane)
     {
         T FocalLength = T(1) / std::tan(FOV_Y * T(0.5));
 
@@ -22,7 +22,7 @@ namespace Math
 
     // Infinite reverse-Z maps near 1, far 0.
     template<typename T>
-    static Matrix<T, 4, 4> PerspectiveInfinity(T FOV_Y, T AspectRatio, T NearPlane)
+    inline Matrix<T, 4, 4> PerspectiveInfinity(T FOV_Y, T AspectRatio, T NearPlane)
     {
         T FocalLength = T(1) / std::tan(FOV_Y * T(0.5));
 
@@ -35,7 +35,7 @@ namespace Math
     }
 
     template<typename T>
-    static Matrix<T, 4, 4> Orthographic(T left, T right, T bottom, T top, T nearPlane, T farPlane)
+    inline Matrix<T, 4, 4> Orthographic(T left, T right, T bottom, T top, T nearPlane, T farPlane)
     {
         Matrix<T, 4, 4> Result;
         
@@ -56,5 +56,11 @@ namespace Math
         Result.Data[3][3] = T(1);
         
         return Result;
+    }
+
+    template<typename T>
+    inline Vector<T, 3> Lerp(const Vector<T, 3>& a, const Vector<T, 3>& b, float t)
+    {
+        return a + t * (b - a);
     }
 }
