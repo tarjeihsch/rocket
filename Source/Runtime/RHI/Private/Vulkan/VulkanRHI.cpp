@@ -347,7 +347,7 @@ namespace RHI
 
         std::vector<const char*> validation_extensions = 
         {
-            "VK_LAYER_KHRONOS_validation"
+            "VK_LAYER_KHRONOS_validation",
         };
 
 
@@ -356,8 +356,19 @@ namespace RHI
             "VK_KHR_swapchain"
         };
 
+        std::vector<VkValidationFeatureEnableEXT> validation_feature_extensions =
+        {
+            VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT
+        };
+
+        VkValidationFeaturesEXT validation_feature_data = {};
+        validation_feature_data.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        validation_feature_data.enabledValidationFeatureCount = validation_feature_extensions.size();
+        validation_feature_data.pEnabledValidationFeatures = validation_feature_extensions.data();
+
         VkInstanceCreateInfo instance_create_info = {};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_create_info.pNext = &validation_feature_data;
         instance_create_info.pApplicationInfo = &application_info;
         instance_create_info.ppEnabledExtensionNames = instance_extensions.data();
         instance_create_info.enabledExtensionCount = instance_extensions.size();
