@@ -90,6 +90,11 @@ namespace Math
             return data[0] * other.data[1] - data[1] * other.data[0];
         }
 
+        inline Vector<T, 2> operator-(const Vector<T, 2>& other) const
+        {
+            return Vector<T, 2>(data[0] - other.data[0], data[1] - other.data[1]);
+        }
+
         static Vector<T, 2> Up() { return Vector<T, 2>(T(0), T(1)); }
         static Vector<T, 2> Right() { return Vector<T, 2>(T(1), T(0)); }
     };
