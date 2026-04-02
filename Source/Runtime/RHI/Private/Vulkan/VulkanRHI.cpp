@@ -830,6 +830,7 @@ namespace RHI
         if (buffer_desc.flags & GPUBufferFlag::Index) buffer_usage_flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         if (buffer_desc.flags & GPUBufferFlag::Storage) buffer_usage_flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         if (buffer_desc.flags & GPUBufferFlag::Uniform) buffer_usage_flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        if (buffer_desc.flags & GPUBufferFlag::Indirect) buffer_usage_flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 
         VmaAllocationCreateFlags memory_allocation_flags = 0;
         switch (buffer_desc.heap_type)
@@ -1457,6 +1458,7 @@ namespace RHI
     
     void VulkanGPUCommandList::DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count)
     {
+        RHI::vkCmdDrawIndirect(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, draw_count, 0);
     }
 
     void VulkanGPUCommandList::Dispatch(uint32_t x, uint32_t y, uint32_t z)

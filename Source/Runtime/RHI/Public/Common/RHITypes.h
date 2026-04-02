@@ -274,7 +274,8 @@ enum class GPUDriver
             Vertex      = 1U << 0,
             Index       = 1U << 1,
             Storage     = 1U << 2,
-            Uniform     = 1U << 3
+            Uniform     = 1U << 3,
+            Indirect    = 1U << 4
         };
     };
 
@@ -506,6 +507,11 @@ enum class GPUDriver
         static GPUBufferDesc UniformBuffer(uint64_t size)
         {
             return UploadBuffer(size, GPUBufferFlag::Uniform);
+        }
+
+        static GPUBufferDesc IndirectBuffer(uint64_t size)
+        {
+            return UploadBuffer(size, GPUBufferFlag::Indirect);
         }
     };
 
