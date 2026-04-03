@@ -799,7 +799,32 @@ namespace RHI
         VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
         assert(result == VK_SUCCESS);
     }
-    
+
+    void VulkanRHI::SubmitImmediate(GPUCommandList *command_list)
+    {
+        VkCommandBufferSubmitInfo command_buffer_submit_info = {};
+        command_buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        command_buffer_submit_info.commandBuffer = static_cast<VulkanGPUCommandList*>(command_list)->command_buffer_data[CURRENT_FRAME];
+
+        VkSubmitInfo2 submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submit_info.commandBufferInfoCount = 1;
+        submit_info.pCommandBufferInfos = &command_buffer_submit_info;
+
+        VkFenceCreateInfo fence_info = {};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = 0;
+        
+        VkFence fence;
+        RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &fence);
+
+        VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, fence);
+        assert(result == VK_SUCCESS);
+
+        RHI::vkWaitForFences(g_logical_device, 1, &fence, VK_TRUE, UINT64_MAX);
+        RHI::vkDestroyFence(g_logical_device, fence, nullptr);
+    }
+
     void VulkanRHI::WaitIdle()
     {
         RHI::vkDeviceWaitIdle(g_logical_device);

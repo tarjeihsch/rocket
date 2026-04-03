@@ -150,6 +150,7 @@ namespace RHI
         void SetSampler(uint32_t index, const GPUSampler* sampler) override;
 
         void Submit(GPUCommandList* command_list) override;
+        void SubmitImmediate(GPUCommandList* command_list) override;
         void WaitIdle() override;
 
         GPUTimingQueryResult GetTimingQueryResult() override;
