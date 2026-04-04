@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <fstream>
 
-inline std::vector<char> LoadFile(const char* path)
+inline std::vector<uint8_t> LoadFile(const char* path)
 {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     assert(file);
@@ -12,8 +12,8 @@ inline std::vector<char> LoadFile(const char* path)
     std::streamsize file_size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    std::vector<char> buffer(file_size);
-    file.read(buffer.data(), file_size);
+    std::vector<uint8_t> buffer(file_size);
+    file.read(reinterpret_cast<char*>(buffer.data()), file_size);
 
     return buffer;
 }
