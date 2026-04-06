@@ -109,38 +109,39 @@ void Application::process_deferred_message(const Event& event)
     {
         case EventType::Quit:
         {
-            message_controller->OnExit();
+            //message_controller->OnExit();
             break;
         }
 
         case EventType::WindowCloseRequested:
         {
-            message_controller->OnWindowClose(window);
+            //message_controller->OnWindowClose(window);
+            window->on_window_close();
             break;
         }
 
         case EventType::WindowResized:
         {
-            const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
-            message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
+            //const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
+            //message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
             break;
         }
 
         case EventType::WindowMoved:
         {
-            message_controller->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
+            //message_controller->OnWindowMoved(window, event.windowMove.value.x, event.windowMove.value.y);
             break;
         }
 
         case EventType::WindowFocusGained:
         {
-            message_controller->OnWindowFocusGained();
+            //message_controller->OnWindowFocusGained();
             break;
         }
 
         case EventType::WindowFocusLost:
         {
-            message_controller->OnWindowFocusLost();
+            //message_controller->OnWindowFocusLost();
             break;
         }
 
@@ -149,15 +150,16 @@ void Application::process_deferred_message(const Event& event)
             const bool repeat = event.key.repeat;
             const uint32_t charcode = 0;
 
-            message_controller->OnKeyDown(event.key.value, charcode, repeat);
+            //message_controller->OnKeyDown(event.key.value, charcode, repeat);
+            window->on_key_down(event.key.value);
 
             if (event.key.value == Key::Backspace)
             {
-                message_controller->OnKeyChar('\b', repeat);
+                //message_controller->OnKeyChar('\b', repeat);
             }
             else if (event.key.value == Key::Enter) 
             {
-                message_controller->OnKeyChar('\r', repeat);
+                //message_controller->OnKeyChar('\r', repeat);
             }
             break;
         }
@@ -165,7 +167,8 @@ void Application::process_deferred_message(const Event& event)
         case EventType::KeyUp:
         {
             const uint32_t charcode = 0;
-            message_controller->OnKeyUp(event.key.value, charcode, false);
+            //message_controller->OnKeyUp(event.key.value, charcode, false);
+            window->on_key_up(event.key.value);
             break;
         }
 
@@ -206,7 +209,7 @@ void Application::process_deferred_message(const Event& event)
                     continue;
                 }
 
-                message_controller->OnKeyChar(Codepoint, repeat);
+                //message_controller->OnKeyChar(Codepoint, repeat);
                 break;
             }
 
@@ -215,27 +218,27 @@ void Application::process_deferred_message(const Event& event)
 
         case EventType::MouseMove:
         {
-            message_controller->OnMouseMove(event.axis.position.x, event.axis.position.y);
-            message_controller->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
+            //message_controller->OnMouseMove(event.axis.position.x, event.axis.position.y);
+            //message_controller->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
             break;
         }
 
         case EventType::MouseButtonDown:
         {
-            message_controller->OnMouseDown(window, event.button.value);
+            //message_controller->OnMouseDown(window, event.button.value);
             break;
         }
 
         case EventType::MouseButtonUp:
         {
-            message_controller->OnMouseUp(window, event.button.value);
+            //message_controller->OnMouseUp(window, event.button.value);
             break;
         }
 
         case EventType::MouseWheel:
         {
             const float amount = event.wheel.value.y * 1.0f;
-            message_controller->OnMouseWheel(amount);
+            //message_controller->OnMouseWheel(amount);
             break;
         }
 

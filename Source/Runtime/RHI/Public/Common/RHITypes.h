@@ -747,4 +747,16 @@ enum class GPUDriver
             default:                            return 0;
         }
     }
+
+    inline const char* LexToString(GPUAdapterVendor adapter_vendor)
+    {
+        switch (adapter_vendor)
+        {
+            case GPUAdapterVendor::AMD:         return "AMD";
+            case GPUAdapterVendor::APPLE:       return "Apple";
+            case GPUAdapterVendor::NVIDIA:      return "Nvidia";
+            case GPUAdapterVendor::INTEL:       return "Intel";
+            default:                            return "Unknown vendor";
+        }
+    }
 }

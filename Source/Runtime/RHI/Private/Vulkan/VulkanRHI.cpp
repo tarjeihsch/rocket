@@ -62,8 +62,13 @@ namespace RHI
     static VkQueryPool                  g_pipeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
     static uint32_t                     g_query_pool_counter[CONCURRENT_FRAME_COUNT]        = {};
 
-    static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT Severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
+    static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
+        if (severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        {
+            return false;
+        }
+
         printf("[Vulkan] %s\n", CallbackData->pMessage);
         return VK_FALSE;
     }
@@ -742,6 +747,8 @@ namespace RHI
             RHI::vkCreateQueryPool(g_logical_device, &pipeline_query_pool_create_info, nullptr, &g_pipeline_query_pool_data[index]);
             RHI::vkResetQueryPool(g_logical_device, g_pipeline_query_pool_data[index], 0, 1);
         }
+
+        std::printf("[RHI] GPU:\n\tVendor: %s\n\tName: %s\n\tID: %d\n", LexToString(g_adapter.vendor), g_adapter.device_name, g_adapter.device_id);
     }
 
     VulkanRHI::~VulkanRHI()

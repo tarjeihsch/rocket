@@ -313,9 +313,6 @@ static void OnMouseScroll(GLFWwindow* glfwWindow, double xOffset, double yOffset
 void RegisterPlatformWindow(void* nativeWindow, uint64_t WindowHandleID, EventSink* eventSink)
 {
     GLFWwindow* window = static_cast<GLFWwindow*>(nativeWindow);
-        
-    //ensure(window);
-    //ensure(eventSink);
 
     NativeWindowUserData* userData = new NativeWindowUserData();
     userData->WindowHandleID = WindowHandleID;

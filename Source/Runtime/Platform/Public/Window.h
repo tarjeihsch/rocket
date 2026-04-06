@@ -15,9 +15,17 @@ struct WindowCreateInfo
     bool hdpi;
 };
 
+DECLARE_DELEGATE_OneParam(OnKeyDown, void, Key);
+DECLARE_DELEGATE_OneParam(OnKeyUp, void, Key);
+DECLARE_DELEGATE(OnWindowClose, void);
+
 class OSWindow
 {
 public:
+    OnKeyDown on_key_down;
+    OnKeyUp on_key_up;
+    OnWindowClose on_window_close;
+
     OSWindow();
     ~OSWindow();
 
@@ -48,7 +56,7 @@ public:
 private:
     void* WindowHandle;
     uint64_t WindowHandleID;
-        
+
     ENativePlatformBackend NativeBackend;
     RNativeWindowSystemHandle NativeWindowSystemHandle = nullptr;
     RNativeWindowHandle NativeWindowHandle = nullptr;

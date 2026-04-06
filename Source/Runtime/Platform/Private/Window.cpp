@@ -22,7 +22,9 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
 }
 
 OSWindow::OSWindow()
-    : WindowHandle(nullptr)
+    : on_key_down(nullptr)
+    , on_key_up(nullptr)
+    , WindowHandle(nullptr)
     , WindowHandleID(0)
 {
 }
@@ -83,8 +85,8 @@ bool OSWindow::Create(const WindowCreateInfo& createInfo)
 #endif
 
     std::printf("[Platform] Spawn Window\n");
-    std::printf("[Platform] \t\tExtent: %ix%i\n", createInfo.width, createInfo.height);
-    std::printf("[Platform] \t\tBackend: %i\n", static_cast<uint8_t>(NativeBackend));
+    std::printf("\tExtent: %ix%i\n", createInfo.width, createInfo.height);
+    std::printf("\tBackend: %i\n", static_cast<uint8_t>(NativeBackend));
 
     return true;
 }
