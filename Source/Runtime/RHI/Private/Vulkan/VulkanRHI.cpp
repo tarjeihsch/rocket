@@ -37,8 +37,6 @@ namespace RHI
         return fn(instance, &info, nullptr, surface);
     }
     
-    uint32_t g_current_swapchain_image_index;
-
     static constexpr uint32_t           MAX_SHADER_BINDINGS                                 = 4U;
     
     static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 64U;
@@ -74,12 +72,10 @@ namespace RHI
 
     static GPUAdapter                   g_adapter                                           = {};
 
-    static VkSemaphore                  g_image_available[CONCURRENT_FRAME_COUNT]           = {};
-    static VkSemaphore                  g_render_finished[CONCURRENT_FRAME_COUNT]           = {};
-    static VkFence                      g_in_flight_fence[CONCURRENT_FRAME_COUNT]           = {};
-    static VkQueryPool                  g_timeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
-    static VkQueryPool                  g_pipeline_query_pool_data[CONCURRENT_FRAME_COUNT]  = {};
-    static uint32_t                     g_query_pool_counter[CONCURRENT_FRAME_COUNT]        = {};
+    static VkFence                      g_in_flight_fence                   [CONCURRENT_FRAME_COUNT]            = {};
+    static VkQueryPool                  g_timeline_query_pool_data          [CONCURRENT_FRAME_COUNT]            = {};
+    static VkQueryPool                  g_pipeline_query_pool_data          [CONCURRENT_FRAME_COUNT]            = {};
+    static uint32_t                     g_query_pool_counter                [CONCURRENT_FRAME_COUNT]            = {};
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
@@ -192,6 +188,9 @@ namespace RHI
             textures[index]->texture = nullptr;
             textures[index]->allocation = nullptr;
 
+            RHI::vkDestroySemaphore(g_logical_device, image_available_semaphores[index], nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, render_finished_semaphores[index], nullptr);
+
             delete textures[index];
         }
 
@@ -206,23 +205,21 @@ namespace RHI
 
     GPUTexture* VulkanGPUSwapchain::GetBackBufferTexture() const
     {
-        return textures[g_current_swapchain_image_index];
+        return textures[current_image_index];
     }
 
     bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
+        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
 
-        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &g_current_swapchain_image_index);
+        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, image_available_semaphores[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             return false;
         }
-        
-        // Reset fence to unsignaled - this frame will happen.
-        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
-
+    
         return true;
     }
 
@@ -231,10 +228,10 @@ namespace RHI
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &g_render_finished[g_current_swapchain_image_index];
+        present_info.pWaitSemaphores = &render_finished_semaphores[current_image_index];
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain;
-        present_info.pImageIndices = &g_current_swapchain_image_index;
+        present_info.pImageIndices = &current_image_index;
 
         VkResult result = RHI::vkQueuePresentKHR(g_graphics_queue, &present_info);
 
@@ -245,15 +242,19 @@ namespace RHI
 
     void VulkanGPUSwapchain::ResizeBackBuffers()
     {
-        //RHI::vkWaitForFences(g_logical_device, CONCURRENT_FRAME_COUNT, g_in_flight_fence, VK_TRUE, UINT64_MAX);
-        RHI::GetRHI()->WaitIdle();
+        RHI::vkDeviceWaitIdle(g_logical_device);
 
         for (uint32_t index = 0; index < image_count; ++index)
         {
             RHI::vkDestroyImageView(g_logical_device, textures[index]->rtv, nullptr);
-                
+            RHI::vkDestroySemaphore(g_logical_device, image_available_semaphores[index], nullptr);
+            RHI::vkDestroySemaphore(g_logical_device, render_finished_semaphores[index], nullptr);
+
             free(textures[index]);
         }
+
+        free(image_available_semaphores);
+        free(render_finished_semaphores);
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surface_capabilities);
@@ -317,6 +318,9 @@ namespace RHI
         std::vector<VkImage> images(image_count);
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain, &image_count, images.data());
 
+        image_available_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * image_count);
+        render_finished_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * image_count);
+
         for (uint32_t index = 0; index < image_count; ++index)
         {
             textures[index] = new VulkanGPUTexture();
@@ -335,9 +339,14 @@ namespace RHI
 
             result = RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &textures[index]->rtv);
             assert(result == VK_SUCCESS);
+
+            VkSemaphoreCreateInfo semaphore_create_info = {};
+            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &image_available_semaphores[index]);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &render_finished_semaphores[index]);
         }
 
-        printf("Swapchain re-created: %d %d\n", extent.width, extent.height);
+        printf("Swapchain re-created: %d %d\nNew image count: %d\n", extent.width, extent.height, image_count);
     }
 
     Vector2i VulkanGPUSwapchain::GetBackBufferSize()
@@ -746,11 +755,6 @@ namespace RHI
 
         for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
-            VkSemaphoreCreateInfo semaphore_create_info = {};
-            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_image_available[index]);
-            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &g_render_finished[index]);
-
             VkFenceCreateInfo fence_create_info = {};
             fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -779,10 +783,7 @@ namespace RHI
     {
         for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
-            RHI::vkDestroySemaphore(g_logical_device, g_image_available[index], nullptr);
-            RHI::vkDestroySemaphore(g_logical_device, g_render_finished[index], nullptr);
             RHI::vkDestroyFence(g_logical_device, g_in_flight_fence[index], nullptr);
-
             RHI::vkDestroyQueryPool(g_logical_device, g_timeline_query_pool_data[index], nullptr);
             RHI::vkDestroyQueryPool(g_logical_device, g_pipeline_query_pool_data[index], nullptr);
         }
@@ -802,7 +803,7 @@ namespace RHI
         return GPUAdapter();
     }
     
-    void VulkanRHI::Submit(GPUCommandList* command_list)
+    void VulkanRHI::Submit(GPUCommandList* command_list, GPUSwapchain* swapchain)
     {
         VkCommandBufferSubmitInfo command_buffer_submit_info = {};
         command_buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -810,19 +811,19 @@ namespace RHI
 
         VkSemaphoreSubmitInfo wait_semaphore_info = {};
         wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-        wait_semaphore_info.semaphore = g_image_available[CURRENT_FRAME];
+        wait_semaphore_info.semaphore = ((VulkanGPUSwapchain*)swapchain)->image_available_semaphores[CURRENT_FRAME];
         wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
         VkSemaphoreSubmitInfo signal_semaphore_info = {};
         signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-        signal_semaphore_info.semaphore = g_render_finished[g_current_swapchain_image_index];
+        signal_semaphore_info.semaphore = ((VulkanGPUSwapchain*)swapchain)->render_finished_semaphores[((VulkanGPUSwapchain*)swapchain)->current_image_index];
         signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
         VkSubmitInfo2 submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
         submit_info.commandBufferInfoCount = 1;
         submit_info.pCommandBufferInfos = &command_buffer_submit_info;
-        submit_info.waitSemaphoreInfoCount = 1;
+        submit_info.waitSemaphoreInfoCount = 1; 
         submit_info.pWaitSemaphoreInfos = &wait_semaphore_info;
         submit_info.signalSemaphoreInfoCount = 1;
         submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
@@ -1280,6 +1281,9 @@ namespace RHI
         std::vector<VkImage> images(swapchain->image_count);
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain->swapchain, &swapchain->image_count, images.data());
 
+        swapchain->image_available_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * swapchain->image_count);
+        swapchain->render_finished_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * swapchain->image_count);
+
         for (uint32_t index = 0; index < swapchain->image_count; ++index)
         {
             swapchain->textures[index] = new VulkanGPUTexture();
@@ -1296,8 +1300,13 @@ namespace RHI
             image_view_create_info.subresourceRange.levelCount = 1;
             image_view_create_info.subresourceRange.baseArrayLayer = 0;
             image_view_create_info.subresourceRange.layerCount = 1;
-
+            
             RHI::vkCreateImageView(g_logical_device, &image_view_create_info, nullptr, &swapchain->textures[index]->rtv);
+
+            VkSemaphoreCreateInfo semaphore_create_info = {};
+            semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &swapchain->image_available_semaphores[index]);
+            RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &swapchain->render_finished_semaphores[index]);
         }
 
         std::printf("Swapchain:\n\tImage Count: %d\n\tFrame Count: %d\n", swapchain->image_count, CONCURRENT_FRAME_COUNT);

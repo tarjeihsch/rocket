@@ -93,9 +93,10 @@ namespace RHI
         VkSurfaceKHR            surface                                 = nullptr;
         uint32_t                image_count                             = 0;
         uint32_t                current_image_index                     = 0;
-        uint32_t                image_available_index                   = 0;
         VulkanGPUTexture*       textures[3]                             = {};
         VkExtent2D              extent                                  = {};
+        VkSemaphore*            image_available_semaphores              = nullptr;
+        VkSemaphore*            render_finished_semaphores              = nullptr;
     };
 
     struct VulkanGPUCommandList : GPUCommandList
@@ -150,7 +151,7 @@ namespace RHI
         void SetBuffer(uint32_t index, const GPUBuffer* buffer) override;
         void SetSampler(uint32_t index, const GPUSampler* sampler) override;
 
-        void Submit(GPUCommandList* command_list) override;
+        void Submit(GPUCommandList* command_list, GPUSwapchain* swapchain) override;
         void SubmitImmediate(GPUCommandList* command_list) override;
         void WaitIdle() override;
 

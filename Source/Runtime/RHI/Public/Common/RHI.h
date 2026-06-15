@@ -134,7 +134,7 @@ namespace RHI
         virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;
         virtual void SetSampler(uint32_t index, const GPUSampler* sampler) = 0;
 
-        virtual void Submit(GPUCommandList* command_list) = 0;
+        virtual void Submit(GPUCommandList* command_list, GPUSwapchain* swapchain) = 0;
         virtual void SubmitImmediate(GPUCommandList* command_list) = 0;
         virtual void WaitIdle() = 0;
 
