@@ -1,17 +1,7 @@
 #pragma once
 
-#if defined(_WIN32)
-    #include <windows.h>
-#endif
-
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
-
-#if defined(_WIN32)
-    #include <vulkan/vulkan_win32.h>
-#elif defined(__linux__)
-    #include <vulkan/vulkan_wayland.h>
-#endif
 
 namespace RHI
 {
@@ -130,12 +120,6 @@ namespace RHI
     extern PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
     extern PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT;
     extern PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT;
-
-#if defined(_WIN32)
-    extern PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
-#elif defined(__linux__)
-    extern PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
-#endif
 
     void LoadVulkanLibrary();
     void UnloadVulkanLibrary();

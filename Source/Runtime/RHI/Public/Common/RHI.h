@@ -2,6 +2,8 @@
 
 #include "Common/RHITypes.h"
 
+#include <Math/Vector.h>
+
 namespace RHI
 {
     // RHI Resource Ownership
@@ -69,7 +71,7 @@ namespace RHI
         virtual void SetDebugName(const char* debug_name) = 0;
         virtual GPUTexture* GetBackBufferTexture() const = 0;
         virtual bool AcquireNextBackBuffer() = 0;
-        virtual void PresentBackBuffer() = 0;
+        virtual bool PresentBackBuffer() = 0;
         virtual void ResizeBackBuffers() = 0;
         virtual Vector2i GetBackBufferSize() = 0;
     };

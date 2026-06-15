@@ -66,6 +66,8 @@ bool Application::Initialize()
         return true;
     }
 
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+
     if (glfwInit() != GLFW_TRUE)
     {
         return false;
@@ -124,6 +126,7 @@ void Application::process_deferred_message(const Event& event)
         {
             //const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
             //message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
+            window->onWindowResize(Vector2i(event.windowResize.value.x, event.windowResize.value.y));
             break;
         }
 

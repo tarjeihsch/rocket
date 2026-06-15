@@ -85,7 +85,7 @@ namespace RHI
         void                    SetDebugName(const char* debug_name)    override;
         GPUTexture*             GetBackBufferTexture()                  const override;
         bool                    AcquireNextBackBuffer()                 override;
-        void                    PresentBackBuffer()                     override;
+        bool                    PresentBackBuffer()                     override;
         void                    ResizeBackBuffers()                     override;
         Vector2i                GetBackBufferSize()                     override;
 
@@ -95,6 +95,7 @@ namespace RHI
         uint32_t                current_image_index                     = 0;
         uint32_t                image_available_index                   = 0;
         VulkanGPUTexture*       textures[3]                             = {};
+        VkExtent2D              extent                                  = {};
     };
 
     struct VulkanGPUCommandList : GPUCommandList

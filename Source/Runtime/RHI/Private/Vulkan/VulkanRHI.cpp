@@ -1,5 +1,9 @@
 ﻿#include "VulkanRHI.h"
 
+#include "Common/RHI.h"
+#include "Vulkan/VulkanLoader.h"
+#include "VulkanTypes.h"
+
 #include <vector>
 #include <assert.h>
 #include <unordered_set>
@@ -8,10 +12,9 @@
 #include <unordered_map>
 
 #if defined(__linux__)
-    #include <wayland-client.h>
+    #include <X11/Xlib.h>
+    #include <vulkan/vulkan_xlib.h>
 #endif
-
-#include "VulkanTypes.h"
 
 RHI::IRHI* CreateVulkanRHI()
 {
@@ -19,7 +22,23 @@ RHI::IRHI* CreateVulkanRHI()
 }
 
 namespace RHI
-{
+{    
+    static VkResult CreateSurfaceX11(VkInstance instance, VkSurfaceKHR* surface, void* display, void* window)
+    {
+        VkXlibSurfaceCreateInfoKHR info{};
+        info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+        info.dpy = reinterpret_cast<Display*>(display);
+        info.window = reinterpret_cast<Window>(window);
+
+        auto fn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+            vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR")
+        );
+
+        return fn(instance, &info, nullptr, surface);
+    }
+    
+    uint32_t g_current_swapchain_image_index;
+
     static constexpr uint32_t           MAX_SHADER_BINDINGS                                 = 4U;
     
     static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 64U;
@@ -187,40 +206,47 @@ namespace RHI
 
     GPUTexture* VulkanGPUSwapchain::GetBackBufferTexture() const
     {
-        return textures[current_image_index];
+        return textures[g_current_swapchain_image_index];
     }
 
     bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
 
-        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
-        assert(result == VK_SUCCESS);
+        VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, g_image_available[CURRENT_FRAME], VK_NULL_HANDLE, &g_current_swapchain_image_index);
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            return false;
+        }
         
         // Reset fence to unsignaled - this frame will happen.
         RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
-        
-        return false;
+
+        return true;
     }
 
-    void VulkanGPUSwapchain::PresentBackBuffer()
+    bool VulkanGPUSwapchain::PresentBackBuffer()
     {
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &g_render_finished[CURRENT_FRAME];
+        present_info.pWaitSemaphores = &g_render_finished[g_current_swapchain_image_index];
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain;
-        present_info.pImageIndices = &current_image_index;
+        present_info.pImageIndices = &g_current_swapchain_image_index;
 
-        RHI::vkQueuePresentKHR(g_graphics_queue, &present_info);
+        VkResult result = RHI::vkQueuePresentKHR(g_graphics_queue, &present_info);
 
         g_frame_counter++;
+
+        return result == VK_SUCCESS;
     }
 
     void VulkanGPUSwapchain::ResizeBackBuffers()
     {
-        RHI::vkWaitForFences(g_logical_device, CONCURRENT_FRAME_COUNT, g_in_flight_fence, VK_TRUE, UINT64_MAX);
+        //RHI::vkWaitForFences(g_logical_device, CONCURRENT_FRAME_COUNT, g_in_flight_fence, VK_TRUE, UINT64_MAX);
+        RHI::GetRHI()->WaitIdle();
 
         for (uint32_t index = 0; index < image_count; ++index)
         {
@@ -232,9 +258,9 @@ namespace RHI
         VkSurfaceCapabilitiesKHR surface_capabilities;
         RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surface_capabilities);
         
-        VkExtent2D new_surface_extent = surface_capabilities.currentExtent;
-        new_surface_extent.width = std::clamp(new_surface_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-        new_surface_extent.height = std::clamp(new_surface_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
+        extent = surface_capabilities.currentExtent;
+        extent.width = std::clamp(extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+        extent.height = std::clamp(extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
 
         uint32_t available_texture_format_count = 0;
         RHI::vkGetPhysicalDeviceSurfaceFormatsKHR(g_physical_device, surface, &available_texture_format_count, nullptr);
@@ -272,7 +298,7 @@ namespace RHI
         swapchain_create_info.minImageCount = new_image_count;
         swapchain_create_info.imageFormat = texture_format;
         swapchain_create_info.imageColorSpace = texture_color_space;
-        swapchain_create_info.imageExtent = new_surface_extent;
+        swapchain_create_info.imageExtent = extent;
         swapchain_create_info.imageArrayLayers = 1;
         swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -311,14 +337,12 @@ namespace RHI
             assert(result == VK_SUCCESS);
         }
 
-        printf("Swapchain re-created: %d %d\n", new_surface_extent.width, new_surface_extent.height);
+        printf("Swapchain re-created: %d %d\n", extent.width, extent.height);
     }
 
     Vector2i VulkanGPUSwapchain::GetBackBufferSize()
     {
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surfaceCapabilities);
-        return Vector2i(surfaceCapabilities.currentExtent.width, surfaceCapabilities.currentExtent.height);
+        return Vector2i(extent.width, extent.height);
     }
 
     VulkanRHI::VulkanRHI()
@@ -346,7 +370,7 @@ namespace RHI
 #if defined(_WIN32)
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 #elif defined(__linux__)
-            VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
+            VK_KHR_XLIB_SURFACE_EXTENSION_NAME
 #endif
         };
 
@@ -370,16 +394,16 @@ namespace RHI
         validation_feature_data.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
         validation_feature_data.enabledValidationFeatureCount = validation_feature_extensions.size();
         validation_feature_data.pEnabledValidationFeatures = validation_feature_extensions.data();
+        validation_feature_data.pNext = &debug_utils_messenger_create_info;
 
         VkInstanceCreateInfo instance_create_info = {};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        instance_create_info.pNext = &validation_feature_data;
         instance_create_info.pApplicationInfo = &application_info;
         instance_create_info.ppEnabledExtensionNames = instance_extensions.data();
         instance_create_info.enabledExtensionCount = instance_extensions.size();
         instance_create_info.ppEnabledLayerNames = validation_extensions.data();
         instance_create_info.enabledLayerCount = validation_extensions.size();
-        instance_create_info.pNext = &debug_utils_messenger_create_info;
+        instance_create_info.pNext = &validation_feature_data;
 
         RHI::LoadVulkanGlobals();
 
@@ -594,8 +618,8 @@ namespace RHI
         logical_device_create_info.pNext = &request_device_features_1_3;
         logical_device_create_info.ppEnabledExtensionNames = physical_device_extensions.data();
         logical_device_create_info.enabledExtensionCount = static_cast<uint32_t>(physical_device_extensions.size());
-        logical_device_create_info.ppEnabledLayerNames = validation_extensions.data();
-        logical_device_create_info.enabledLayerCount = validation_extensions.size();
+        logical_device_create_info.ppEnabledLayerNames = nullptr;
+        logical_device_create_info.enabledLayerCount = 0;
 
         result = RHI::vkCreateDevice(g_physical_device, &logical_device_create_info, nullptr, &g_logical_device);
         assert(result == VK_SUCCESS);
@@ -791,7 +815,7 @@ namespace RHI
 
         VkSemaphoreSubmitInfo signal_semaphore_info = {};
         signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-        signal_semaphore_info.semaphore = g_render_finished[CURRENT_FRAME];
+        signal_semaphore_info.semaphore = g_render_finished[g_current_swapchain_image_index];
         signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
         VkSubmitInfo2 submit_info = {};
@@ -880,6 +904,7 @@ namespace RHI
         {
             case GPUHeapType::Upload: memory_allocation_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; break;
             case GPUHeapType::Readback: memory_allocation_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT; break;
+            default: break;
         }
 
         VkBufferCreateInfo buffer_create_info = {};
@@ -941,6 +966,7 @@ namespace RHI
                 texture_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
                 break;
             }
+            default: break;
         }
 
         VkImageCreateInfo texture_create_info = {};
@@ -1184,13 +1210,14 @@ namespace RHI
         surface_info.hinstance = GetModuleHandle(nullptr);
         VkResult result = RHI::vkCreateWin32SurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
 #elif defined(__linux__)
-        VkWaylandSurfaceCreateInfoKHR surface_info = {};
-        surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-        surface_info.display = (wl_display*)swapchain_desc.window_platform.display;
-        surface_info.surface = (wl_surface*)swapchain_desc.window_platform.surface;
-        VkResult result = RHI::vkCreateWaylandSurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
+        //VkWaylandSurfaceCreateInfoKHR surface_info = {};
+        //surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+        //surface_info.display = (wl_display*)swapchain_desc.window_platform.display;
+        //surface_info.surface = (wl_surface*)swapchain_desc.window_platform.surface;
+        //VkResult result = RHI::vkCreateWaylandSurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
+
+        CreateSurfaceX11(g_instance, &swapchain->surface, swapchain_desc.window_platform.display, reinterpret_cast<void*>(static_cast<uintptr_t>(swapchain_desc.window_platform.window)));
 #endif
-        assert(result == VK_SUCCESS);
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, swapchain->surface, &surface_capabilities);
@@ -1207,15 +1234,14 @@ namespace RHI
             swapchain->image_count = surface_capabilities.maxImageCount;
         }
 
-        VkExtent2D extent;
         if (surface_capabilities.currentExtent.width != UINT32_MAX)
         {
-            extent = surface_capabilities.currentExtent;
+            swapchain->extent = surface_capabilities.currentExtent;
         }
         else
         {
-            extent.width = std::clamp(swapchain_desc.backbuffer_width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
-            extent.height = std::clamp(swapchain_desc.backbuffer_height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
+            swapchain->extent.width = std::clamp(swapchain_desc.backbuffer_width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
+            swapchain->extent.height = std::clamp(swapchain_desc.backbuffer_height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
         }
 
         uint32_t presentation = 0U;
@@ -1238,7 +1264,7 @@ namespace RHI
         swapchain_create_info.minImageCount = swapchain->image_count;
         swapchain_create_info.imageFormat = GetVkFormat(swapchain_desc.backbuffer_format);
         swapchain_create_info.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-        swapchain_create_info.imageExtent = extent;
+        swapchain_create_info.imageExtent = swapchain->extent;
         swapchain_create_info.imageArrayLayers = 1;
         swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1247,7 +1273,7 @@ namespace RHI
         swapchain_create_info.presentMode = present_mode;
         swapchain_create_info.clipped = VK_TRUE;
 
-        result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain->swapchain);
+        VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain->swapchain);
         assert(result == VK_SUCCESS);
 
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain->swapchain, &swapchain->image_count, nullptr);

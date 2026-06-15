@@ -57,31 +57,14 @@ bool OSWindow::Create(const WindowCreateInfo& createInfo)
     NativeWindowHandle = (void*)glfwGetWin32Window(static_cast<GLFWwindow*>(WindowHandle));
     NativeWindowSystemHandle = (void*)GetModuleHandle(nullptr);
 #elif defined(__linux__)
-    #if defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        if (auto* wlDisplay = glfwGetWaylandDisplay(); wlDisplay != nullptr)
-        {
-            NativeBackend = ENativePlatformBackend::Wayland;
-            NativeWindowHandle = (void*)wlDisplay;
-            NativeWindowSystemHandle = (void*)glfwGetWaylandWindow(static_cast<GLFWwindow*>(WindowHandle));
-        }
-        else
-    #endif
-    #if defined(GLFW_EXPOSE_NATIVE_X11)
-        {
-            auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));
-            NativeBackend = ENativePlatformBackend::X11;
-            NativeWindowHandle = (void*)glfwGetX11Display();
-            NativeWindowSystemHandle = (void*)(uintptr_t)x11Window;
-        }
-    #else
-        {
-            static_assert("No support for Linux backend exposed.");
-        }
-    #endif
+    auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));
+    NativeBackend = ENativePlatformBackend::X11;
+    NativeWindowHandle = (void*)glfwGetX11Display();
+    NativeWindowSystemHandle = (void*)(uintptr_t)x11Window;
 #elif defined(__APPLE__)
     NativeBackend = WindowServerType::Cocoa;
-        windowInfo.display = (void*)glfwGetCocoaWindow(WindowHandle);
-        windowInfo.instance = nullptr;
+    windowInfo.display = (void*)glfwGetCocoaWindow(WindowHandle);
+    windowInfo.instance = nullptr;
 #endif
 
     std::printf("[Platform] Spawn Window\n");
@@ -188,4 +171,9 @@ RNativeWindowHandle OSWindow::GetNativeWindowHandle() const
 bool OSWindow::IsValid() const
 {
     return WindowHandle != nullptr;
+}
+
+bool OSWindow::IsFocused() const
+{
+    return glfwGetWindowAttrib(static_cast<GLFWwindow*>(WindowHandle), GLFW_FOCUSED);
 }

@@ -1,5 +1,4 @@
 #define VMA_IMPLEMENTATION
-
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 
@@ -134,7 +133,7 @@ namespace RHI
 #if defined(_WIN32)
     PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = nullptr;
 #elif defined(__linux__)
-    PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR = nullptr;
+    //PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR = nullptr;
 #endif
 
 #define LOAD_GLOBAL(fn) \
@@ -203,7 +202,7 @@ namespace RHI
 #if defined(_WIN32)
         LOAD_INSTANCE(instance, vkCreateWin32SurfaceKHR);
 #elif defined(__linux__)
-        LOAD_INSTANCE(instance, vkCreateWaylandSurfaceKHR);
+        //LOAD_INSTANCE(instance, vkCreateWaylandSurfaceKHR);
 #endif
     }
 

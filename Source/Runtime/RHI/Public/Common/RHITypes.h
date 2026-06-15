@@ -1,39 +1,33 @@
 #pragma once
 
 #include <cstdint>
-#include <cstddef>
 
 #ifdef _WIN32
     #include <wtypes.h>
 #endif
 
 #if defined(__linux__)
-    struct wl_display;
-    struct wl_surface;
-
     #include <cstring>
 #endif
 
-#include "Math/Vector.h"
-
 namespace RHI 
 {
-struct GPUShaderResources;
-struct GPUShader;
-struct GPUTexture;
-struct GPUBuffer;
+    struct GPUShaderResources;
+    struct GPUShader;
+    struct GPUTexture;
+    struct GPUBuffer;
 
-enum class GPUDriver
-{
-    Unknown,
+    enum class GPUDriver
+    {
+        Unknown,
 
-    OpenGL,
+        OpenGL,
 
-    Vulkan,
+        Vulkan,
 
-    Direct3D12,
+        Direct3D12,
 
-    Metal,
+        Metal,
 
         WebGPU
     };
@@ -265,7 +259,7 @@ enum class GPUDriver
         OpaqueBlack,
         OpaqueWhite
     };
-    
+
     namespace GPUBufferFlag
     {
         enum Bits : uint32_t
@@ -350,22 +344,22 @@ enum class GPUDriver
         }
     };
 
-#if defined(_WIN32)
+    #if defined(_WIN32)
 
     struct GPUWindowPlatform
     {
         HWND hwnd = nullptr;
     };
 
-#elif defined(__linux__)
-    
+    #elif defined(__linux__)
+
     struct GPUWindowPlatform
     {
-        wl_display* display = nullptr;
-        wl_surface* surface = nullptr;
+        void* display;
+        uint64_t window;
     };
 
-#endif
+    #endif
 
     struct GPUTimingQueryResult
     {
