@@ -55,7 +55,7 @@ add_subdirectory(Source/Runtime/RHI)
 
 enable_testing()
 add_subdirectory(Source/Tests/Core)
-add_test(NAME CoreTest COMMAND CoreTest)
+add_test(NAME Color COMMAND ColorTest)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_target_properties(glfw PROPERTIES FOLDER "ThirdParty/glfw")

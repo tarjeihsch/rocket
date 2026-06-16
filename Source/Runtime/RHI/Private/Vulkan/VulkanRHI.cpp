@@ -1,7 +1,6 @@
 ﻿#include "VulkanRHI.h"
 
 #include "Common/RHI.h"
-#include "Vulkan/VulkanLoader.h"
 #include "VulkanTypes.h"
 
 #include <vector>
