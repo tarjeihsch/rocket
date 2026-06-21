@@ -101,8 +101,16 @@ namespace Math
         static Quaternion<T> FromAxisAngle(const Vector<T, 3>& axis, T angle)
         {
             const T halfAngle = angle * T(0.5);
-            const T s = std::sin(halfAngle);
-            return Quaternion<T>(std::cos(halfAngle), axis.x * s, axis.y * s, axis.z * s).Normalize();
+            const T halfAngleSinus = std::sin(halfAngle);
+            return Quaternion<T>(std::cos(halfAngle), axis.x * halfAngleSinus, axis.y * halfAngleSinus, axis.z * halfAngleSinus).Normalize();
+        }
+
+        static Quaternion<T> FromEulerAngles(const Vector<T, 3>& euler)
+        {
+            auto qx = FromAxisAngle(Vector<T, 3>(1, 0, 0), euler.x);
+            auto qy = FromAxisAngle(Vector<T, 3>(0, 1, 0), euler.y);
+            auto qz = FromAxisAngle(Vector<T, 3>(0, 0, 1), euler.z);
+            return qy * qx * qz;
         }
     };
 }

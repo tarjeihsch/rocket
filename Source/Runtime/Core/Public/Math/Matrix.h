@@ -5,19 +5,19 @@
 
 namespace Math
 {
-	template <typename T, size_t R, size_t C>
+	template <typename T, size_t C, size_t R>
 	struct Matrix
 	{
-		T Data[R][C];
+		T Data[C][R];
 
 		Matrix()
 		{
-			memset(Data, 0, sizeof(T) * R * C);
+			memset(Data, 0, sizeof(T) * C * R);
 		}
 
-		static Matrix<T, R, C> Zero()
+		static Matrix<T, C, R> Zero()
 		{
-			return Matrix<T, R, C>();
+			return Matrix<T, C, R>();
 		}
 	};
 
@@ -45,14 +45,14 @@ namespace Math
 		{
 			Matrix<T, 4, 4> Result;
 
-			for (uint32_t Row = 0; Row < 4; Row++)
+			for (uint32_t Column = 0; Column < 4; ++Column)
 			{
-				for (uint32_t Column = 0; Column < 4; Column++)
+				for (uint32_t Row = 0; Row < 4; ++Row)
 				{
-					Result.Data[Row][Column] = Data[Row][0]*Other.Data[0][Column]
-						+ Data[Row][1]*Other.Data[1][Column]
-						+ Data[Row][2]*Other.Data[2][Column]
-						+ Data[Row][3]*Other.Data[3][Column];
+					Result.Data[Column][Row] = Data[0][Row] * Other.Data[Column][0]
+						+ Data[1][Row] * Other.Data[Column][1]
+						+ Data[2][Row] * Other.Data[Column][2]
+						+ Data[3][Row] * Other.Data[Column][3];
 				}
 			}
 
@@ -91,9 +91,9 @@ namespace Math
 		{
 			Matrix<T, 4, 4> Result;
 
-			for (uint32_t Row = 0; Row < 4; ++Row)
+			for (uint32_t Column = 0; Column < 4; ++Column)
 			{
-				for (uint32_t Column = 0; Column < 4; ++Column)
+				for (uint32_t Row = 0; Row < 4; ++Row)
 				{
 					Result.Data[Column][Row] = Data[Row][Column];
 				}
@@ -150,17 +150,6 @@ namespace Math
 			return result;
 		}
 	};
-
-	template<typename T>
-	inline Vector<T,4> operator*(const Vector<T,4>& v, const Matrix<T,4,4>& m)
-	{
-		return Vector<T,4>(
-			v.x * m.Data[0][0] + v.y * m.Data[1][0] + v.z * m.Data[2][0] + v.w * m.Data[3][0], // Column 0
-			v.x * m.Data[0][1] + v.y * m.Data[1][1] + v.z * m.Data[2][1] + v.w * m.Data[3][1], // Column 1
-			v.x * m.Data[0][2] + v.y * m.Data[1][2] + v.z * m.Data[2][2] + v.w * m.Data[3][2], // Column 2
-			v.x * m.Data[0][3] + v.y * m.Data[1][3] + v.z * m.Data[2][3] + v.w * m.Data[3][3]  // Column 3
-		);
-	}
 }
 
 using Matrix4x4 = Math::Matrix<Real, 4, 4>;

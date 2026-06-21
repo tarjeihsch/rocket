@@ -29,7 +29,7 @@ namespace Math
         Matrix<T, 4, 4> Result;
         Result.Data[0][0] = FocalLength / AspectRatio;
         Result.Data[1][1] = FocalLength;
-        Result.Data[2][3] = T(-1);
+        Result.Data[2][3] = T(1);
         Result.Data[3][2] = NearPlane;
         return Result;
     }
