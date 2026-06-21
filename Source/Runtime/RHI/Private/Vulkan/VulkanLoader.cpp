@@ -6,6 +6,10 @@
 
 #include <cassert>
 
+#if defined(_WIN32)
+    #include <windows.h>
+#endif
+
 #if defined(__linux__)
     #include <dlfcn.h>
 #endif
@@ -130,12 +134,6 @@ namespace RHI
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = nullptr;
     PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = nullptr;
 
-#if defined(_WIN32)
-    PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = nullptr;
-#elif defined(__linux__)
-    //PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR = nullptr;
-#endif
-
 #define LOAD_GLOBAL(fn) \
     fn = reinterpret_cast<PFN_##fn>(vkGetInstanceProcAddr(nullptr, #fn))
 
@@ -198,12 +196,6 @@ namespace RHI
         LOAD_INSTANCE(instance, vkGetPhysicalDeviceSurfacePresentModesKHR);
         LOAD_INSTANCE(instance, vkCreateDebugUtilsMessengerEXT);
         LOAD_INSTANCE(instance, vkDestroyDebugUtilsMessengerEXT);
-
-#if defined(_WIN32)
-        LOAD_INSTANCE(instance, vkCreateWin32SurfaceKHR);
-#elif defined(__linux__)
-        //LOAD_INSTANCE(instance, vkCreateWaylandSurfaceKHR);
-#endif
     }
 
     void LoadVulkanDevice(VkDevice device)

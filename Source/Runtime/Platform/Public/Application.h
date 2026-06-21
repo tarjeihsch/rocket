@@ -32,7 +32,12 @@ public:
     /* Traverse event queue and dispatch corresponding events */
     void PumpMessageQueue();
 
-    void process_deferred_message(const Event& event);
+    /**
+     * Runs an infinite loop (or until timeout) while waiting for a new event.
+     */
+    void WaitForEvents(double timeout = DBL_MAX);
+
+    void ProcessDeferredEvent(const Event& event);
 
     MessageController* GetMessageController() const;
 

@@ -66,7 +66,13 @@ bool Application::Initialize()
         return true;
     }
 
+#if defined(_WIN32)
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WIN32);
+#endif
+
+#if defined(__linux__)
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
 
     if (glfwInit() != GLFW_TRUE)
     {
@@ -99,11 +105,16 @@ void Application::PumpMessageQueue()
     Event event = {};
     while (eventQueue.Dequeue(event))
     {
-        process_deferred_message(event);
+        ProcessDeferredEvent(event);
     }
 }
 
-void Application::process_deferred_message(const Event& event)
+void Application::WaitForEvents(double timeout)
+{
+    glfwWaitEventsTimeout(timeout);
+}
+
+void Application::ProcessDeferredEvent(const Event &event)
 {
     OSWindow* window = FindWindowByHandle(event.WindowHandleID);
     

@@ -40,6 +40,7 @@ target_include_directories(RHI
 target_link_libraries(RHI
     PUBLIC
         Rocket::Core
+        Rocket::Platform
     PRIVATE
         $<BUILD_INTERFACE:vulkan::vulkan>
 )

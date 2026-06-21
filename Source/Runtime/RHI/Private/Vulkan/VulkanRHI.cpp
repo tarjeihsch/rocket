@@ -2,6 +2,7 @@
 
 #include "Common/RHI.h"
 #include "VulkanTypes.h"
+#include "Application.h"
 
 #include <vector>
 #include <assert.h>
@@ -9,6 +10,11 @@
 #include <string_view>
 #include <algorithm>
 #include <unordered_map>
+
+#if defined(_WIN32)
+    #include <windows.h>
+    #include <vulkan/vulkan_win32.h>
+#endif
 
 #if defined(__linux__)
     #include <X11/Xlib.h>
@@ -21,7 +27,22 @@ RHI::IRHI* CreateVulkanRHI()
 }
 
 namespace RHI
-{    
+{
+#if defined(_WIN32)
+    static VkResult CreateSurfaceWin32(VkInstance instance, VkSurfaceKHR* surface, HWND hwnd, HINSTANCE window)
+    {
+        VkWin32SurfaceCreateInfoKHR surface_info = {};
+        surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        surface_info.hwnd = hwnd;
+        surface_info.hinstance = GetModuleHandle(nullptr);
+
+        auto fun = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR"));
+
+        return fun(instance, &surface_info, nullptr, surface);
+    }
+#endif
+
+#if defined(__linux__)
     static VkResult CreateSurfaceX11(VkInstance instance, VkSurfaceKHR* surface, void* display, void* window)
     {
         VkXlibSurfaceCreateInfoKHR info{};
@@ -29,12 +50,11 @@ namespace RHI
         info.dpy = reinterpret_cast<Display*>(display);
         info.window = reinterpret_cast<Window>(window);
 
-        auto fn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-            vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR")
-        );
+        auto fun = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR"));
 
-        return fn(instance, &info, nullptr, surface);
+        return fun(instance, &info, nullptr, surface);
     }
+#endif
     
     static constexpr uint32_t           MAX_SHADER_BINDINGS                                 = 4U;
     
@@ -257,7 +277,16 @@ namespace RHI
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
         RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surface_capabilities);
-        
+
+        while (surface_capabilities.currentExtent.width == 0 || surface_capabilities.currentExtent.height == 0)
+        {
+            // Block the thread until the OS receives an event (like a restore or resize)
+            Application::Get().WaitForEvents();
+            
+            // Re-check the capabilities after waking up
+            RHI::vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_physical_device, surface, &surface_capabilities);
+        }
+
         extent = surface_capabilities.currentExtent;
         extent.width = std::clamp(extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width);
         extent.height = std::clamp(extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height);
@@ -1204,18 +1233,8 @@ namespace RHI
         VulkanGPUSwapchain* swapchain = new VulkanGPUSwapchain();
 
 #if defined(_WIN32)
-        VkWin32SurfaceCreateInfoKHR surface_info = {};
-        surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-        surface_info.hwnd = swapchain_desc.window_platform.hwnd;
-        surface_info.hinstance = GetModuleHandle(nullptr);
-        VkResult result = RHI::vkCreateWin32SurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
+        CreateSurfaceWin32(g_instance, &swapchain->surface, swapchain_desc.window_platform.hwnd, GetModuleHandle(nullptr));
 #elif defined(__linux__)
-        //VkWaylandSurfaceCreateInfoKHR surface_info = {};
-        //surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-        //surface_info.display = (wl_display*)swapchain_desc.window_platform.display;
-        //surface_info.surface = (wl_surface*)swapchain_desc.window_platform.surface;
-        //VkResult result = RHI::vkCreateWaylandSurfaceKHR(g_instance, &surface_info, nullptr, &swapchain->surface);
-
         CreateSurfaceX11(g_instance, &swapchain->surface, swapchain_desc.window_platform.display, reinterpret_cast<void*>(static_cast<uintptr_t>(swapchain_desc.window_platform.window)));
 #endif
 
