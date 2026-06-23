@@ -137,7 +137,7 @@ void Application::ProcessDeferredEvent(const Event &event)
         {
             //const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
             //message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
-            window->onWindowResize(Vector2i(event.windowResize.value.x, event.windowResize.value.y));
+            window->on_window_resize(Vector2i(event.windowResize.value.x, event.windowResize.value.y));
             break;
         }
 
@@ -232,6 +232,8 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseMove:
         {
+            window->on_mouse_move(Vector2(event.axis.position.x, event.axis.position.y));
+            window->on_mouse_move_delta(Vector2(event.axis.delta.x, event.axis.delta.y));
             //message_controller->OnMouseMove(event.axis.position.x, event.axis.position.y);
             //message_controller->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
             break;
@@ -239,12 +241,14 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseButtonDown:
         {
+            window->on_mouse_button_down(event.button.value);
             //message_controller->OnMouseDown(window, event.button.value);
             break;
         }
 
         case EventType::MouseButtonUp:
         {
+            window->on_mouse_button_up(event.button.value);
             //message_controller->OnMouseUp(window, event.button.value);
             break;
         }

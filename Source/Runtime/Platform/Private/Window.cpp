@@ -6,7 +6,6 @@
     #define GLFW_EXPOSE_NATIVE_WIN32
 #elif defined(__linux__)
     #define GLFW_EXPOSE_NATIVE_X11
-    #define GLFW_EXPOSE_NATIVE_WAYLAND
 #elif defined(__APPLE__)
     #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
@@ -57,10 +56,9 @@ bool OSWindow::Create(const WindowCreateInfo& createInfo)
     NativeWindowHandle = (void*)glfwGetWin32Window(static_cast<GLFWwindow*>(WindowHandle));
     NativeWindowSystemHandle = (void*)GetModuleHandle(nullptr);
 #elif defined(__linux__)
-    auto x11Window = glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));
     NativeBackend = ENativePlatformBackend::X11;
     NativeWindowHandle = (void*)glfwGetX11Display();
-    NativeWindowSystemHandle = (void*)(uintptr_t)x11Window;
+    NativeWindowSystemHandle = (void*)(uintptr_t)glfwGetX11Window(static_cast<GLFWwindow*>(WindowHandle));;
 #elif defined(__APPLE__)
     NativeBackend = WindowServerType::Cocoa;
     windowInfo.display = (void*)glfwGetCocoaWindow(WindowHandle);

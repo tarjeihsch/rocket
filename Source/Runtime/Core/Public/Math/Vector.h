@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <algorithm>
 #include <limits>
 #include <string>
@@ -287,6 +288,18 @@ namespace Math
         bool IsZero() const
         {
             return data[0] == T(0) && data[1] == T(0) && data[2] == T(0);
+        }
+
+        T& operator[](std::size_t index)
+        {
+            assert(index < 3 && "Index is out of range");
+            return data[index];
+        }
+
+        const T& operator[](std::size_t index) const
+        {
+            assert(index < 3 && "Index is out of range");
+            return data[index];
         }
 
         static Vector<T, 3> Forward() { return Vector<T, 3>(T(0), T(0), T(-1)); }
