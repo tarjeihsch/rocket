@@ -63,4 +63,51 @@ namespace Math
     {
         return a + t * (b - a);
     }
+
+    template<typename T>
+    inline Vector<T, 3> TransformPoint(const Vector<T, 3>& point, const Matrix<T, 4, 4>& matrix)
+    {
+        Vector<T, 4> vector = Vector<T, 4>(point.x, point.y, point.z, T(1.0));
+        vector = matrix * vector;
+        
+        // Account for perspective division if the matrix contains projection data
+        if (vector.w != T(1.0) && vector.w != T(0.0))
+        {
+            vector /= vector.w;
+        }
+        
+        return Vector<T, 3>(vector.x, vector.y, vector.z); 
+    }
+
+    template<typename T>
+    inline Vector<T, 3> TransformDirection(const Vector<T, 3>& velocity, const Matrix<T, 4, 4>& matrix)
+    {
+        Vector<T, 4> vector = Vector<T, 4>(velocity.x, velocity.y, velocity.z, T(0.0));
+        vector = matrix * vector;
+        return Vector<T, 3>(vector.x, vector.y, vector.z);
+    }
+
+    template<typename T>
+    inline Vector<T, 3> LocalToWorldPoint(const Vector<T, 3>& local_point, const Matrix4x4& model_matrix)
+    {
+        return TransformPoint(local_point, model_matrix);
+    }
+
+    template<typename T>
+    inline Vector<T, 3> WorldToLocalPoint(const Vector<T, 3>& world_point, const Matrix4x4& model_matrix)
+    {
+        return TransformPoint(world_point, model_matrix.Inverse());
+    }
+
+    inline Vector3 LocalToWorldDirection(const Vector3& local_dir, const Matrix4x4& model_matrix)
+    {
+        // Uses the direct model matrix, ignores translation (w = 0), and normalizes to strip object scale
+        return TransformDirection(local_dir, model_matrix).Normalize();
+    }
+
+    inline Vector3 WorldToLocalDirection(const Vector3& world_dir, const Matrix4x4& model_matrix)
+    {
+        // Uses the inverse model matrix, ignores translation (w = 0), and normalizes to strip object scale
+        return TransformDirection(world_dir, model_matrix.Inverse()).Normalize();
+    }
 }
