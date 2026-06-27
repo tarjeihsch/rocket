@@ -255,7 +255,7 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseWheel:
         {
-            const float amount = event.wheel.value.y * 1.0f;
+            window->on_mouse_scroll(event.wheel.value);
             //message_controller->OnMouseWheel(amount);
             break;
         }

@@ -18,6 +18,7 @@ struct WindowCreateInfo
 DECLARE_DELEGATE_OneParam(OnWindowResize, void, Vector2i);
 DECLARE_DELEGATE_OneParam(OnMouseMove, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseMoveDelta, void, Vector2);
+DECLARE_DELEGATE_OneParam(OnMouseScroll, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseButtonDown, void, Button);
 DECLARE_DELEGATE_OneParam(OnMouseButtonUp, void, Button);
 DECLARE_DELEGATE_OneParam(OnKeyDown, void, Key);
@@ -30,6 +31,7 @@ public:
     OnWindowResize on_window_resize;
     OnMouseMove on_mouse_move;
     OnMouseMoveDelta on_mouse_move_delta;
+    OnMouseScroll on_mouse_scroll;
     OnMouseButtonDown on_mouse_button_down;
     OnMouseButtonUp on_mouse_button_up;
     OnKeyDown on_key_down;
