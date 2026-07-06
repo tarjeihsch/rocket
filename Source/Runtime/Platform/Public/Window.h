@@ -19,9 +19,9 @@ DECLARE_DELEGATE_OneParam(OnWindowResize, void, Vector2i);
 DECLARE_DELEGATE_OneParam(OnMouseMove, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseMoveDelta, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseScroll, void, Vector2);
-DECLARE_DELEGATE_OneParam(OnMouseButtonDown, void, Button);
+DECLARE_DELEGATE_TwoParams(OnMouseButtonDown, void, Button, bool);
 DECLARE_DELEGATE_OneParam(OnMouseButtonUp, void, Button);
-DECLARE_DELEGATE_OneParam(OnKeyDown, void, Key);
+DECLARE_DELEGATE_TwoParams(OnKeyDown, void, Key, bool);
 DECLARE_DELEGATE_OneParam(OnKeyUp, void, Key);
 DECLARE_DELEGATE(OnWindowClose, void);
 

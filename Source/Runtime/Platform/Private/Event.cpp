@@ -293,6 +293,7 @@ static void OnMouseButton(GLFWwindow* glfwWindow, int32_t button, int32_t action
     event.button.modifier = GetModifier(modifier);
     event.button.position.x = static_cast<int32_t>(lastMouseX);
     event.button.position.y = static_cast<int32_t>(lastMouseY);
+    event.button.repeat = action == GLFW_REPEAT;
 
     Enqueue(*userData->eventSink, event);
 }

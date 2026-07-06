@@ -59,6 +59,12 @@ namespace Math
     }
 
     template<typename T>
+    inline T Lerp(const T a, const T b, T t)
+    {
+        return a + t * (b - a);
+    }
+
+    template<typename T>
     inline Vector<T, 3> Lerp(const Vector<T, 3>& a, const Vector<T, 3>& b, float t)
     {
         return a + t * (b - a);

@@ -161,11 +161,7 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::KeyDown:
         {
-            const bool repeat = event.key.repeat;
-            const uint32_t charcode = 0;
-
-            //message_controller->OnKeyDown(event.key.value, charcode, repeat);
-            window->on_key_down(event.key.value);
+            window->on_key_down(event.key.value, event.key.repeat);
 
             if (event.key.value == Key::Backspace)
             {
@@ -241,7 +237,7 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseButtonDown:
         {
-            window->on_mouse_button_down(event.button.value);
+            window->on_mouse_button_down(event.button.value, event.button.repeat);
             //message_controller->OnMouseDown(window, event.button.value);
             break;
         }
@@ -255,7 +251,7 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseWheel:
         {
-            window->on_mouse_scroll(event.wheel.value);
+            //window->on_mouse_scroll(event.wheel.value);
             //message_controller->OnMouseWheel(amount);
             break;
         }

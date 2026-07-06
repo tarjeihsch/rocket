@@ -192,6 +192,7 @@ struct Event
             Button value;
             Modifier modifier;
             Vector2i position;
+            bool repeat;
         } button;
 
         struct
