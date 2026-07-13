@@ -2,10 +2,20 @@
 
 #include <cstdint>
 
+using i8  = int8_t;
+using i16 = int16_t;
+using i32 = int32_t;
+using i64 = int64_t;
+
+using u8  = uint8_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+
 using ANSICHAR = char;
 using WCHAR = wchar_t;
 
-constexpr static int32_t INT_MX = 0x7FFFFFFF;
+constexpr static int32_t INTEGER_MAX  = 0x7FFFFFFF;
 
 #if defined(__GNUC__) || defined(__clang__)
     #define LIKELY(x)   (__builtin_expect(!!(x), 1))
