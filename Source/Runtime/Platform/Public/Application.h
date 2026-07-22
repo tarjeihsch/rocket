@@ -54,7 +54,5 @@ public:
 private:
     std::vector<std::unique_ptr<OSWindow>> M_Windows;
 
-    MessageController* message_controller;
-
     bool M_IsValid;
 };

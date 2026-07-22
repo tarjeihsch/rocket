@@ -23,6 +23,7 @@ static uint64_t MakeWindowHandle(GLFWwindow* glfwWindow)
 OSWindow::OSWindow()
     : on_key_down(nullptr)
     , on_key_up(nullptr)
+    , on_window_resize(nullptr)
     , WindowHandle(nullptr)
     , WindowHandleID(0)
 {
@@ -126,7 +127,7 @@ Vector2i OSWindow::GetSize() const
 {
     if (!IsValid())
     {
-        return Vector2i(-INT_MX, -INT_MX);
+        return Vector2i(-INTEGER_MAX, -INTEGER_MAX);
     }
 
     Vector2i result;
@@ -138,7 +139,7 @@ Vector2i OSWindow::GetPosition() const
 {
     if (!IsValid())
     {
-        return Vector2i(-INT_MX, -INT_MX);
+        return Vector2i(-INTEGER_MAX, -INTEGER_MAX);
     }
 
     Vector2i result;

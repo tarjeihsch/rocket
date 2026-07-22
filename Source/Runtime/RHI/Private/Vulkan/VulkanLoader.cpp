@@ -113,6 +113,7 @@ namespace RHI
     PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage = nullptr;
     PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer = nullptr;
     PFN_vkCmdCopyImage vkCmdCopyImage = nullptr;
+    PFN_vkCmdCopyBuffer2 vkCmdCopyBuffer2 = nullptr;
     PFN_vkCmdBlitImage2 vkCmdBlitImage2 = nullptr;
     PFN_vkCmdCopyBufferToImage2 vkCmdCopyBufferToImage2 = nullptr;
     PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2 = nullptr;
@@ -271,6 +272,7 @@ namespace RHI
         LOAD_DEVICE(device, vkCmdCopyBufferToImage);
         LOAD_DEVICE(device, vkCmdCopyImageToBuffer);
         LOAD_DEVICE(device, vkCmdCopyImage);
+        LOAD_DEVICE(device, vkCmdCopyBuffer2);
         LOAD_DEVICE(device, vkCmdBlitImage2);
         LOAD_DEVICE(device, vkCmdPipelineBarrier2);
         LOAD_DEVICE(device, vkCmdCopyBufferToImage2);

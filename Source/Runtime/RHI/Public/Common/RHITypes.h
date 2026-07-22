@@ -666,7 +666,7 @@ namespace RHI
         GPUFrontFace front_face = GPUFrontFace::CounterClockwise;
         GPUPolygonMode polygon_mode = GPUPolygonMode::Fill;
 
-        const GPUFormat* color_formats = nullptr;
+        GPUFormat color_formats[8] = {};
         uint32_t color_format_count = 0;
         
         GPUFormat depth_format = GPUFormat::Unknown;

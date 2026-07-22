@@ -3,7 +3,6 @@
 #include "CoreTypes.h"
 #include "Event.h"
 #include "Window.h"
-#include "MessageController.h"
 #include "EventSink.h"
 
 #include <mutex>
@@ -49,7 +48,6 @@ static EventQueue eventQueue;
 
 Application::Application()
 {
-    message_controller = nullptr;
     M_IsValid = false;
 }
 
@@ -135,6 +133,10 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::WindowResized:
         {
+            if (!window->on_window_resize)
+            {
+                return;
+            }
             //const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
             //message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
             window->on_window_resize(Vector2i(event.windowResize.value.x, event.windowResize.value.y));
@@ -261,16 +263,6 @@ void Application::ProcessDeferredEvent(const Event &event)
             break;
         }
     }
-}
-
-MessageController *Application::GetMessageController() const
-{
-    return message_controller;
-}
-
-void Application::SetMessageController(MessageController* new_message_controller)
-{
-    message_controller = new_message_controller;
 }
 
 OSWindow* Application::InitWindow(WindowCreateInfo windowCreateInfo)

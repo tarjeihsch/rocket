@@ -100,6 +100,7 @@ namespace RHI
     extern PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
     extern PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer;
     extern PFN_vkCmdCopyImage vkCmdCopyImage;
+    extern PFN_vkCmdCopyBuffer2 vkCmdCopyBuffer2;
     extern PFN_vkCmdBlitImage2 vkCmdBlitImage2;
     extern PFN_vkCmdCopyBufferToImage2 vkCmdCopyBufferToImage2;
     extern PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2;

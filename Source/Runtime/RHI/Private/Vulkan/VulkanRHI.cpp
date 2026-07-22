@@ -1550,6 +1550,7 @@ namespace RHI
     
     void VulkanGPUCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
     {
+        RHI::vkCmdDrawIndexed(command_buffer_data[CURRENT_FRAME], index_count, instance_count, first_index, vertex_offset, first_instance);
     }
     
     void VulkanGPUCommandList::DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count)
@@ -1564,6 +1565,20 @@ namespace RHI
 
     void VulkanGPUCommandList::CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset)
     {
+        VkBufferCopy2 region = {};
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        region.srcOffset = src_offset;
+        region.dstOffset = dst_offset;
+        region.size = size;
+
+        VkCopyBufferInfo2 copy_info = {};
+        copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+        copy_info.srcBuffer = static_cast<const VulkanGPUBuffer*>(src)->buffer;
+        copy_info.dstBuffer = static_cast<const VulkanGPUBuffer*>(dst)->buffer;
+        copy_info.regionCount = 1;
+        copy_info.pRegions = &region;
+
+        RHI::vkCmdCopyBuffer2(command_buffer_data[CURRENT_FRAME], &copy_info);
     }
 
     void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer)
