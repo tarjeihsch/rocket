@@ -4,10 +4,6 @@ include(CMakePackageConfigHelpers)
 
 project(Rocket LANGUAGES C CXX)
 
-if(MSVC)
-  add_compile_options(/MP)
-endif()
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -35,6 +31,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	add_compile_options(/MP)
     add_compile_definitions(RK_PLATFORM_WINDOWS)
 endif()
 
@@ -52,6 +49,8 @@ add_subdirectory(Source/ThirdParty/vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(Source/Runtime/Core)
 add_subdirectory(Source/Runtime/Platform)
 add_subdirectory(Source/Runtime/RHI)
+add_subdirectory(Source/Runtime/Geometry)
+add_subdirectory(Source/Runtime/Graphics)
 
 enable_testing()
 add_subdirectory(Source/Tests/Core)
@@ -64,6 +63,8 @@ set(ROCKET_EXPORT_LIBS
     Core
     Platform
     RHI
+	Geometry
+	Graphics
 )
 
 configure_package_config_file(
