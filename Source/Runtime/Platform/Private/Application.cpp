@@ -126,8 +126,10 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::WindowCloseRequested:
         {
-            //message_controller->OnWindowClose(window);
-            window->on_window_close();
+            if (window->on_window_close)
+            {
+                window->on_window_close();
+            }
             break;
         }
 
@@ -163,24 +165,30 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::KeyDown:
         {
-            window->on_key_down(event.key.value, event.key.repeat);
+            if (window->on_window_close)
+            {
+                window->on_key_down(event.key.value, event.key.repeat);
 
-            if (event.key.value == Key::Backspace)
-            {
-                //message_controller->OnKeyChar('\b', repeat);
-            }
-            else if (event.key.value == Key::Enter) 
-            {
-                //message_controller->OnKeyChar('\r', repeat);
+                if (event.key.value == Key::Backspace)
+                {
+                    //message_controller->OnKeyChar('\b', repeat);
+                }
+                else if (event.key.value == Key::Enter) 
+                {
+                    //message_controller->OnKeyChar('\r', repeat);
+                }
             }
             break;
         }
 
         case EventType::KeyUp:
         {
-            const uint32_t charcode = 0;
-            //message_controller->OnKeyUp(event.key.value, charcode, false);
-            window->on_key_up(event.key.value);
+            if (window->on_key_up)
+            {
+                const uint32_t charcode = 0;
+                //message_controller->OnKeyUp(event.key.value, charcode, false);
+                window->on_key_up(event.key.value);
+            }
             break;
         }
 
@@ -230,23 +238,34 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseMove:
         {
-            window->on_mouse_move(Vector2(event.axis.position.x, event.axis.position.y));
-            window->on_mouse_move_delta(Vector2(event.axis.delta.x, event.axis.delta.y));
-            //message_controller->OnMouseMove(event.axis.position.x, event.axis.position.y);
-            //message_controller->OnRawMouseMove(event.axis.delta.x, event.axis.delta.y);
+            if (window->on_mouse_move)
+            {
+                window->on_mouse_move(Vector2(event.axis.position.x, event.axis.position.y));
+            }
+
+            if (window->on_mouse_move_delta)
+            {
+                window->on_mouse_move_delta(Vector2(event.axis.delta.x, event.axis.delta.y));
+            }
             break;
         }
 
         case EventType::MouseButtonDown:
         {
-            window->on_mouse_button_down(event.button.value, event.button.repeat);
+            if (window->on_mouse_button_down)
+            {
+                window->on_mouse_button_down(event.button.value, event.button.repeat);
+            }
             //message_controller->OnMouseDown(window, event.button.value);
             break;
         }
 
         case EventType::MouseButtonUp:
         {
-            window->on_mouse_button_up(event.button.value);
+            if (window->on_mouse_button_up)
+            {
+                window->on_mouse_button_up(event.button.value);
+            }
             //message_controller->OnMouseUp(window, event.button.value);
             break;
         }
