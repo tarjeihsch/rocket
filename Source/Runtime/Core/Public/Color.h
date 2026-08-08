@@ -1,6 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include "Math/Vector.h"
+
+static float Clamp01(float value)
+{
+	return Math::Clamp(value, 0.0f, 1.0f);
+}
+
+static uint8_t ToByte(float value)
+{
+	return (uint8_t)(Clamp01(value) * 255.0f + 0.5f);
+}
 
 struct LinearColor
 {
@@ -44,10 +55,17 @@ struct Color32
 	Color32(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 	{
 		data = 0;
-		data |= ((uint32_t)r << 24);
-		data |= ((uint32_t)g << 16);
-		data |= ((uint32_t)b << 8);
-		data |= ((uint32_t)a << 0);
+		data |= ((uint32_t)a << 24);
+		data |= ((uint32_t)b << 16);
+		data |= ((uint32_t)g << 8);
+		data |= ((uint32_t)r << 0);
+	}
+
+	// Converts a linear-space color to Color32, gamma-encoding RGB to sRGB.
+	// Alpha is stored linearly (never gamma-encoded).
+	explicit Color32(const LinearColor& c)
+		: Color32(ToByte(c.R), ToByte(c.G), ToByte(c.B), ToByte(c.A))
+	{
 	}
 
 	static const Color32 red;
