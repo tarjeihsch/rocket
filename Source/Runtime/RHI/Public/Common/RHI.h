@@ -1,137 +1,172 @@
 #pragma once
 
-#include "RHICommandList.h"
-#include "RHIPipeline.h"
+#include "Common/RHITypes.h"
 
-#include <cstdint>
-#include <memory>
-#include <span>
+#include <Math/Vector.h>
 
-struct RRHISamplerDesc;
-class RRHISampler;
-struct FRHIDrawCommand;
-struct FRHIBufferDesc;
-struct FRHIBuffer;
-struct FMeshDrawCommand;
-enum class ERHIPipelineStage : uint16_t;
-enum class ERHIResourceAccess : uint16_t;
-enum class ERHITextureLayout : uint8_t;
-struct FRHITextureView;
-struct FRHITextureDesc;
-struct FRHITextureViewDesc;
-struct FRHITexture;
-struct FRHIDrawParams;
-class IRHICommandListContext;
-class FRHICommandList;
-
-enum class ERHIResourceLifetime : uint8_t
+namespace RHI
 {
-    Unknown = 0,
+    // RHI Resource Ownership
+    // All RHI resources (buffers, textures, etc.) are created via IRHI factory methods
+    // (e.g. CreateBuffer) and destroyed by deleting the returned pointer. Resources
+    // clean up their underlying API objects in their destructors. There are no
+    // explicit Destroy methods on the RHI interface.
 
-    // Long-lived object with default VMA allocator
-    Persistent,
+    struct GPUBuffer
+    {
+        virtual ~GPUBuffer() = default;
 
-    // Short-lived object with custom allocator
-    Transient,
+        virtual void SetDebugName(const char* debug_name) = 0;
+        virtual uint64_t GetVirtualAddress() const = 0;
 
-    // Memory will be managed externally
-    Unmanaged,
+        virtual void* Lock() = 0;
+        virtual void Unlock() = 0;
+    };
+
+    struct GPUBufferView
+    {
+        virtual ~GPUBufferView() = default;
+    };
+
+    struct GPUTexture
+    {
+        virtual ~GPUTexture() = default;
+        
+        virtual void SetDebugName(const char* debug_name) = 0;
+    };
+    
+    struct GPUSampler
+    {
+        virtual ~GPUSampler() = default;
+
+        virtual void SetDebugName(const char* debug_name) = 0;
+    };
+
+    struct GPUPipeline
+    {
+        virtual ~GPUPipeline() = default;
+        
+        virtual void SetDebugName(const char* debug_name) = 0;
+    };
+
+    struct GPUGraphicsPipeline : GPUPipeline
+    {
+        virtual ~GPUGraphicsPipeline() = default;
+    };
+
+    struct GPUComputePipeline : GPUPipeline
+    {
+        virtual ~GPUComputePipeline() = default;
+    };
+
+    struct GPUShader
+    {
+        virtual ~GPUShader() = default;
+    };
+
+    struct GPUSwapchain
+    {
+        virtual ~GPUSwapchain() = default;
+
+        virtual void SetDebugName(const char* debug_name) = 0;
+        virtual GPUTexture* GetBackBufferTexture() const = 0;
+        virtual bool AcquireNextBackBuffer() = 0;
+        virtual bool PresentBackBuffer() = 0;
+        virtual void ResizeBackBuffers() = 0;
+        virtual Vector2i GetBackBufferSize() = 0;
+    };
+
+    struct GPUCommandList
+    {
+        virtual ~GPUCommandList() = default;
+
+        virtual void Begin() = 0;
+        virtual void End() = 0;
+        virtual void BeginRenderPass(GPURenderPass* rendering_info) = 0;
+        virtual void EndRenderPass() = 0;
+        virtual void SetGraphicsPipeline(const GPUGraphicsPipeline* pipeline) = 0;
+        virtual void SetComputePipeline(const GPUComputePipeline* computePipeline) = 0;
+        virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
+        virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
+        virtual void SetPushConstants(const void* data, uint32_t size) = 0;
+        virtual void Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) = 0;
+        virtual void DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) = 0;
+        virtual void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) = 0;
+        virtual void Dispatch(uint32_t x, uint32_t y, uint32_t z) = 0;
+        virtual void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) = 0;
+        virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) = 0;
+        virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
+        virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
+        virtual void BeginTimelineQuery() = 0;
+        virtual void EndTimelineQuery() = 0;
+        virtual void BeginPipelineQuery() = 0;
+        virtual void EndPipelineQuery() = 0;
+
+        void Barrier(const GPUBufferBarrier& barrier)
+        {
+            Barrier(&barrier, 1, nullptr, 0);
+        }
+
+        void Barrier(const GPUTextureBarrier& barrier)
+        {
+            Barrier(nullptr, 0, &barrier, 1);
+        }
+    };
+
+	class IRHI
+	{
+    public:
+        virtual ~IRHI() = default;
+
+        virtual GPUAdapter GetAdapater() const = 0;
+
+        virtual GPUBuffer* CreateBuffer(const GPUBufferDesc& buffer_desc) = 0;
+        virtual GPUTexture* CreateTexture(const GPUTextureDesc& texture_desc) = 0;
+        virtual GPUSampler* CreateSampler(const GPUSamplerDesc& sampler_desc) = 0;
+        virtual GPUGraphicsPipeline* CreateGraphicsPipeline(const GPUGraphicsPipelineDesc& pipeline_desc) = 0;
+        virtual GPUComputePipeline* CreateComputePipeline(const GPUComputePipelineDesc& pipeline_desc) = 0;
+        virtual GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) = 0;
+        virtual GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) = 0;
+        virtual GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) = 0;
+
+        virtual void SetTexture(uint32_t index, const GPUTexture* texture) = 0;
+        virtual void SetRWTexture(uint32_t index, const GPUTexture* texture) = 0;
+        virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;
+        virtual void SetSampler(uint32_t index, const GPUSampler* sampler) = 0;
+
+        virtual void Submit(GPUCommandList* command_list, GPUSwapchain* swapchain) = 0;
+        virtual void SubmitImmediate(GPUCommandList* command_list) = 0;
+        virtual void WaitIdle() = 0;
+
+        virtual GPUTimingQueryResult GetTimingQueryResult() = 0;
+        virtual GPUPipelineQueryResult GetPipelineQueryResult() = 0;
+	};
+
+    void Initialize(GPUDriver driver);
+    void Shutdown();
+
+    extern IRHI* g_rhi;
+
+    inline IRHI* GetRHI()
+    {
+        return g_rhi;
+    }
+
+    template<typename T>
+    T* CastRHI() 
+    {
+        return static_cast<T>(GetRHI());
+    }
+
+    static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT = 8;
+    static constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
+
+    extern uint64_t g_frame_counter;
+
+    #define CURRENT_FRAME g_frame_counter % CONCURRENT_FRAME_COUNT
+
+    inline static uint32_t GetCurrentFrame()
+    {
+        return g_frame_counter % CONCURRENT_FRAME_COUNT;
+    }
 };
-
-enum class ERHIResourceMemory
-{
-    Unknown = 0,
-
-    // GPU-only memory; fastest access by the GPU; CPU can't map it
-    DeviceLocal,
-
-    // CPU can map this memory
-    HostVisible
-};
-
-enum class ERHIInterfaceType : uint8_t
-{
-    None = 0,
-
-    Vulkan,
-
-    D3D12,
-
-    Metal,
-
-    WebGL
-};
-
-class IRHI
-{
-public:
-    virtual ~IRHI() = default;
-
-    virtual void Init() = 0;
-    virtual void Shutdown() = 0;
-    virtual void Tick(float DeltaTime) = 0;
-
-    [[nodiscard]] virtual const char* GetName() const  = 0;
-    [[nodiscard]] virtual const char* GetVersion() const  = 0;
-    [[nodiscard]] virtual ERHIInterfaceType  GetInterfaceType() const noexcept = 0;
-    [[nodiscard]] virtual IRHI* GetNonValidationRHI() const noexcept { return const_cast<IRHI*>(this); }
-
-    virtual uint64_t GetFrameCounter() const noexcept = 0;
-    virtual void RHIWaitUntilIdle() const = 0;
-    virtual FRHITexture* RHICreateTexture(FRHITextureDesc Desc) const = 0;
-    virtual FRHITextureView* RHICreateTextureView(FRHITextureViewDesc TextureViewDesc, FRHITexture* Texture) const = 0;
-    virtual FRHIBuffer* RHICreateBuffer(FRHIBufferDesc Desc) const = 0;
-    virtual RRHISampler* RHICreateSampler(RRHISamplerDesc Desc) const = 0;
-    virtual void RHIUploadDataBlocking(FRHIBuffer* Buffer, void* Data, uint64_t Size) = 0;
-    virtual void RHIUploadTextureBlocking(FRHITexture* Texture2D, const uint8_t* Data, uint32_t Width, uint32_t Height) = 0;
-    virtual FRHIPipeline* RHICreatePipelineStateObject(FRHIPipelineDesc Desc) = 0;
-    virtual IRHICommandListContext* GetCommandListContext() const = 0;
-    virtual void RHICmdBindPipeline(FRHICommandList& RHICmdList, FRHIPipeline* Pipeline) = 0;
-    virtual void RHICmdBeginRendering(FRHICommandList* RHICmdList, std::span<FRHITextureView*> Attachments, FRHITextureView* DepthAttachmentView, bool bClearColor) = 0;
-    virtual void RHICmdPipelineBarrier(FRHICommandList* RHICmdList, FRHITexture* Texture, ERHITextureLayout SrcLayout, ERHITextureLayout DstLayout, ERHIResourceAccess SrcAccess, ERHIResourceAccess DstAccess, ERHIPipelineStage SrcStage, ERHIPipelineStage DstStage, uint32_t SrcQueueFamilyIndex = ~(0U), uint32_t DstQueueFamilyIndex = ~(0U)) = 0;
-    virtual void RHICmdEndRendering(FRHICommandList* RHICmdList) = 0;
-    virtual void RHICmdDraw(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-    virtual void RHICmdDrawIndexed(FRHICommandList& RHICmdList, const FRHIDrawCommand& DrawCommand, const FRHIDrawParams& Params) = 0;
-    virtual void RHICmdBlitImage(FRHICommandList &RHICmdList, FRHITexture *Src, FRHITexture *Dst) = 0;
-    virtual void RHICmdSetScissor(FRHICommandList& RHICmdList, int32_t X, int32_t Y, uint32_t Width, uint32_t Height) = 0;
-    virtual FRHITexture *RHIGetBackBufferRenderTarget() const = 0;
-    virtual std::shared_ptr<FRHIBuffer> RHIBindBuffer(void* Data, uint64_t Size) = 0;
-    virtual std::array<uint32_t, 2> RHIGetViewportExtent() const = 0;
-
-    // virtual void RHIUploadTextureData()
-};
-
-class IRHIModule
-{
-public:
-    virtual ~IRHIModule() = default;
-
-    virtual IRHI* CreateRHI() = 0;
-};
-
-extern IRHI* GRHI;
-extern IRHIModule* GRHIModule;
-
-void SetRHIModule(ERHIInterfaceType InInterfaceType);
-
-IRHIModule* CreateVulkanRHIModule();
-
-template<typename TRHI>
-inline TRHI* CastRHI(IRHI* InRHI)
-{
-#ifdef _DEBUG
-    assert(InRHI && InRHI->GetInterfaceType() == TRHI::StaticType);
-#endif
-    return static_cast<TRHI*>(InRHI->GetNonValidationRHI());
-}
-
-template<typename TRHI>
-inline TRHI* GetRHI()
-{
-    return CastRHI<TRHI>(GRHI);
-}
-
-inline IRHI* GetRHI()
-{
-    return GRHI;
-}

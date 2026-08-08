@@ -20,7 +20,14 @@ file(GLOB_RECURSE RHI_PRIVATE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/*.cpp
 )
 
-target_sources(RHI PRIVATE ${RHI_PRIVATE_SOURCES})
+target_sources(RHI PRIVATE 
+    ${RHI_PUBLIC_HEADERS}
+    ${RHI_PRIVATE_HEADERS}
+    ${RHI_PRIVATE_SOURCES}
+)
+
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Public"  PREFIX "Public"  FILES ${RHI_PUBLIC_HEADERS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/Private" PREFIX "Private" FILES ${RHI_PRIVATE_HEADERS} ${RHI_PRIVATE_SOURCES})
 
 target_include_directories(RHI
     PUBLIC
@@ -31,13 +38,11 @@ target_include_directories(RHI
 )
 
 target_link_libraries(RHI
-    PUBLIC Rocket::Core
-    PRIVATE Rocket::Window
-    PRIVATE Rocket::Asset
-    PRIVATE $<BUILD_INTERFACE:imgui::imgui>
-    PRIVATE $<BUILD_INTERFACE:vulkan::vulkan>
-    PRIVATE $<BUILD_INTERFACE:glfw>
-    PRIVATE $<BUILD_INTERFACE:glm::glm>
+    PUBLIC
+        Rocket::Core
+        Rocket::Platform
+    PRIVATE
+        $<BUILD_INTERFACE:vulkan::vulkan>
 )
 
-set_target_properties(Core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(RHI PROPERTIES POSITION_INDEPENDENT_CODE ON)

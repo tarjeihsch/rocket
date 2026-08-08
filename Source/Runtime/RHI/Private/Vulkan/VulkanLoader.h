@@ -1,200 +1,131 @@
 #pragma once
 
-#include "Common/RHIPipeline.h"
-#include "Common/RHISampler.h"
-#include "Common/RHITexture.h"
-
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
-#define VMA_STATIC_VULKAN_FUNCTIONS 0
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-
-#define VULKAN_GLOBAL_FUNCTIONS(X) \
-    X(vkGetInstanceProcAddr) \
-    X(vkEnumerateInstanceExtensionProperties) \
-    X(vkEnumerateInstanceLayerProperties) \
-    X(vkCreateInstance)
-
-#define VULKAN_INSTANCE_FUNCTIONS(X) \
-    X(vkDestroyInstance) \
-    X(vkEnumeratePhysicalDevices) \
-    X(vkGetPhysicalDeviceProperties) \
-    X(vkGetPhysicalDeviceFeatures) \
-    X(vkGetPhysicalDeviceQueueFamilyProperties) \
-    X(vkGetPhysicalDeviceMemoryProperties) \
-    X(vkGetPhysicalDeviceMemoryProperties2) \
-    X(vkGetPhysicalDeviceMemoryProperties2KHR) \
-    X(vkEnumerateDeviceExtensionProperties) \
-    X(vkGetPhysicalDeviceFormatProperties) \
-    X(vkGetPhysicalDeviceFormatProperties2) \
-    X(vkGetPhysicalDeviceFormatProperties2KHR) \
-    X(vkGetPhysicalDeviceImageFormatProperties) \
-    X(vkGetPhysicalDeviceProperties2) \
-    X(vkGetPhysicalDeviceProperties2KHR) \
-    X(vkGetPhysicalDeviceFeatures2) \
-    X(vkGetPhysicalDeviceFeatures2KHR) \
-    X(vkGetPhysicalDeviceSurfaceSupportKHR) \
-    X(vkGetPhysicalDeviceSurfaceCapabilitiesKHR) \
-    X(vkGetPhysicalDeviceSurfaceFormatsKHR) \
-    X(vkGetPhysicalDeviceSurfacePresentModesKHR) \
-    X(vkCreateDebugUtilsMessengerEXT) \
-    X(vkDestroyDebugUtilsMessengerEXT) \
-    X(vkCreateDevice) \
-    X(vkGetDeviceProcAddr) \
-    X(vkDestroySurfaceKHR)
-
-#define VULKAN_DEVICE_FUNCTIONS(X) \
-    X(vkDestroyDevice) \
-    X(vkDeviceWaitIdle) \
-    X(vkGetDeviceQueue) \
-    X(vkAllocateMemory) \
-    X(vkFreeMemory) \
-    X(vkMapMemory) \
-    X(vkUnmapMemory) \
-    X(vkFlushMappedMemoryRanges) \
-    X(vkInvalidateMappedMemoryRanges) \
-    X(vkGetBufferMemoryRequirements) \
-    X(vkGetBufferMemoryRequirements2) \
-    X(vkGetBufferMemoryRequirements2KHR) \
-    X(vkGetImageMemoryRequirements) \
-    X(vkGetImageMemoryRequirements2) \
-    X(vkGetImageMemoryRequirements2KHR) \
-    X(vkBindBufferMemory) \
-    X(vkBindBufferMemory2) \
-    X(vkBindBufferMemory2KHR) \
-    X(vkBindImageMemory) \
-    X(vkBindImageMemory2) \
-    X(vkBindImageMemory2KHR) \
-    X(vkCreateBuffer) \
-    X(vkDestroyBuffer) \
-    X(vkCreateImage) \
-    X(vkDestroyImage) \
-    X(vkGetImageSubresourceLayout) \
-    X(vkCreateImageView) \
-    X(vkDestroyImageView) \
-    X(vkCreateCommandPool) \
-    X(vkDestroyCommandPool) \
-    X(vkAllocateCommandBuffers) \
-    X(vkFreeCommandBuffers) \
-    X(vkBeginCommandBuffer) \
-    X(vkEndCommandBuffer) \
-    X(vkResetCommandBuffer) \
-    X(vkQueueSubmit) \
-    X(vkQueueSubmit2) \
-    X(vkQueueWaitIdle) \
-    X(vkQueuePresentKHR) \
-    X(vkCreateSemaphore) \
-    X(vkDestroySemaphore) \
-    X(vkWaitSemaphores) \
-    X(vkCreateFence) \
-    X(vkDestroyFence) \
-    X(vkWaitForFences) \
-    X(vkResetFences) \
-    X(vkCreateSwapchainKHR) \
-    X(vkDestroySwapchainKHR) \
-    X(vkGetSwapchainImagesKHR) \
-    X(vkAcquireNextImageKHR) \
-    X(vkGetDeviceBufferMemoryRequirements) \
-    X(vkGetDeviceImageMemoryRequirements) \
-    X(vkCreateShaderModule) \
-    X(vkDestroyShaderModule) \
-    X(vkCreateGraphicsPipelines) \
-    X(vkDestroyPipeline) \
-    X(vkCmdBindPipeline) \
-    X(vkCmdBindDescriptorSets) \
-    X(vkCmdBindVertexBuffers) \
-    X(vkCreateDescriptorSetLayout) \
-    X(vkCreateDescriptorPool) \
-    X(vkAllocateDescriptorSets) \
-    X(vkUpdateDescriptorSets) \
-    X(vkCmdBindIndexBuffer) \
-    X(vkCmdDraw) \
-    X(vkCmdBlitImage) \
-    X(vkCmdDrawIndexed) \
-    X(vkDestroyDescriptorPool) \
-    X(vkDestroyDescriptorSetLayout)\
-    X(vkCreatePipelineLayout) \
-    X(vkDestroyPipelineLayout) \
-    X(vkCmdSetViewport) \
-    X(vkCmdSetScissor) \
-    X(vkCmdCopyBuffer) \
-    X(vkCmdPipelineBarrier) \
-    X(vkCmdPipelineBarrier2) \
-    X(vkCmdBeginRendering) \
-    X(vkCmdEndRendering) \
-    X(vkCmdPushConstants) \
-    X(vkCmdCopyBufferToImage) \
-    X(vkCreateSampler) \
-    X(vkDestroySampler)
-
-#define VMA_BASE_FUNCTIONS(X) \
-    X(vkGetInstanceProcAddr) \
-    X(vkGetDeviceProcAddr) \
-    X(vkGetPhysicalDeviceProperties) \
-    X(vkGetPhysicalDeviceMemoryProperties) \
-    X(vkAllocateMemory) \
-    X(vkFreeMemory) \
-    X(vkMapMemory) \
-    X(vkUnmapMemory) \
-    X(vkFlushMappedMemoryRanges) \
-    X(vkInvalidateMappedMemoryRanges) \
-    X(vkBindBufferMemory) \
-    X(vkBindImageMemory) \
-    X(vkGetBufferMemoryRequirements) \
-    X(vkGetImageMemoryRequirements) \
-    X(vkCreateBuffer) \
-    X(vkDestroyBuffer) \
-    X(vkCreateImage) \
-    X(vkDestroyImage) \
-    X(vkCmdCopyBuffer)
-
-#define VULKAN_ALL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                \
-    VULKAN_GLOBAL_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 \
-    VULKAN_INSTANCE_FUNCTIONS(X)                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
-    VULKAN_DEVICE_FUNCTIONS(X)
-
-enum class ERHIResourceMemory;
-enum class ERHIBufferUsage : uint32_t;
-namespace VulkanRHI
+namespace RHI
 {
-    // Opaque handle to dynamic library
-    extern void* Library;
+    extern PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+    extern PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties;
+    extern PFN_vkEnumerateInstanceLayerProperties vkEnumerateInstanceLayerProperties;
+    extern PFN_vkCreateInstance vkCreateInstance;
+    extern PFN_vkDestroyInstance vkDestroyInstance;
+    extern PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
+    extern PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties;
+    extern PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2;
+    extern PFN_vkGetPhysicalDeviceFeatures2 vkGetPhysicalDeviceFeatures2;
+    extern PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
+    extern PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties;
+    extern PFN_vkGetPhysicalDeviceMemoryProperties2 vkGetPhysicalDeviceMemoryProperties2;
+    extern PFN_vkGetPhysicalDeviceFormatProperties vkGetPhysicalDeviceFormatProperties;
+    extern PFN_vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceImageFormatProperties;
+    extern PFN_vkEnumerateDeviceExtensionProperties vkEnumerateDeviceExtensionProperties;
+    extern PFN_vkCreateDevice vkCreateDevice;
+    extern PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
+    extern PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
+    extern PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+    extern PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
+    extern PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
+    extern PFN_vkDestroyDevice vkDestroyDevice;
+    extern PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+    extern PFN_vkGetDeviceQueue vkGetDeviceQueue;
+    extern PFN_vkQueueSubmit2 vkQueueSubmit2;
+    extern PFN_vkQueueWaitIdle vkQueueWaitIdle;
+    extern PFN_vkQueuePresentKHR vkQueuePresentKHR;
+    extern PFN_vkAllocateMemory vkAllocateMemory;
+    extern PFN_vkFreeMemory vkFreeMemory;
+    extern PFN_vkMapMemory vkMapMemory;
+    extern PFN_vkUnmapMemory vkUnmapMemory;
+    extern PFN_vkFlushMappedMemoryRanges vkFlushMappedMemoryRanges;
+    extern PFN_vkInvalidateMappedMemoryRanges vkInvalidateMappedMemoryRanges;
+    extern PFN_vkBindBufferMemory vkBindBufferMemory;
+    extern PFN_vkBindBufferMemory2 vkBindBufferMemory2;
+    extern PFN_vkBindImageMemory vkBindImageMemory;
+    extern PFN_vkBindImageMemory2 vkBindImageMemory2;
+    extern PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
+    extern PFN_vkGetBufferMemoryRequirements2 vkGetBufferMemoryRequirements2;
+    extern PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements;
+    extern PFN_vkGetImageMemoryRequirements2 vkGetImageMemoryRequirements2;
+    extern PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements;
+    extern PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements;
+    extern PFN_vkCreateBuffer vkCreateBuffer;
+    extern PFN_vkDestroyBuffer vkDestroyBuffer;
+    extern PFN_vkGetBufferDeviceAddress vkGetBufferDeviceAddress;
+    extern PFN_vkCreateImage vkCreateImage;
+    extern PFN_vkDestroyImage vkDestroyImage;
+    extern PFN_vkCreateImageView vkCreateImageView;
+    extern PFN_vkDestroyImageView vkDestroyImageView;
+    extern PFN_vkCreateSampler vkCreateSampler;
+    extern PFN_vkDestroySampler vkDestroySampler;
+    extern PFN_vkCreateShaderModule vkCreateShaderModule;
+    extern PFN_vkDestroyShaderModule vkDestroyShaderModule;
+    extern PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines;
+    extern PFN_vkCreateComputePipelines vkCreateComputePipelines;
+    extern PFN_vkDestroyPipeline vkDestroyPipeline;
+    extern PFN_vkCreatePipelineLayout vkCreatePipelineLayout;
+    extern PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout;
+    extern PFN_vkCreateDescriptorSetLayout vkCreateDescriptorSetLayout;
+    extern PFN_vkDestroyDescriptorSetLayout vkDestroyDescriptorSetLayout;
+    extern PFN_vkCreateDescriptorPool vkCreateDescriptorPool;
+    extern PFN_vkDestroyDescriptorPool vkDestroyDescriptorPool;
+    extern PFN_vkAllocateDescriptorSets vkAllocateDescriptorSets;
+    extern PFN_vkFreeDescriptorSets vkFreeDescriptorSets;
+    extern PFN_vkUpdateDescriptorSets vkUpdateDescriptorSets;
+    extern PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
+    extern PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
+    extern PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+    extern PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
+    extern PFN_vkCreateCommandPool vkCreateCommandPool;
+    extern PFN_vkDestroyCommandPool vkDestroyCommandPool;
+    extern PFN_vkResetCommandPool vkResetCommandPool;
+    extern PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
+    extern PFN_vkBeginCommandBuffer vkBeginCommandBuffer;
+    extern PFN_vkEndCommandBuffer vkEndCommandBuffer;
+    extern PFN_vkCmdBeginRendering vkCmdBeginRendering;
+    extern PFN_vkCmdEndRendering vkCmdEndRendering;
+    extern PFN_vkCmdBindPipeline vkCmdBindPipeline;
+    extern PFN_vkCmdBindDescriptorSets vkCmdBindDescriptorSets;
+    extern PFN_vkCmdSetViewport vkCmdSetViewport;
+    extern PFN_vkCmdSetScissor vkCmdSetScissor;
+    extern PFN_vkCmdPushConstants vkCmdPushConstants;
+    extern PFN_vkCmdDraw vkCmdDraw;
+    extern PFN_vkCmdDrawIndexed vkCmdDrawIndexed;
+    extern PFN_vkCmdDrawIndirect vkCmdDrawIndirect;
+    extern PFN_vkCmdDrawIndexedIndirect vkCmdDrawIndexedIndirect;
+    extern PFN_vkCmdDispatch vkCmdDispatch;
+    extern PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
+    extern PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
+    extern PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer;
+    extern PFN_vkCmdCopyImage vkCmdCopyImage;
+    extern PFN_vkCmdCopyBuffer2 vkCmdCopyBuffer2;
+    extern PFN_vkCmdBlitImage2 vkCmdBlitImage2;
+    extern PFN_vkCmdCopyBufferToImage2 vkCmdCopyBufferToImage2;
+    extern PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2;
+    extern PFN_vkCreateSemaphore vkCreateSemaphore;
+    extern PFN_vkDestroySemaphore vkDestroySemaphore;
+    extern PFN_vkCreateFence vkCreateFence;
+    extern PFN_vkDestroyFence vkDestroyFence;
+    extern PFN_vkWaitForFences vkWaitForFences;
+    extern PFN_vkResetFences vkResetFences;
+    extern PFN_vkCreateQueryPool vkCreateQueryPool;
+    extern PFN_vkResetQueryPool vkResetQueryPool;
+    extern PFN_vkDestroyQueryPool vkDestroyQueryPool;
+    extern PFN_vkCmdResetQueryPool vkCmdResetQueryPool;
+    extern PFN_vkCmdWriteTimestamp vkCmdWriteTimestamp;
+    extern PFN_vkCmdBeginQuery vkCmdBeginQuery;
+    extern PFN_vkCmdEndQuery vkCmdEndQuery;
+    extern PFN_vkGetQueryPoolResults vkGetQueryPoolResults;
+    extern PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
+    extern PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT;
+    extern PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT;
 
-#define DECLARE_PFN(name) extern PFN_##name name;
-    VULKAN_ALL_FUNCTIONS(DECLARE_PFN)
-#undef DECLARE_PFN
+    void LoadVulkanLibrary();
+    void UnloadVulkanLibrary();
 
-    VkImageCreateInfo GetVkImageCreateInfo(VkExtent3D Extent, VkFormat Format, VkImageUsageFlags UsageFlags);
-    VkImageViewCreateInfo GetVkImageViewCreateInfo(VkImage Image, VkFormat Format, VkImageAspectFlags AspectFlags);
-    VkBufferCreateInfo GetVkBufferCreateInfo(uint64_t Size, VkBufferUsageFlags UsageFlags);
-
-    VkImageLayout GetVulkanLayout(ERHITextureLayout layout);
-    VkAccessFlags GetVulkanAccess(ERHIResourceAccess access);
-    VkPipelineStageFlags GetVulkanPipelineStage(ERHIPipelineStage stage);
-    VkImageUsageFlags GetVulkanUsage(ERHITextureUsage usage);
-    VkFormat GetVkFormat(ERHITextureFormat Format);
-    VkImageAspectFlags GetVkAspect(ERHITextureAspect Aspect);
-    VkFormat ToVkFormat(ERHIFormat Format);
-    VkPrimitiveTopology ToVkTopology(ERHIPrimitiveTopology Topology);
-    VkCullModeFlags ToVkCullMode(ERHICullMode Mode);
-    VkPolygonMode ToVkPolygonMode(ERHIPolygonMode Mode);
-    VmaMemoryUsage ToVmaMemoryUsage(ERHIResourceMemory Memory);
-
-    VkBufferUsageFlags GetVkBufferUsage(ERHIBufferUsage usage);
-
-    VkFilter ToVkFilter(ERHIFilterMode mode);
-    VkSamplerAddressMode ToVkAddressMode(ERHIAddressMode mode);
-    VkBorderColor ToVkBorderColor(ERHIBorderColor color);
-    VkCompareOp ToVkCompareOp(ERHICompareOp op);
-
-    VkBlendFactor GetVkBlendFactor(ERHIBlendFactor Factor);
-    VkBlendOp GetVkBlendOp(ERHIBlendOp Op);
+    void LoadVulkanGlobals();
+    void LoadVulkanInstance(VkInstance instance);
+    void LoadVulkanDevice(VkDevice device);
 }
-
-void LoadVulkanLibrary();
-void LoadVulkanGlobalFunc();
-void LoadVulkanInstanceFunc(VkInstance Instance);
-void LoadVulkanDeviceFunc(VkDevice Device);
-VmaVulkanFunctions CreateVmaFuncTable();
-void FreeVulkanLibrary();
