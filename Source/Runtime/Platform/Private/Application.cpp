@@ -272,8 +272,10 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::MouseWheel:
         {
-            //window->on_mouse_scroll(event.wheel.value);
-            //message_controller->OnMouseWheel(amount);
+            if (window->on_mouse_scroll)
+            {
+                window->on_mouse_scroll(Vector2(event.wheel.value.x, event.wheel.value.y));
+            }
             break;
         }
 
