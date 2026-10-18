@@ -194,45 +194,10 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::TextInput:
         {
-            const bool repeat = false;
-            const ANSICHAR* UTF8 = event.text.value.buffer;
-
-            for (const unsigned char* P = reinterpret_cast<const unsigned char*>(UTF8); P && *P; )
+            if (window->on_text_input)
             {
-                uint32_t Codepoint = 0;
-
-                if ((*P & 0x80u) == 0)
-                {
-                    Codepoint = *P++;
-                }
-                else if ((*P & 0xE0u) == 0xC0u)
-                {
-                    Codepoint = (uint32_t)(*P++ & 0x1Fu) << 6;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu);
-                }
-                else if ((*P & 0xF0u) == 0xE0u)
-                {
-                    Codepoint = (uint32_t)(*P++ & 0x0Fu) << 12;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu) << 6;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu);
-                }
-                else if ((*P & 0xF8u) == 0xF0u)
-                {
-                    Codepoint = (uint32_t)(*P++ & 0x07u) << 18;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu) << 12;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu) << 6;
-                    Codepoint |= (uint32_t)(*P++ & 0x3Fu);
-                }
-                else
-                {
-                    ++P;
-                    continue;
-                }
-
-                //message_controller->OnKeyChar(Codepoint, repeat);
-                break;
+                window->on_text_input(event.text.value.buffer);
             }
-
             break;
         }
 

@@ -23,6 +23,7 @@ DECLARE_DELEGATE_TwoParams(OnMouseButtonDown, void, Button, bool);
 DECLARE_DELEGATE_OneParam(OnMouseButtonUp, void, Button);
 DECLARE_DELEGATE_TwoParams(OnKeyDown, void, Key, bool);
 DECLARE_DELEGATE_OneParam(OnKeyUp, void, Key);
+DECLARE_DELEGATE_OneParam(OnTextInput, void, const ANSICHAR*);
 DECLARE_DELEGATE(OnWindowClose, void);
 
 class OSWindow
@@ -36,6 +37,7 @@ public:
     OnMouseButtonUp on_mouse_button_up;
     OnKeyDown on_key_down;
     OnKeyUp on_key_up;
+    OnTextInput on_text_input;
     OnWindowClose on_window_close;
 
     OSWindow();
