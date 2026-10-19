@@ -66,6 +66,7 @@ public:
 
     bool IsValid() const;
     bool ShouldClose() const;
+    void RequestClose();
     bool IsFocused() const;
 
 private:

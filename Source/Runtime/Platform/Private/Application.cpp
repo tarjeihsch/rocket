@@ -165,7 +165,7 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::KeyDown:
         {
-            if (window->on_window_close)
+            if (window->on_key_down)
             {
                 window->on_key_down(event.key.value, event.key.repeat);
 

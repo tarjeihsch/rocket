@@ -178,6 +178,16 @@ bool OSWindow::IsValid() const
     return WindowHandle != nullptr;
 }
 
+bool OSWindow::ShouldClose() const
+{
+    return glfwWindowShouldClose(static_cast<GLFWwindow*>(WindowHandle));
+}
+
+void OSWindow::RequestClose()
+{
+    glfwSetWindowShouldClose(static_cast<GLFWwindow*>(WindowHandle), GLFW_TRUE);
+}
+
 bool OSWindow::IsFocused() const
 {
     return glfwGetWindowAttrib(static_cast<GLFWwindow*>(WindowHandle), GLFW_FOCUSED);
