@@ -75,6 +75,8 @@ namespace RHI
         FragmentShaderRead,
         ComputeShaderRead,
         ComputeShaderWrite,
+        ComputeShaderReadWrite,
+        IndirectArgument,
         TransferSrc,
         TransferDst
     };
@@ -253,6 +255,13 @@ namespace RHI
         ClampToBorder
     };
 
+    enum class GPUSamplerReductionMode
+    {
+        WeightedAverage,
+        Min,
+        Max
+    };
+
     enum class GPUBorderColor
     {
         TransparentBlack,
@@ -382,6 +391,7 @@ namespace RHI
         uint32_t device_id;
 
         float timestamp_period = 0;
+        uint32_t timestamp_valid_bits = 0;
 
         uint32_t max_texture_dimension_2d = 0;
         uint32_t max_texture_dimension_3d = 0;
@@ -505,7 +515,7 @@ namespace RHI
 
         static GPUBufferDesc IndirectBuffer(uint64_t size)
         {
-            return UploadBuffer(size, GPUBufferFlag::Indirect);
+            return DefaultBuffer(size, GPUBufferFlag::Indirect | GPUBufferFlag::Storage);
         }
     };
 
@@ -614,7 +624,8 @@ namespace RHI
         float maxAnisotropy = 1.0f;
 
         GPUCompareOp compareOp = GPUCompareOp::Never;
-        GPUBorderColor borderColor = GPUBorderColor::TransparentBlack; 
+        GPUBorderColor borderColor = GPUBorderColor::TransparentBlack;
+        GPUSamplerReductionMode reductionMode = GPUSamplerReductionMode::WeightedAverage;
 
         uint8_t anisotropyEnable : 1 = false;
         uint8_t compareEnable : 1 = false;
@@ -652,6 +663,14 @@ namespace RHI
             samplerDesc.minFilter = GPUFilter::Linear;
             samplerDesc.magFilter = GPUFilter::Linear;
             samplerDesc.mipFilter = GPUFilter::Linear;
+            return samplerDesc;
+        }
+
+        static GPUSamplerDesc LinearClampMin()
+        {
+            GPUSamplerDesc samplerDesc = LinearClamp();
+            samplerDesc.maxLod = 16.0f;
+            samplerDesc.reductionMode = GPUSamplerReductionMode::Min;
             return samplerDesc;
         }
     };

@@ -89,16 +89,20 @@ namespace RHI
         virtual void SetViewport(float x, float y, float width, float height, float min_depth, float max_depth) = 0;
         virtual void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) = 0;
         virtual void SetPushConstants(const void* data, uint32_t size) = 0;
+        virtual void SetIndexBuffer(const GPUBuffer* buffer, uint64_t offset) = 0;
         virtual void Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance) = 0;
         virtual void DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) = 0;
         virtual void DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count) = 0;
+        virtual void DrawIndexedIndirectCount(const GPUBuffer* buffer, uint64_t offset, const GPUBuffer* count_buffer, uint64_t count_offset, uint32_t max_draw_count) = 0;
         virtual void Dispatch(uint32_t x, uint32_t y, uint32_t z) = 0;
+        virtual void FillBuffer(GPUBuffer* buffer, uint64_t size, uint64_t offset, uint32_t value) = 0;
         virtual void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) = 0;
         virtual void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) = 0;
         virtual void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) = 0;
         virtual void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) = 0;
-        virtual void BeginTimelineQuery() = 0;
-        virtual void EndTimelineQuery() = 0;
+        // Each writes the next timestamp of the frame and returns its index.
+        virtual uint32_t BeginTimelineQuery() = 0;
+        virtual uint32_t EndTimelineQuery() = 0;
         virtual void BeginPipelineQuery() = 0;
         virtual void EndPipelineQuery() = 0;
 
@@ -130,7 +134,7 @@ namespace RHI
         virtual GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) = 0;
 
         virtual void SetTexture(uint32_t index, const GPUTexture* texture) = 0;
-        virtual void SetRWTexture(uint32_t index, const GPUTexture* texture) = 0;
+        virtual void SetRWTexture(uint32_t index, const GPUTexture* texture, uint32_t mip) = 0;
         virtual void SetBuffer(uint32_t index, const GPUBuffer* buffer) = 0;
         virtual void SetSampler(uint32_t index, const GPUSampler* sampler) = 0;
 
@@ -139,6 +143,11 @@ namespace RHI
         virtual void WaitIdle() = 0;
 
         virtual GPUTimingQueryResult GetTimingQueryResult() = 0;
+
+        // Writes the timestamps of the frame that last used the current frame slot, in
+        // milliseconds from the first, and returns how many there are. Call before the
+        // frame's command list begins.
+        virtual uint32_t GetTimestampResults(double* milliseconds, uint32_t capacity) = 0;
         virtual GPUPipelineQueryResult GetPipelineQueryResult() = 0;
 	};
 
@@ -160,6 +169,7 @@ namespace RHI
 
     static constexpr uint32_t MAX_COLOR_ATTACHMENT_COUNT = 8;
     static constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
+    static constexpr uint32_t MAX_TIMESTAMP_COUNT = 128;
 
     extern uint64_t g_frame_counter;
 

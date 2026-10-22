@@ -108,6 +108,9 @@ namespace RHI
     PFN_vkCmdDrawIndexed vkCmdDrawIndexed = nullptr;
     PFN_vkCmdDrawIndirect vkCmdDrawIndirect = nullptr;
     PFN_vkCmdDrawIndexedIndirect vkCmdDrawIndexedIndirect = nullptr;
+    PFN_vkCmdDrawIndexedIndirectCount vkCmdDrawIndexedIndirectCount = nullptr;
+    PFN_vkCmdBindIndexBuffer vkCmdBindIndexBuffer = nullptr;
+    PFN_vkCmdFillBuffer vkCmdFillBuffer = nullptr;
     PFN_vkCmdDispatch vkCmdDispatch = nullptr;
     PFN_vkCmdCopyBuffer vkCmdCopyBuffer = nullptr;
     PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage = nullptr;
@@ -267,6 +270,9 @@ namespace RHI
         LOAD_DEVICE(device, vkCmdDrawIndexed);
         LOAD_DEVICE(device, vkCmdDrawIndirect);
         LOAD_DEVICE(device, vkCmdDrawIndexedIndirect);
+        LOAD_DEVICE(device, vkCmdDrawIndexedIndirectCount);
+        LOAD_DEVICE(device, vkCmdBindIndexBuffer);
+        LOAD_DEVICE(device, vkCmdFillBuffer);
         LOAD_DEVICE(device, vkCmdDispatch);
         LOAD_DEVICE(device, vkCmdCopyBuffer);
         LOAD_DEVICE(device, vkCmdCopyBufferToImage);

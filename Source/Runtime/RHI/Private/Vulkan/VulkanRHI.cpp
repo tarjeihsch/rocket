@@ -61,7 +61,7 @@ namespace RHI
     static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 64U;
     static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES                = 64U;
     static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS                 = 16U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                        = 16U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                        = 64U;
 
     static constexpr uint32_t           BINDING_SAMPLED_IMAGES                              = 0U;
     static constexpr uint32_t           BINDING_STORAGE_IMAGES                              = 1U;
@@ -96,6 +96,7 @@ namespace RHI
     static VkQueryPool                  g_pipeline_query_pool_data          [CONCURRENT_FRAME_COUNT]            = {};
     static uint32_t                     g_query_pool_counter                [CONCURRENT_FRAME_COUNT]            = {};
 
+#if RK_DEBUG
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
         if (severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
@@ -106,6 +107,7 @@ namespace RHI
         printf("[Vulkan] %s\n", CallbackData->pMessage);
         return VK_FALSE;
     }
+#endif
 
     static void SetDebugNameInternal(VkObjectType type, uint64_t handle, const char* debug_name)
     {
@@ -132,6 +134,11 @@ namespace RHI
         vmaDestroyImage(g_memory_allocator, texture, allocation);
         
         for (VkImageView view : views)
+        {
+            vkDestroyImageView(g_logical_device, view, nullptr);
+        }
+
+        for (VkImageView view : uavs)
         {
             vkDestroyImageView(g_logical_device, view, nullptr);
         }
@@ -230,15 +237,18 @@ namespace RHI
     bool VulkanGPUSwapchain::AcquireNextBackBuffer()
     {
         RHI::vkWaitForFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME], VK_TRUE, UINT64_MAX);
-        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
 
         VkResult result = RHI::vkAcquireNextImageKHR(g_logical_device, swapchain, UINT64_MAX, image_available_semaphores[CURRENT_FRAME], VK_NULL_HANDLE, &current_image_index);
 
-        if (result == VK_ERROR_OUT_OF_DATE_KHR)
+        // No image was acquired, so no frame is submitted to signal the fence again.
+        // Resetting it first would leave the next acquire waiting on it forever.
+        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
             return false;
         }
-    
+
+        RHI::vkResetFences(g_logical_device, 1, &g_in_flight_fence[CURRENT_FRAME]);
+
         return true;
     }
 
@@ -265,11 +275,14 @@ namespace RHI
 
         for (uint32_t index = 0; index < image_count; ++index)
         {
-            RHI::vkDestroyImageView(g_logical_device, textures[index]->rtv, nullptr);
+            // The images belong to the swapchain, and the destructor destroys the view.
+            textures[index]->texture = nullptr;
+            textures[index]->allocation = nullptr;
+
             RHI::vkDestroySemaphore(g_logical_device, image_available_semaphores[index], nullptr);
             RHI::vkDestroySemaphore(g_logical_device, render_finished_semaphores[index], nullptr);
 
-            free(textures[index]);
+            delete textures[index];
         }
 
         free(image_available_semaphores);
@@ -394,11 +407,13 @@ namespace RHI
         application_info.engineVersion = VK_MAKE_API_VERSION(1, 0, 0, 0);
         application_info.apiVersion = VK_API_VERSION_1_3;
 
+#if RK_DEBUG
         VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info = {};
         debug_utils_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         debug_utils_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         debug_utils_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         debug_utils_messenger_create_info.pfnUserCallback = &ExecDebugCallback;
+#endif
 
         std::vector<const char*> instance_extensions =
         {
@@ -411,17 +426,19 @@ namespace RHI
 #endif
         };
 
+#if RK_DEBUG
         std::vector<const char*> validation_extensions = 
         {
             "VK_LAYER_KHRONOS_validation",
         };
-
+#endif
 
         std::vector<const char*> physical_device_extensions =
         {
             "VK_KHR_swapchain"
         };
 
+#if RK_DEBUG
         std::vector<VkValidationFeatureEnableEXT> validation_feature_extensions =
         {
             VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT
@@ -432,15 +449,18 @@ namespace RHI
         validation_feature_data.enabledValidationFeatureCount = validation_feature_extensions.size();
         validation_feature_data.pEnabledValidationFeatures = validation_feature_extensions.data();
         validation_feature_data.pNext = &debug_utils_messenger_create_info;
+#endif
 
         VkInstanceCreateInfo instance_create_info = {};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instance_create_info.pApplicationInfo = &application_info;
         instance_create_info.ppEnabledExtensionNames = instance_extensions.data();
         instance_create_info.enabledExtensionCount = instance_extensions.size();
+#if RK_DEBUG
         instance_create_info.ppEnabledLayerNames = validation_extensions.data();
         instance_create_info.enabledLayerCount = validation_extensions.size();
         instance_create_info.pNext = &validation_feature_data;
+#endif
 
         RHI::LoadVulkanGlobals();
 
@@ -575,6 +595,8 @@ namespace RHI
         request_device_features_1_2.timelineSemaphore = VK_TRUE;
         request_device_features_1_2.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
         request_device_features_1_2.hostQueryReset = VK_TRUE;
+        request_device_features_1_2.drawIndirectCount = VK_TRUE;
+        request_device_features_1_2.samplerFilterMinmax = VK_TRUE;
 
         VkPhysicalDeviceVulkan13Features request_device_features_1_3 = {};
         request_device_features_1_3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
@@ -586,6 +608,8 @@ namespace RHI
         request_device_features.shaderInt64 = VK_TRUE;
         request_device_features.samplerAnisotropy = VK_TRUE;
         request_device_features.multiDrawIndirect = VK_TRUE;
+        request_device_features.drawIndirectFirstInstance = VK_TRUE;
+        request_device_features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
         request_device_features.pipelineStatisticsQuery = VK_TRUE;
         request_device_features.fillModeNonSolid = VK_TRUE;
 
@@ -602,6 +626,7 @@ namespace RHI
             if ((queue_flags & VK_QUEUE_GRAPHICS_BIT) && g_graphics_family == UINT32_MAX)
             {
                 g_graphics_family = index;
+                g_adapter.timestamp_valid_bits = queue_family_data[index].timestampValidBits;
             }
             else if ((queue_flags & VK_QUEUE_COMPUTE_BIT) && !(queue_flags & VK_QUEUE_GRAPHICS_BIT) && g_compute_family == UINT32_MAX)
             {
@@ -791,9 +816,9 @@ namespace RHI
             VkQueryPoolCreateInfo timeline_query_pool_create_info = {};
             timeline_query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
             timeline_query_pool_create_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
-            timeline_query_pool_create_info.queryCount = 2;
+            timeline_query_pool_create_info.queryCount = MAX_TIMESTAMP_COUNT;
             RHI::vkCreateQueryPool(g_logical_device, &timeline_query_pool_create_info, nullptr, &g_timeline_query_pool_data[index]);
-            RHI::vkResetQueryPool(g_logical_device, g_timeline_query_pool_data[index], 0, 2);
+            RHI::vkResetQueryPool(g_logical_device, g_timeline_query_pool_data[index], 0, MAX_TIMESTAMP_COUNT);
 
             VkQueryPoolCreateInfo pipeline_query_pool_create_info = {};
             pipeline_query_pool_create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -893,16 +918,40 @@ namespace RHI
     GPUTimingQueryResult VulkanRHI::GetTimingQueryResult()
     {
         GPUTimingQueryResult timing_query_result = {};
-        if (g_frame_counter < CONCURRENT_FRAME_COUNT)
+
+        double timestamps[MAX_TIMESTAMP_COUNT];
+        const uint32_t count = GetTimestampResults(timestamps, MAX_TIMESTAMP_COUNT);
+
+        if (count >= 2)
         {
-            return timing_query_result;
+            timing_query_result.gpu_time_ms = timestamps[count - 1];
         }
 
-        uint64_t timestamps[2];
-        RHI::vkGetQueryPoolResults(g_logical_device, g_timeline_query_pool_data[CURRENT_FRAME], 0, 2, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-        timing_query_result.gpu_time_ms = (timestamps[1] - timestamps[0]) * g_adapter.timestamp_period / 1000000.0;
-
         return timing_query_result;
+    }
+
+    uint32_t VulkanRHI::GetTimestampResults(double* milliseconds, uint32_t capacity)
+    {
+        if (g_frame_counter < CONCURRENT_FRAME_COUNT)
+        {
+            return 0;
+        }
+
+        const uint32_t count = g_query_pool_counter[CURRENT_FRAME];
+        assert(count <= capacity);
+
+        uint64_t timestamps[MAX_TIMESTAMP_COUNT];
+        RHI::vkGetQueryPoolResults(g_logical_device, g_timeline_query_pool_data[CURRENT_FRAME], 0, count, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+
+        // Only the low bits of a timestamp count, so the difference wraps within them.
+        const uint64_t mask = g_adapter.timestamp_valid_bits >= 64 ? ~0ULL : (1ULL << g_adapter.timestamp_valid_bits) - 1;
+
+        for (uint32_t index = 0; index < count; index++)
+        {
+            milliseconds[index] = ((timestamps[index] - timestamps[0]) & mask) * g_adapter.timestamp_period / 1000000.0;
+        }
+
+        return count;
     }
 
     GPUPipelineQueryResult VulkanRHI::GetPipelineQueryResult()
@@ -1052,7 +1101,13 @@ namespace RHI
         {
             texture_view_create_info.subresourceRange.aspectMask = aspect_flag;
             texture_view_create_info.subresourceRange.levelCount = 1;
-            RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->uav);
+
+            texture->uavs.resize(texture_desc.mip_level_count);
+            for (uint32_t mip = 0; mip < texture_desc.mip_level_count; ++mip)
+            {
+                texture_view_create_info.subresourceRange.baseMipLevel = mip;
+                RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->uavs[mip]);
+            }
         }
 
         return texture;
@@ -1064,7 +1119,7 @@ namespace RHI
         samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerCreateInfo.minFilter = samplerDesc.minFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
         samplerCreateInfo.magFilter = samplerDesc.magFilter == GPUFilter::Linear ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-        samplerCreateInfo.mipmapMode = samplerDesc.minFilter == GPUFilter::Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerCreateInfo.mipmapMode = samplerDesc.mipFilter == GPUFilter::Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
         samplerCreateInfo.addressModeU = GetAddressMode(samplerDesc.addressU);
         samplerCreateInfo.addressModeV = GetAddressMode(samplerDesc.addressV);
         samplerCreateInfo.addressModeW = GetAddressMode(samplerDesc.addressW);
@@ -1076,7 +1131,12 @@ namespace RHI
         samplerCreateInfo.compareEnable = samplerDesc.compareEnable ? VK_TRUE : VK_FALSE;
         samplerCreateInfo.compareOp = GetCompareOp(samplerDesc.compareOp);
         samplerCreateInfo.borderColor = GetBorderColor(samplerDesc.borderColor);
-        
+
+        VkSamplerReductionModeCreateInfo reductionModeCreateInfo = {};
+        reductionModeCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO;
+        reductionModeCreateInfo.reductionMode = GetReductionMode(samplerDesc.reductionMode);
+        samplerCreateInfo.pNext = &reductionModeCreateInfo;
+
         VulkanGPUSampler* vkSampler = new VulkanGPUSampler();
 
         VkResult result = RHI::vkCreateSampler(g_logical_device, &samplerCreateInfo, nullptr, &vkSampler->sampler);
@@ -1388,10 +1448,10 @@ namespace RHI
         RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write_descriptor_set, 0, nullptr);
     }
 
-    void VulkanRHI::SetRWTexture(uint32_t index, const GPUTexture* texture)
+    void VulkanRHI::SetRWTexture(uint32_t index, const GPUTexture* texture, uint32_t mip)
     {
         VkDescriptorImageInfo descriptor_texture_info = {};
-        descriptor_texture_info.imageView = static_cast<const VulkanGPUTexture*>(texture)->uav;
+        descriptor_texture_info.imageView = static_cast<const VulkanGPUTexture*>(texture)->uavs[mip];
         descriptor_texture_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
         VkWriteDescriptorSet write_descriptor_set = {};
@@ -1462,7 +1522,7 @@ namespace RHI
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
 
-        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_timeline_query_pool_data[CURRENT_FRAME], 0, 2);
+        RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_timeline_query_pool_data[CURRENT_FRAME], 0, MAX_TIMESTAMP_COUNT);
         RHI::vkCmdResetQueryPool(command_buffer_data[CURRENT_FRAME], g_pipeline_query_pool_data[CURRENT_FRAME], 0, 1);
         g_query_pool_counter[CURRENT_FRAME] = 0;
     }
@@ -1543,6 +1603,11 @@ namespace RHI
         RHI::vkCmdPushConstants(command_buffer_data[CURRENT_FRAME], g_pipeline_layout, VK_SHADER_STAGE_ALL, 0, size, data);
     }
     
+    void VulkanGPUCommandList::SetIndexBuffer(const GPUBuffer* buffer, uint64_t offset)
+    {
+        RHI::vkCmdBindIndexBuffer(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, VK_INDEX_TYPE_UINT32);
+    }
+
     void VulkanGPUCommandList::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance)
     {
         RHI::vkCmdDraw(command_buffer_data[CURRENT_FRAME], vertex_count, instance_count, first_vertex, first_instance);
@@ -1555,12 +1620,22 @@ namespace RHI
     
     void VulkanGPUCommandList::DrawIndirect(const GPUBuffer* buffer, uint64_t offset, uint32_t draw_count)
     {
-        RHI::vkCmdDrawIndirect(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, draw_count, 0);
+        RHI::vkCmdDrawIndirect(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, draw_count, sizeof(VkDrawIndirectCommand));
+    }
+
+    void VulkanGPUCommandList::DrawIndexedIndirectCount(const GPUBuffer* buffer, uint64_t offset, const GPUBuffer* count_buffer, uint64_t count_offset, uint32_t max_draw_count)
+    {
+        RHI::vkCmdDrawIndexedIndirectCount(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, static_cast<const VulkanGPUBuffer*>(count_buffer)->buffer, count_offset, max_draw_count, sizeof(VkDrawIndexedIndirectCommand));
     }
 
     void VulkanGPUCommandList::Dispatch(uint32_t x, uint32_t y, uint32_t z)
     {
         RHI::vkCmdDispatch(command_buffer_data[CURRENT_FRAME], x, y, z);
+    }
+
+    void VulkanGPUCommandList::FillBuffer(GPUBuffer* buffer, uint64_t size, uint64_t offset, uint32_t value)
+    {
+        RHI::vkCmdFillBuffer(command_buffer_data[CURRENT_FRAME], static_cast<const VulkanGPUBuffer*>(buffer)->buffer, offset, size, value);
     }
 
     void VulkanGPUCommandList::CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset)
@@ -1697,18 +1772,25 @@ namespace RHI
         RHI::vkCmdPipelineBarrier2(command_buffer_data[CURRENT_FRAME], &dependency_info);
     }
 
-    void VulkanGPUCommandList::BeginTimelineQuery()
+    uint32_t VulkanGPUCommandList::BeginTimelineQuery()
     {
         uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
-        VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
-    }
-
-    void VulkanGPUCommandList::EndTimelineQuery()
-    {
-        uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
+        assert(index < MAX_TIMESTAMP_COUNT);
+        // Not top of pipe, which does not wait for the work before it and so counts it.
         VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
+
+        return index;
+    }
+
+    uint32_t VulkanGPUCommandList::EndTimelineQuery()
+    {
+        uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
+        assert(index < MAX_TIMESTAMP_COUNT);
+        VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
+
+        return index;
     }
 
     void VulkanGPUCommandList::BeginPipelineQuery()

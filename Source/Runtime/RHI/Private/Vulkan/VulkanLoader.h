@@ -95,6 +95,9 @@ namespace RHI
     extern PFN_vkCmdDrawIndexed vkCmdDrawIndexed;
     extern PFN_vkCmdDrawIndirect vkCmdDrawIndirect;
     extern PFN_vkCmdDrawIndexedIndirect vkCmdDrawIndexedIndirect;
+    extern PFN_vkCmdDrawIndexedIndirectCount vkCmdDrawIndexedIndirectCount;
+    extern PFN_vkCmdBindIndexBuffer vkCmdBindIndexBuffer;
+    extern PFN_vkCmdFillBuffer vkCmdFillBuffer;
     extern PFN_vkCmdDispatch vkCmdDispatch;
     extern PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
     extern PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;

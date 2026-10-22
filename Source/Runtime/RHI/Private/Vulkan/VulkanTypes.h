@@ -75,6 +75,16 @@ namespace RHI
             access = VK_ACCESS_2_SHADER_WRITE_BIT;
             break;
 
+        case GPUAccessType::ComputeShaderReadWrite:
+            stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+            break;
+
+        case GPUAccessType::IndirectArgument:
+            stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+            access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+            break;
+
         case GPUAccessType::TransferSrc:
             stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
             access = VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -277,6 +287,17 @@ namespace RHI
             case GPUCompareOp::GreaterOrEqual: return VK_COMPARE_OP_GREATER_OR_EQUAL;
             case GPUCompareOp::Always: return VK_COMPARE_OP_ALWAYS;
             default: return VK_COMPARE_OP_NEVER;
+        }
+    }
+
+    static VkSamplerReductionMode GetReductionMode(GPUSamplerReductionMode reductionMode)
+    {
+        switch (reductionMode)
+        {
+            case GPUSamplerReductionMode::WeightedAverage: return VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE;
+            case GPUSamplerReductionMode::Min: return VK_SAMPLER_REDUCTION_MODE_MIN;
+            case GPUSamplerReductionMode::Max: return VK_SAMPLER_REDUCTION_MODE_MAX;
+            default: return VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE;
         }
     }
 
