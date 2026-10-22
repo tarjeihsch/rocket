@@ -77,8 +77,8 @@ configure_package_config_file(
 
 install(TARGETS ${ROCKET_EXPORT_LIBS} glfw
     EXPORT RocketTargets
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib/$<CONFIG>
+    LIBRARY DESTINATION lib/$<CONFIG>
     RUNTIME DESTINATION bin
 )
 
