@@ -32,6 +32,7 @@ OSWindow::OSWindow()
 	, on_mouse_scroll(nullptr)
     , WindowHandle(nullptr)
     , WindowHandleID(0)
+    , ResizeRequested(false)
 {
 }
 
@@ -141,6 +142,18 @@ Vector2i OSWindow::GetSize() const
     return result;
 }
 
+Vector2i OSWindow::GetFramebufferSize() const
+{
+    if (!IsValid())
+    {
+        return Vector2i(-INTEGER_MAX, -INTEGER_MAX);
+    }
+
+    Vector2i result;
+    glfwGetFramebufferSize(static_cast<GLFWwindow*>(WindowHandle), &result.data[0], &result.data[1]);
+    return result;
+}
+
 Vector2i OSWindow::GetPosition() const
 {
     if (!IsValid())
@@ -186,6 +199,21 @@ bool OSWindow::ShouldClose() const
 void OSWindow::RequestClose()
 {
     glfwSetWindowShouldClose(static_cast<GLFWwindow*>(WindowHandle), GLFW_TRUE);
+}
+
+bool OSWindow::ShouldResize() const
+{
+    return ResizeRequested;
+}
+
+void OSWindow::RequestResize()
+{
+    ResizeRequested = true;
+}
+
+void OSWindow::ClearResize()
+{
+    ResizeRequested = false;
 }
 
 bool OSWindow::IsFocused() const

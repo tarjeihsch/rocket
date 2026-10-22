@@ -49,6 +49,9 @@ public:
     /* Fetch window object by window handle */
     OSWindow* FindWindowByHandle(uint64_t WindowHandleID);
 
+    /* Window created first, used as the game's main window */
+    OSWindow* GetMainWindow() const;
+
     std::vector<const char*> GetSurfaceExtensions() const;
 
 private:

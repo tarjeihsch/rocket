@@ -135,13 +135,18 @@ void Application::ProcessDeferredEvent(const Event &event)
 
         case EventType::WindowResized:
         {
-            if (!window->on_window_resize)
-            {
-                return;
-            }
+            window->RequestResize();
+
             //const bool is_minimized = event.windowResize.value.x == 0 || event.windowResize.value.y == 0;
             //message_controller->OnWindowSizeChanged(window, event.windowResize.value.x, event.windowResize.value.y, is_minimized);
-            window->on_window_resize(Vector2i(event.windowResize.value.x, event.windowResize.value.y));
+            const Vector2i size(event.windowResize.value.x, event.windowResize.value.y);
+
+            if (window->on_window_resize)
+            {
+                window->on_window_resize(size);
+            }
+
+            window->on_window_resize_multicast.Broadcast(size);
             break;
         }
 
@@ -264,6 +269,11 @@ OSWindow* Application::InitWindow(WindowCreateInfo windowCreateInfo)
     M_Windows.emplace_back(std::move(window));
 
     return M_Windows.back().get();
+}
+
+OSWindow* Application::GetMainWindow() const
+{
+    return M_Windows.empty() ? nullptr : M_Windows.front().get();
 }
 
 OSWindow* Application::FindWindowByHandle(uint64_t WindowHandleID)

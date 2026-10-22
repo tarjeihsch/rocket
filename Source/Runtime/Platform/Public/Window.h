@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreTypes.h"
+#include "Delegate.h"
 #include "PlatformTypes.h"
 #include "Event.h"
 #include "Math/Vector.h"
@@ -15,7 +16,8 @@ struct WindowCreateInfo
     bool hdpi;
 };
 
-DECLARE_DELEGATE_OneParam(OnWindowResize, void, Vector2i);
+using OnWindowResize = Delegate<void(Vector2i)>;
+using OnWindowResizeMulticast = MulticastDelegate<void(Vector2i)>;
 DECLARE_DELEGATE_OneParam(OnMouseMove, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseMoveDelta, void, Vector2);
 DECLARE_DELEGATE_OneParam(OnMouseScroll, void, Vector2);
@@ -29,7 +31,9 @@ DECLARE_DELEGATE(OnWindowClose, void);
 class OSWindow
 {
 public:
+    /* Both are called with the new size of the window when it is resized, the single delegate first */
     OnWindowResize on_window_resize;
+    OnWindowResizeMulticast on_window_resize_multicast;
     OnMouseMove on_mouse_move;
     OnMouseMoveDelta on_mouse_move_delta;
     OnMouseScroll on_mouse_scroll;
@@ -56,7 +60,12 @@ public:
 
     void WaitEvents();
 
+    /* Size in screen coordinates, which is not the size in pixels on a scaled display */
     Vector2i GetSize() const;
+
+    /* Size of the drawable area in pixels, which is what a swapchain is sized to. Zero when minimized */
+    Vector2i GetFramebufferSize() const;
+
     Vector2i GetPosition() const;
 
     uint64_t GetWindowHandleID() const;
@@ -67,11 +76,15 @@ public:
     bool IsValid() const;
     bool ShouldClose() const;
     void RequestClose();
+    bool ShouldResize() const;
+    void RequestResize();
+    void ClearResize();
     bool IsFocused() const;
 
 private:
     void* WindowHandle;
     uint64_t WindowHandleID;
+    bool ResizeRequested;
 
     ENativePlatformBackend NativeBackend;
     RNativeWindowSystemHandle NativeWindowSystemHandle = nullptr;
