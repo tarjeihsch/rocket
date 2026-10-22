@@ -76,3 +76,26 @@ struct Color32
 inline const Color32 Color32::red(255, 0, 0, 255);
 inline const Color32 Color32::green(0, 255, 0, 255);
 inline const Color32 Color32::blue(0, 0, 255, 255);
+
+static Color32 ToColor32(const Vector4& color)
+{
+	return Color32(ToByte(color.x), ToByte(color.y), ToByte(color.z), ToByte(color.w));
+}
+
+static LinearColor ToLinearColor(Color32 color)
+{
+	return LinearColor(
+		(float)((color.data >> 0) & 0xFF) / 255.0f,
+		(float)((color.data >> 8) & 0xFF) / 255.0f,
+		(float)((color.data >> 16) & 0xFF) / 255.0f,
+		(float)((color.data >> 24) & 0xFF) / 255.0f);
+}
+
+static Vector4 ToVector4(Color32 color)
+{
+	return Vector4(
+		(float)((color.data >> 0) & 0xFF) / 255.0f,
+		(float)((color.data >> 8) & 0xFF) / 255.0f,
+		(float)((color.data >> 16) & 0xFF) / 255.0f,
+		(float)((color.data >> 24) & 0xFF) / 255.0f);
+}
