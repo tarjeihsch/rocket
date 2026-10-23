@@ -21,6 +21,8 @@ namespace RHI
             case GPUFormat::RG16_FLOAT:      return VK_FORMAT_R16G16_SFLOAT;
             case GPUFormat::RGBA16_FLOAT:    return VK_FORMAT_R16G16B16A16_SFLOAT;
 
+            case GPUFormat::R11G11B10_FLOAT: return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+
             case GPUFormat::R32_FLOAT:       return VK_FORMAT_R32_SFLOAT;
             case GPUFormat::RG32_FLOAT:      return VK_FORMAT_R32G32_SFLOAT;
             case GPUFormat::RGB32_FLOAT:     return VK_FORMAT_R32G32B32_SFLOAT;

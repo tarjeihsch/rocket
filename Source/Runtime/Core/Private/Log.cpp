@@ -8,19 +8,33 @@ namespace
     constexpr u32 kMessageLength = 2048;
 
     Log::Sink g_sink = nullptr;
+    Log::Sink g_console_sink = nullptr;
 
     void DefaultSink(Log::Level level, const char* message)
     {
         std::fputs(message, level == Log::Level::Info ? stdout : stderr);
     }
 
-    void PrintV(Log::Level level, const char* format, va_list arguments)
+    bool IsSet(Log::Sinks sinks, Log::Sinks sink)
+    {
+        return (static_cast<u8>(sinks) & static_cast<u8>(sink)) != 0;
+    }
+
+    void PrintV(Log::Level level, Log::Sinks sinks, const char* format, va_list arguments)
     {
         char message[kMessageLength];
         std::vsnprintf(message, sizeof(message), format, arguments);
 
-        Log::Sink sink = g_sink != nullptr ? g_sink : DefaultSink;
-        sink(level, message);
+        if (IsSet(sinks, Log::Sinks::Terminal))
+        {
+            Log::Sink sink = g_sink != nullptr ? g_sink : DefaultSink;
+            sink(level, message);
+        }
+
+        if (IsSet(sinks, Log::Sinks::Console) && g_console_sink != nullptr)
+        {
+            g_console_sink(level, message);
+        }
     }
 }
 
@@ -31,11 +45,24 @@ namespace Log
         g_sink = sink;
     }
 
+    void SetConsoleSink(Sink sink)
+    {
+        g_console_sink = sink;
+    }
+
     void Printf(const char* format, ...)
     {
         va_list arguments;
         va_start(arguments, format);
-        PrintV(Level::Info, format, arguments);
+        PrintV(Level::Info, Sinks::Terminal, format, arguments);
+        va_end(arguments);
+    }
+
+    void Printf(Sinks sinks, const char* format, ...)
+    {
+        va_list arguments;
+        va_start(arguments, format);
+        PrintV(Level::Info, sinks, format, arguments);
         va_end(arguments);
     }
 
@@ -43,7 +70,7 @@ namespace Log
     {
         va_list arguments;
         va_start(arguments, format);
-        PrintV(Level::Warning, format, arguments);
+        PrintV(Level::Warning, Sinks::Terminal, format, arguments);
         va_end(arguments);
     }
 
@@ -51,7 +78,7 @@ namespace Log
     {
         va_list arguments;
         va_start(arguments, format);
-        PrintV(Level::Error, format, arguments);
+        PrintV(Level::Error, Sinks::Terminal, format, arguments);
         va_end(arguments);
     }
 
@@ -63,7 +90,7 @@ namespace Log
         {
             va_list arguments;
             va_start(arguments, format);
-            PrintV(Level::Error, format, arguments);
+            PrintV(Level::Error, Sinks::Terminal, format, arguments);
             va_end(arguments);
             Error("\n");
         }

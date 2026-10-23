@@ -47,6 +47,9 @@ namespace RHI
         RG16_FLOAT,
         RGBA16_FLOAT,
 
+        // Packed float
+        R11G11B10_FLOAT,
+
         // 32-bit float
         R32_FLOAT,
         RG32_FLOAT,
@@ -748,6 +751,7 @@ namespace RHI
             case GPUFormat::BGRA8_UNORM:        return 4;
             case GPUFormat::BGRA8_SRGB:         return 4;
             case GPUFormat::RG16_FLOAT:         return 4;
+            case GPUFormat::R11G11B10_FLOAT:    return 4;
             case GPUFormat::R32_FLOAT:          return 4;
             case GPUFormat::R32_UINT:           return 4;
             case GPUFormat::D32_FLOAT:          return 4;
