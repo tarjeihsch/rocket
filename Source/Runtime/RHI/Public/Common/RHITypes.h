@@ -294,7 +294,11 @@ namespace RHI
             SRV = 1U << 2,
             UAV = 1U << 3,
             TransferSrc = 1U << 4,
-            TransferDst = 1U << 5
+            TransferDst = 1U << 5,
+
+            // Also creates a view that reads an RGBA8 or BGRA8 UNORM texture as
+            // sRGB. SetTexture binds it right after the regular view.
+            SRGBView = 1U << 6
         };
     };
 

@@ -58,10 +58,10 @@ namespace RHI
     
     static constexpr uint32_t           MAX_SHADER_BINDINGS                                 = 4U;
     
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLED_TEXTURES                = 2048U;
     static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_TEXTURES                = 64U;
     static constexpr uint32_t           MAX_SHADER_RESOURCE_STORAGE_BUFFERS                 = 16U;
-    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                        = 64U;
+    static constexpr uint32_t           MAX_SHADER_RESOURCE_SAMPLERS                        = 1024U;
 
     static constexpr uint32_t           BINDING_SAMPLED_IMAGES                              = 0U;
     static constexpr uint32_t           BINDING_STORAGE_IMAGES                              = 1U;
@@ -1059,6 +1059,22 @@ namespace RHI
         texture_create_info.imageType = texture_type;
         texture_create_info.flags = texture_flags;
 
+        // The image is created as UNORM and viewed as either, which the format list
+        // declares.
+        const VkFormat srgb_format = (texture_desc.flags & GPUTextureFlag::SRGBView) != 0 ? GetVkSRGBFormat(texture_desc.format) : VK_FORMAT_UNDEFINED;
+        const VkFormat view_formats[] = { format, srgb_format };
+
+        VkImageFormatListCreateInfo format_list_create_info = {};
+        format_list_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
+        format_list_create_info.viewFormatCount = 2;
+        format_list_create_info.pViewFormats = view_formats;
+
+        if (srgb_format != VK_FORMAT_UNDEFINED)
+        {
+            texture_create_info.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+            texture_create_info.pNext = &format_list_create_info;
+        }
+
         VmaAllocationCreateInfo memory_allocation_info = {};
         memory_allocation_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
@@ -1095,6 +1111,21 @@ namespace RHI
             texture_view_create_info.subresourceRange.aspectMask = aspect_flag;
             texture_view_create_info.subresourceRange.levelCount = texture_desc.mip_level_count;
             RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->srv);
+
+            if (srgb_format != VK_FORMAT_UNDEFINED)
+            {
+                // The sRGB format cannot be stored to, so the view is for sampling only.
+                VkImageViewUsageCreateInfo view_usage_create_info = {};
+                view_usage_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
+                view_usage_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+                texture_view_create_info.pNext = &view_usage_create_info;
+                texture_view_create_info.format = srgb_format;
+                RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &texture->srgb_srv);
+
+                texture_view_create_info.pNext = nullptr;
+                texture_view_create_info.format = format;
+            }
         }
 
         if (texture_desc.flags & GPUTextureFlag::UAV)
@@ -1432,18 +1463,24 @@ namespace RHI
     
     void VulkanRHI::SetTexture(uint32_t index, const GPUTexture* texture)
     {
-        VkDescriptorImageInfo descriptor_texture_info = {};
-        descriptor_texture_info.imageView = static_cast<const VulkanGPUTexture*>(texture)->srv;
-        descriptor_texture_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        const VulkanGPUTexture* vulkan_texture = static_cast<const VulkanGPUTexture*>(texture);
+
+        // Textures bind in pairs: the regular view at the even slot and the sRGB view
+        // right after it, which is the regular view again for a texture without one.
+        VkDescriptorImageInfo descriptor_texture_info[2] = {};
+        descriptor_texture_info[0].imageView = vulkan_texture->srv;
+        descriptor_texture_info[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        descriptor_texture_info[1].imageView = vulkan_texture->srgb_srv != nullptr ? vulkan_texture->srgb_srv : vulkan_texture->srv;
+        descriptor_texture_info[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkWriteDescriptorSet write_descriptor_set = {};
         write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write_descriptor_set.dstSet = g_descriptor_set;
         write_descriptor_set.dstBinding = BINDING_SAMPLED_IMAGES;
-        write_descriptor_set.dstArrayElement = index;
-        write_descriptor_set.descriptorCount = 1;
+        write_descriptor_set.dstArrayElement = index - index % 2;
+        write_descriptor_set.descriptorCount = 2;
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        write_descriptor_set.pImageInfo = &descriptor_texture_info;
+        write_descriptor_set.pImageInfo = descriptor_texture_info;
 
         RHI::vkUpdateDescriptorSets(g_logical_device, 1, &write_descriptor_set, 0, nullptr);
     }

@@ -38,9 +38,10 @@ namespace RHI
                 VkImageView rtv;
                 VkImageView dsv;
                 VkImageView srv;
+                VkImageView srgb_srv;
             };
 
-            VkImageView views[3] = {};
+            VkImageView views[4] = {};
         };
 
         std::vector<VkImageView> uavs;
