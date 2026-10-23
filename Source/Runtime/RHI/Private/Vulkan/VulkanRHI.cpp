@@ -1566,7 +1566,7 @@ namespace RHI
         rendering_info.layerCount = 1;
         rendering_info.colorAttachmentCount = render_pass->color_attachment_count;
         rendering_info.pColorAttachments = colorAttachmentInfoData;
-        rendering_info.pDepthAttachment = &depthAttachmentInfo;
+        rendering_info.pDepthAttachment = render_pass->depth_attachment ? &depthAttachmentInfo : nullptr;
 
         RHI::vkCmdBeginRendering(command_buffer_data[CURRENT_FRAME], &rendering_info);
     }
