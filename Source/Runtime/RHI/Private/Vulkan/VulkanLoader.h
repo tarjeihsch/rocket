@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Assertion.h>
 #include <vulkan/vulkan.h>
+
+#define VMA_ASSERT(expr) ensure(expr)
 #include <vma/vk_mem_alloc.h>
 
 namespace RHI

@@ -195,7 +195,7 @@ void FreeComputePipeline(ComputePipeline *compute_pipeline)
 
 void CreateLinearBuffer(LinearBuffer *linear_buffer)
 {
-    assert(linear_buffer->capacity > 0);
+    ensure(linear_buffer->capacity > 0);
 
     linear_buffer->buffer.reset(RHI::GetRHI()->CreateBuffer(RHI::GPUBufferDesc::StorageBuffer(linear_buffer->capacity)));
 }
@@ -207,7 +207,7 @@ void FreeLinearBuffer(LinearBuffer *linear_buffer)
 
 u64 WriteLinearBuffer(LinearBuffer *linear_buffer, const void *data, u64 size)
 {
-    assert(linear_buffer->size + size < linear_buffer->capacity);
+    ensure(linear_buffer->size + size < linear_buffer->capacity);
 
     u64 offset = linear_buffer->size;
 
@@ -255,12 +255,12 @@ void ResetPageBuffer(PageBuffer *page_buffer, u32 page_index)
 
 u64 WritePageBuffer(PageBuffer* page_buffer, u32 page_index, const void* data, u64 size, u64 alignment)
 {
-    assert(page_index < 3);
+    ensure(page_index < 3);
 
     u64 current = page_buffer->page_offset[page_index];
     u64 aligned = (current + alignment - 1) & ~(alignment - 1);
 
-    assert(aligned + size <= page_buffer->page_capacity[page_index]);
+    ensure(aligned + size <= page_buffer->page_capacity[page_index]);
 
     u64 byte_offset = page_buffer->page_base[page_index] + aligned;
     page_buffer->page_offset[page_index] = aligned + size;

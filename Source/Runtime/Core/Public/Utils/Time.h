@@ -1,6 +1,6 @@
 #pragma once
 
-#include <assert.h>
+#include <Assertion.h>
 #include <cmath>
 #include <cstdint>
 #include <time.h>

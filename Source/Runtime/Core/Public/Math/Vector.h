@@ -1,6 +1,6 @@
 #pragma once
 
-#include <assert.h>
+#include <Assertion.h>
 #include <algorithm>
 #include <limits>
 #include <string>
@@ -292,13 +292,13 @@ namespace Math
 
         T& operator[](std::size_t index)
         {
-            assert(index < 3 && "Index is out of range");
+            ensure(index < 3 && "Index is out of range");
             return data[index];
         }
 
         const T& operator[](std::size_t index) const
         {
-            assert(index < 3 && "Index is out of range");
+            ensure(index < 3 && "Index is out of range");
             return data[index];
         }
 

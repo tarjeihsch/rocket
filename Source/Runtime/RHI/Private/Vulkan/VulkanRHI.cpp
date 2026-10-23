@@ -5,7 +5,7 @@
 #include "Application.h"
 
 #include <vector>
-#include <assert.h>
+#include <Assertion.h>
 #include <unordered_set>
 #include <string_view>
 #include <algorithm>
@@ -171,7 +171,7 @@ namespace RHI
     {
         void* pointer = nullptr;
         VkResult result = vmaMapMemory(g_memory_allocator, allocation, &pointer);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
         return pointer;
     }
 
@@ -351,7 +351,7 @@ namespace RHI
         swapchain_create_info.oldSwapchain = previous_swapchain;
 
         VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         RHI::vkDestroySwapchainKHR(g_logical_device, previous_swapchain, nullptr);
 
@@ -379,7 +379,7 @@ namespace RHI
             texture_view_create_info.subresourceRange.layerCount = 1;
 
             result = RHI::vkCreateImageView(g_logical_device, &texture_view_create_info, nullptr, &textures[index]->rtv);
-            assert(result == VK_SUCCESS);
+            ensure(result == VK_SUCCESS);
 
             VkSemaphoreCreateInfo semaphore_create_info = {};
             semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -465,7 +465,7 @@ namespace RHI
         RHI::LoadVulkanGlobals();
 
         VkResult result = RHI::vkCreateInstance(&instance_create_info, nullptr, &g_instance);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS, "Result: %d", result);
 
         RHI::LoadVulkanInstance(g_instance);
 
@@ -684,7 +684,7 @@ namespace RHI
         logical_device_create_info.enabledLayerCount = 0;
 
         result = RHI::vkCreateDevice(g_physical_device, &logical_device_create_info, nullptr, &g_logical_device);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         RHI::LoadVulkanDevice(g_logical_device);
 
@@ -726,7 +726,7 @@ namespace RHI
         memory_allocator_create_info.pVulkanFunctions = &allocator_functions;
 
         result = vmaCreateAllocator(&memory_allocator_create_info, &g_memory_allocator);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         VkDescriptorBindingFlags descriptor_binding_flags[MAX_SHADER_BINDINGS];
         std::fill(descriptor_binding_flags, descriptor_binding_flags + MAX_SHADER_BINDINGS, VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT);
@@ -765,7 +765,7 @@ namespace RHI
         descriptor_set_layout_create_info.pBindings = descriptor_set_layout_bindings;
 
         result = RHI::vkCreateDescriptorSetLayout(g_logical_device, &descriptor_set_layout_create_info, nullptr, &g_descriptor_set_layout);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         VkDescriptorPoolSize descriptor_pool_size_data[MAX_SHADER_BINDINGS] = {};
         descriptor_pool_size_data[BINDING_SAMPLED_IMAGES] = { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min<uint32_t>(g_adapter.max_sampled_textures, MAX_SHADER_RESOURCE_SAMPLED_TEXTURES) };
@@ -781,7 +781,7 @@ namespace RHI
         descriptor_pool_create_info.pPoolSizes = descriptor_pool_size_data;
 
         result = RHI::vkCreateDescriptorPool(g_logical_device, &descriptor_pool_create_info, nullptr, &g_descriptor_pool);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
         descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -790,7 +790,7 @@ namespace RHI
         descriptor_set_allocate_info.pSetLayouts = &g_descriptor_set_layout;
 
         result = RHI::vkAllocateDescriptorSets(g_logical_device, &descriptor_set_allocate_info, &g_descriptor_set);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         VkPushConstantRange push_constant_range = {};
         push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
@@ -804,7 +804,7 @@ namespace RHI
         pipeline_layout_layout_info.pPushConstantRanges = &push_constant_range;
 
         result = RHI::vkCreatePipelineLayout(g_logical_device, &pipeline_layout_layout_info, nullptr, &g_pipeline_layout);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         for (uint32_t index = 0; index < CONCURRENT_FRAME_COUNT; ++index)
         {
@@ -882,7 +882,7 @@ namespace RHI
         submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
 
         VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
     }
 
     void VulkanRHI::SubmitImmediate(GPUCommandList *command_list)
@@ -904,7 +904,7 @@ namespace RHI
         RHI::vkCreateFence(g_logical_device, &fence_info, nullptr, &fence);
 
         VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, fence);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         RHI::vkWaitForFences(g_logical_device, 1, &fence, VK_TRUE, UINT64_MAX);
         RHI::vkDestroyFence(g_logical_device, fence, nullptr);
@@ -938,7 +938,7 @@ namespace RHI
         }
 
         const uint32_t count = g_query_pool_counter[CURRENT_FRAME];
-        assert(count <= capacity);
+        ensure(count <= capacity);
 
         uint64_t timestamps[MAX_TIMESTAMP_COUNT];
         RHI::vkGetQueryPoolResults(g_logical_device, g_timeline_query_pool_data[CURRENT_FRAME], 0, count, sizeof(timestamps), timestamps, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
@@ -995,7 +995,7 @@ namespace RHI
         memory_allocation_info.flags = memory_allocation_flags;
 
         VkResult result = vmaCreateBuffer(g_memory_allocator, &buffer_create_info, &memory_allocation_info, &buffer->buffer, &buffer->allocation, nullptr);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         return buffer;
     }
@@ -1063,7 +1063,7 @@ namespace RHI
         memory_allocation_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
         VkResult result = vmaCreateImage(g_memory_allocator, &texture_create_info, &memory_allocation_info, &texture->texture, &texture->allocation, nullptr);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         VkImageAspectFlags aspect_flag = (texture_desc.flags & GPUTextureFlag::DepthTarget) != 0 ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -1140,7 +1140,7 @@ namespace RHI
         VulkanGPUSampler* vkSampler = new VulkanGPUSampler();
 
         VkResult result = RHI::vkCreateSampler(g_logical_device, &samplerCreateInfo, nullptr, &vkSampler->sampler);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         return vkSampler;
     }
@@ -1245,7 +1245,7 @@ namespace RHI
         graphics_pipeline_create_info.layout = g_pipeline_layout;
 
         VkResult result = RHI::vkCreateGraphicsPipelines(g_logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &graphicsPipeline->pipeline);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         return graphicsPipeline;
     }
@@ -1268,7 +1268,7 @@ namespace RHI
         computePipelineCreateInfo.layout = g_pipeline_layout;
 
         VkResult result = RHI::vkCreateComputePipelines(g_logical_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &computePipeline->pipeline);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         return computePipeline;
     }
@@ -1283,7 +1283,7 @@ namespace RHI
         shader_module_create_info.pCode = static_cast<const uint32_t*>(shader_desc.bytecode);
 
         VkResult result = RHI::vkCreateShaderModule(g_logical_device, &shader_module_create_info, nullptr, &native_shader->module);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         return native_shader;
     }
@@ -1325,7 +1325,7 @@ namespace RHI
 
         uint32_t presentation = 0U;
         RHI::vkGetPhysicalDeviceSurfaceSupportKHR(g_physical_device, g_graphics_family, swapchain->surface, &presentation);
-        assert(presentation != 0U);
+        ensure(presentation != 0U);
 
         uint32_t present_mode_count = 0;
         RHI::vkGetPhysicalDeviceSurfacePresentModesKHR(g_physical_device, swapchain->surface, &present_mode_count, nullptr);
@@ -1353,7 +1353,7 @@ namespace RHI
         swapchain_create_info.clipped = VK_TRUE;
 
         VkResult result = RHI::vkCreateSwapchainKHR(g_logical_device, &swapchain_create_info, nullptr, &swapchain->swapchain);
-        assert(result == VK_SUCCESS);
+        ensure(result == VK_SUCCESS);
 
         RHI::vkGetSwapchainImagesKHR(g_logical_device, swapchain->swapchain, &swapchain->image_count, nullptr);
         std::vector<VkImage> images(swapchain->image_count);
@@ -1415,7 +1415,7 @@ namespace RHI
             }
 
             VkResult result = RHI::vkCreateCommandPool(g_logical_device, &command_pool_create_info, nullptr, &command_list->command_pool_data[index]);
-            assert(result == VK_SUCCESS);
+            ensure(result == VK_SUCCESS);
 
             VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
             command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1424,7 +1424,7 @@ namespace RHI
             command_buffer_allocate_info.commandBufferCount = 1;
 
             result = RHI::vkAllocateCommandBuffers(g_logical_device, &command_buffer_allocate_info, &command_list->command_buffer_data[index]);
-            assert(result == VK_SUCCESS);
+            ensure(result == VK_SUCCESS);
         }
 
         return command_list;
@@ -1775,7 +1775,7 @@ namespace RHI
     uint32_t VulkanGPUCommandList::BeginTimelineQuery()
     {
         uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
-        assert(index < MAX_TIMESTAMP_COUNT);
+        ensure(index < MAX_TIMESTAMP_COUNT);
         // Not top of pipe, which does not wait for the work before it and so counts it.
         VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
@@ -1786,7 +1786,7 @@ namespace RHI
     uint32_t VulkanGPUCommandList::EndTimelineQuery()
     {
         uint32_t index = g_query_pool_counter[CURRENT_FRAME]++;
-        assert(index < MAX_TIMESTAMP_COUNT);
+        ensure(index < MAX_TIMESTAMP_COUNT);
         VkPipelineStageFlagBits pipeline_stage_flag = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         RHI::vkCmdWriteTimestamp(command_buffer_data[CURRENT_FRAME], pipeline_stage_flag, g_timeline_query_pool_data[CURRENT_FRAME], index);
 

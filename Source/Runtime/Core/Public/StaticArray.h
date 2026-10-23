@@ -1,6 +1,6 @@
 #pragma once
 
-#include <assert.h>
+#include <Assertion.h>
 
 template<typename T, size_t Capacity>
 class StaticArray
@@ -16,13 +16,13 @@ public:
 
     void Push(T value)
     {
-        assert(count < Capacity);
+        ensure(count < Capacity);
         data[count++] = value;
     }
 
     void Insert(const void* src, size_t size)
     {
-        assert(count + size <= Capacity);
+        ensure(count + size <= Capacity);
         memcpy(data + count, src, size);
         count += size;
     }
@@ -56,13 +56,13 @@ public:
 
     inline T& operator[](size_t index)
     {
-        assert(index < count);
+        ensure(index < count);
         return data[index];
     }
 
     inline const T& operator[](size_t index) const
     {
-        assert(index < count);
+        ensure(index < count);
         return data[index];
     }
 

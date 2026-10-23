@@ -128,14 +128,14 @@ struct BarrierBatch
 {
 	constexpr BarrierBatch& Add(RHI::GPUBuffer* buffer, RHI::GPUAccessType from, RHI::GPUAccessType to)
 	{
-		assert(buffer_barrier_count < BufferCount);
+		ensure(buffer_barrier_count < BufferCount);
 		buffer_barrier_data[buffer_barrier_count++] = { buffer, from, to };
 		return *this;
 	}
 	
 	constexpr BarrierBatch& Add(RHI::GPUTexture* texture, RHI::GPUTextureLayout from, RHI::GPUTextureLayout to)
 	{
-		assert(texture_barrier_count < TextureCount);
+		ensure(texture_barrier_count < TextureCount);
 		texture_barrier_data[texture_barrier_count++] = { texture, from, to };
 		return *this;
 	}

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <vector>
-#include <assert.h>
+#include <Assertion.h>
 #include <fstream>
 
 inline std::vector<uint8_t> LoadFile(const char* path)
 {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
-    assert(file);
+    ensure(file, "Failed to load file %s", path);
 
     std::streamsize file_size = file.tellg();
     file.seekg(0, std::ios::beg);
@@ -21,7 +21,7 @@ inline std::vector<uint8_t> LoadFile(const char* path)
 inline void SaveFile(const char* path, const std::vector<uint8_t>& data)
 {
     std::ofstream file(path, std::ios::binary);
-    assert(file);
+    ensure(file);
 
     file.write(reinterpret_cast<const char*>(data.data()), data.size());
 }

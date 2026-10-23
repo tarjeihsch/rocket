@@ -1,6 +1,6 @@
 #include "GraphicsUtils.hpp"
 
-#include <cassert>
+#include <Assertion.h>
 
 #include "GeometryTypes.hpp"
 #include "GraphicsTypes.hpp"
@@ -109,8 +109,8 @@ PipelineBuilder& PipelineBuilder::AddColorFormat(RHI::GPUFormat format)
 
 GraphicsPipeline* PipelineBuilder::BuildGraphicsPipeline()
 {
-    assert(!vertex_shader_data.empty());
-    assert(!fragment_shader_data.empty());
+    ensure(!vertex_shader_data.empty());
+    ensure(!fragment_shader_data.empty());
 
     GraphicsPipeline* pipeline = new GraphicsPipeline();
 
@@ -136,7 +136,7 @@ GraphicsPipeline* PipelineBuilder::BuildGraphicsPipeline()
 
 ComputePipeline* PipelineBuilder::BuildComputePipeline()
 {
-    assert(!compute_shader_data.empty());
+    ensure(!compute_shader_data.empty());
 
     ComputePipeline* pipeline = new ComputePipeline();
 
@@ -184,7 +184,7 @@ TextBuilder& TextBuilder::SetText(const std::string& msg)
 
 Mesh TextBuilder::Build() const
 {
-    assert(font != nullptr);
+    ensure(font != nullptr);
     
     Mesh result;
 

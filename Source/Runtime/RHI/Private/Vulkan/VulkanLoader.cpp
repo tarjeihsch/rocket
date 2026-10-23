@@ -4,7 +4,6 @@
 
 #include "Vulkan/VulkanLoader.h"
 
-#include <cassert>
 
 #if defined(_WIN32)
     #include <windows.h>
