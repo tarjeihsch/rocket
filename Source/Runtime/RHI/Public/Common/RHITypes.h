@@ -453,11 +453,20 @@ namespace RHI
         uint32_t render_height = 0;
     };
 
+    // A barrier whose src_queue and dst_queue differ hands the resource from one
+    // queue to the other. The same barrier is recorded on both: the source queue
+    // releases the resource, and the destination queue acquires it once a fence
+    // has ordered the two. On a GPU where both are one queue, such as one without
+    // a transfer queue of its own, the release is the whole handover and the
+    // acquire records nothing. None leaves the resource on the queue the barrier
+    // is recorded on.
     struct GPUBufferBarrier
     {
         GPUBuffer* buffer = nullptr;
         GPUAccessType src_access = GPUAccessType::Undefined;
         GPUAccessType dst_access = GPUAccessType::Undefined;
+        GPUQueueFlags src_queue = GPUQueueFlag::None;
+        GPUQueueFlags dst_queue = GPUQueueFlag::None;
     };
 
     struct GPUTextureBarrier
@@ -465,6 +474,8 @@ namespace RHI
         GPUTexture* texture = nullptr;
         GPUTextureLayout old_layout = GPUTextureLayout::Undefined;
         GPUTextureLayout new_layout = GPUTextureLayout::Undefined;
+        GPUQueueFlags src_queue = GPUQueueFlag::None;
+        GPUQueueFlags dst_queue = GPUQueueFlag::None;
     };
 
     struct GPUBufferDesc

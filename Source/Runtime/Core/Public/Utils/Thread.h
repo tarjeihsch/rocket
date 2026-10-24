@@ -57,14 +57,14 @@ public:
         }
 
         ThreadState Current = M_State.load(std::memory_order_acquire);
-    
-        if (Current == ThreadState::Stopped || Current == ThreadState::Stopping)
+
+        if (Current == ThreadState::Running)
         {
-            return;
+            M_State.store(ThreadState::Stopping, std::memory_order_release);
         }
 
-        M_State.store(ThreadState::Stopping, std::memory_order_release);
-
+        // A thread whose Run returned on its own is Stopped already, but it still
+        // has to be joined before it is destroyed.
         if (M_Thread.joinable())
         {
             M_Thread.join();

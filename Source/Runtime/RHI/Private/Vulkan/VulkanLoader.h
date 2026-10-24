@@ -112,6 +112,8 @@ namespace RHI
     extern PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2;
     extern PFN_vkCreateSemaphore vkCreateSemaphore;
     extern PFN_vkDestroySemaphore vkDestroySemaphore;
+    extern PFN_vkWaitSemaphores vkWaitSemaphores;
+    extern PFN_vkGetSemaphoreCounterValue vkGetSemaphoreCounterValue;
     extern PFN_vkCreateFence vkCreateFence;
     extern PFN_vkDestroyFence vkDestroyFence;
     extern PFN_vkWaitForFences vkWaitForFences;

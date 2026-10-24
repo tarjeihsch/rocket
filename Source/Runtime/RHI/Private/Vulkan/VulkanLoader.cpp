@@ -121,6 +121,8 @@ namespace RHI
     PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2 = nullptr;
     PFN_vkCreateSemaphore vkCreateSemaphore = nullptr;
     PFN_vkDestroySemaphore vkDestroySemaphore = nullptr;
+    PFN_vkWaitSemaphores vkWaitSemaphores = nullptr;
+    PFN_vkGetSemaphoreCounterValue vkGetSemaphoreCounterValue = nullptr;
     PFN_vkCreateFence vkCreateFence = nullptr;
     PFN_vkDestroyFence vkDestroyFence = nullptr;
     PFN_vkWaitForFences vkWaitForFences = nullptr;
@@ -283,6 +285,8 @@ namespace RHI
         LOAD_DEVICE(device, vkCmdCopyBufferToImage2);
         LOAD_DEVICE(device, vkCreateSemaphore);
         LOAD_DEVICE(device, vkDestroySemaphore);
+        LOAD_DEVICE(device, vkWaitSemaphores);
+        LOAD_DEVICE(device, vkGetSemaphoreCounterValue);
         LOAD_DEVICE(device, vkCreateFence);
         LOAD_DEVICE(device, vkDestroyFence);
         LOAD_DEVICE(device, vkWaitForFences);

@@ -82,6 +82,17 @@ namespace RHI
         VkPipeline pipeline = nullptr;
     };
 
+    struct VulkanGPUFence : GPUFence
+    {
+        ~VulkanGPUFence();
+
+        void SetDebugName(const char* debug_name) override;
+        uint64_t GetCompletedValue() const override;
+        void Wait(uint64_t value) const override;
+
+        VkSemaphore semaphore = nullptr;
+    };
+
     struct VulkanGPUSwapchain : GPUSwapchain
     {
         ~VulkanGPUSwapchain();
@@ -124,7 +135,7 @@ namespace RHI
         void Dispatch(uint32_t x, uint32_t y, uint32_t z) override;
         void FillBuffer(GPUBuffer* buffer, uint64_t size, uint64_t offset, uint32_t value) override;
         void CopyBufferToBuffer(GPUBuffer* src, GPUBuffer* dst, uint64_t size, uint64_t src_offset, uint64_t dst_offset) override;
-        void CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) override;
+        void CopyBufferToTexture(GPUBuffer* src, uint64_t src_offset, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer) override;
         void CopyTextureToTexture(GPUTexture* src, GPUTexture* dst, uint32_t width, uint32_t height) override;
         void Barrier(const GPUBufferBarrier* buffer_barriers, uint32_t buffer_barrier_count, const GPUTextureBarrier* texture_barriers, uint32_t texture_barrier_count) override;
         uint32_t BeginTimelineQuery() override;
@@ -134,6 +145,9 @@ namespace RHI
 
         VkCommandBuffer command_buffer_data[3] = {};
         VkCommandPool command_pool_data[3] = {};
+
+        // The queue the list is submitted to, which decides what it may record.
+        GPUQueueFlags queue_flags = GPUQueueFlag::None;
     };
 
     class VulkanRHI final : public IRHI
@@ -152,6 +166,7 @@ namespace RHI
         GPUShader* CreateShader(const GPUShaderDesc& pipeline_desc) override;
         GPUSwapchain* CreateSwapchain(const GPUSwapchainDesc& desc) override;
         GPUCommandList* CreateCommandList(const GPUCommandListDesc& desc) override;
+        GPUFence* CreateFence() override;
 
         void SetTexture(uint32_t index, const GPUTexture* texture) override;
         void SetRWTexture(uint32_t index, const GPUTexture* texture, uint32_t mip) override;
@@ -160,6 +175,8 @@ namespace RHI
 
         void Submit(GPUCommandList* command_list, GPUSwapchain* swapchain) override;
         void SubmitImmediate(GPUCommandList* command_list) override;
+        void Submit(GPUCommandList* command_list, GPUFence* fence, uint64_t value) override;
+        void Wait(GPUQueueFlags queue, GPUFence* fence, uint64_t value) override;
         void WaitIdle() override;
 
         GPUTimingQueryResult GetTimingQueryResult() override;

@@ -61,7 +61,7 @@ static void UploadTexture(RHI::GPUTexture* texture, u8* pixel_data, uint32_t wid
         .Add(texture, RHI::GPUTextureLayout::Undefined, RHI::GPUTextureLayout::TransferDst)
         .Submit(command_list);
 
-    command_list->CopyBufferToTexture(staging_buffer, texture, width, height, 0, 0);
+    command_list->CopyBufferToTexture(staging_buffer, 0, texture, width, height, 0, 0);
 
     BarrierBatch<0, 1>()
         .Add(texture, RHI::GPUTextureLayout::TransferDst, RHI::GPUTextureLayout::ShaderReadOnly)

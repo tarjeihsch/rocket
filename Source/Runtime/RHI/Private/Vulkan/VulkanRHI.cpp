@@ -96,6 +96,11 @@ namespace RHI
     static VkQueryPool                  g_pipeline_query_pool_data          [CONCURRENT_FRAME_COUNT]            = {};
     static uint32_t                     g_query_pool_counter                [CONCURRENT_FRAME_COUNT]            = {};
 
+    // The waits IRHI::Wait holds for the next submission to each queue.
+    static std::vector<VkSemaphoreSubmitInfo> g_graphics_queue_waits;
+    static std::vector<VkSemaphoreSubmitInfo> g_compute_queue_waits;
+    static std::vector<VkSemaphoreSubmitInfo> g_transfer_queue_waits;
+
 #if RK_DEBUG
     static VKAPI_ATTR VkBool32 VKAPI_CALL ExecDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT Type, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
     {
@@ -117,6 +122,70 @@ namespace RHI
         debug_info.objectHandle = handle;
         debug_info.pObjectName = debug_name;
         RHI::vkSetDebugUtilsObjectNameEXT(g_logical_device, &debug_info);
+    }
+
+    static uint32_t GetQueueFamily(GPUQueueFlags queue)
+    {
+        switch (queue)
+        {
+            case GPUQueueFlag::Graphics:    return g_graphics_family;
+            case GPUQueueFlag::Compute:     return g_compute_family;
+            case GPUQueueFlag::Transfer:    return g_transfer_family;
+            default:                        return VK_QUEUE_FAMILY_IGNORED;
+        }
+    }
+
+    static VkQueue GetQueue(GPUQueueFlags queue)
+    {
+        switch (queue)
+        {
+            case GPUQueueFlag::Compute:     return g_compute_queue;
+            case GPUQueueFlag::Transfer:    return g_transfer_queue;
+            default:                        return g_graphics_queue;
+        }
+    }
+
+    static std::vector<VkSemaphoreSubmitInfo>& GetQueueWaits(GPUQueueFlags queue)
+    {
+        switch (queue)
+        {
+            case GPUQueueFlag::Compute:     return g_compute_queue_waits;
+            case GPUQueueFlag::Transfer:    return g_transfer_queue_waits;
+            default:                        return g_graphics_queue_waits;
+        }
+    }
+
+    // A barrier that hands a resource from one queue to another is recorded on both
+    // queues. Between two families, the source queue releases the resource, so the
+    // barrier has no second half there, and the destination queue acquires it,
+    // where its first half only keeps the stage, which chains the barrier to the
+    // fence wait that orders the acquire after the release. When the two queues
+    // are one family, as when the transfer queue is the graphics queue, the source
+    // queue's barrier is the whole handover and the destination queue records
+    // nothing. Returns whether the queue records the barrier.
+    static bool GetQueueTransferInfo(GPUQueueFlags queue, GPUQueueFlags src_queue, GPUQueueFlags dst_queue, VkAccessFlags2& src_access, VkPipelineStageFlags2& dst_stage, VkAccessFlags2& dst_access)
+    {
+        if (src_queue == dst_queue)
+        {
+            return true;
+        }
+
+        if (GetQueueFamily(src_queue) == GetQueueFamily(dst_queue))
+        {
+            return queue == src_queue;
+        }
+
+        if (queue == src_queue)
+        {
+            dst_stage = VK_PIPELINE_STAGE_2_NONE;
+            dst_access = VK_ACCESS_2_NONE;
+        }
+        else
+        {
+            src_access = VK_ACCESS_2_NONE;
+        }
+
+        return true;
     }
 
     VulkanGPUBuffer::~VulkanGPUBuffer()
@@ -157,6 +226,34 @@ namespace RHI
     void VulkanGPUSampler::SetDebugName(const char *debugName)
     {
         SetDebugNameInternal(VK_OBJECT_TYPE_SAMPLER, reinterpret_cast<uint64_t>(sampler), debugName);
+    }
+
+    VulkanGPUFence::~VulkanGPUFence()
+    {
+        RHI::vkDestroySemaphore(g_logical_device, semaphore, nullptr);
+    }
+
+    void VulkanGPUFence::SetDebugName(const char* debug_name)
+    {
+        SetDebugNameInternal(VK_OBJECT_TYPE_SEMAPHORE, reinterpret_cast<uint64_t>(semaphore), debug_name);
+    }
+
+    uint64_t VulkanGPUFence::GetCompletedValue() const
+    {
+        uint64_t value = 0;
+        RHI::vkGetSemaphoreCounterValue(g_logical_device, semaphore, &value);
+        return value;
+    }
+
+    void VulkanGPUFence::Wait(uint64_t value) const
+    {
+        VkSemaphoreWaitInfo wait_info = {};
+        wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+        wait_info.semaphoreCount = 1;
+        wait_info.pSemaphores = &semaphore;
+        wait_info.pValues = &value;
+
+        RHI::vkWaitSemaphores(g_logical_device, &wait_info, UINT64_MAX);
     }
     
     uint64_t VulkanGPUBuffer::GetVirtualAddress() const
@@ -690,6 +787,16 @@ namespace RHI
 
         RHI::vkGetDeviceQueue(g_logical_device, g_graphics_family, 0, &g_graphics_queue);
 
+        // A GPU without a transfer family of its own copies on its graphics queue: a
+        // transfer command list is created for the graphics family and submitted to
+        // the graphics queue, which the transfer queue then names as well.
+        if (g_transfer_family == UINT32_MAX)
+        {
+            g_transfer_family = g_graphics_family;
+        }
+
+        RHI::vkGetDeviceQueue(g_logical_device, g_transfer_family, 0, &g_transfer_queue);
+
         VmaVulkanFunctions allocator_functions = {};
         allocator_functions.vkGetInstanceProcAddr = RHI::vkGetInstanceProcAddr;
         allocator_functions.vkGetDeviceProcAddr = RHI::vkGetDeviceProcAddr;
@@ -872,17 +979,22 @@ namespace RHI
         signal_semaphore_info.semaphore = ((VulkanGPUSwapchain*)swapchain)->render_finished_semaphores[((VulkanGPUSwapchain*)swapchain)->current_image_index];
         signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
+        // The frame waits for its back buffer and for every fence IRHI::Wait added.
+        g_graphics_queue_waits.push_back(wait_semaphore_info);
+
         VkSubmitInfo2 submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
         submit_info.commandBufferInfoCount = 1;
         submit_info.pCommandBufferInfos = &command_buffer_submit_info;
-        submit_info.waitSemaphoreInfoCount = 1; 
-        submit_info.pWaitSemaphoreInfos = &wait_semaphore_info;
+        submit_info.waitSemaphoreInfoCount = static_cast<uint32_t>(g_graphics_queue_waits.size());
+        submit_info.pWaitSemaphoreInfos = g_graphics_queue_waits.data();
         submit_info.signalSemaphoreInfoCount = 1;
         submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
 
         VkResult result = RHI::vkQueueSubmit2(g_graphics_queue, 1, &submit_info, g_in_flight_fence[CURRENT_FRAME]);
         ensure(result == VK_SUCCESS);
+
+        g_graphics_queue_waits.clear();
     }
 
     void VulkanRHI::SubmitImmediate(GPUCommandList *command_list)
@@ -908,6 +1020,47 @@ namespace RHI
 
         RHI::vkWaitForFences(g_logical_device, 1, &fence, VK_TRUE, UINT64_MAX);
         RHI::vkDestroyFence(g_logical_device, fence, nullptr);
+    }
+
+    void VulkanRHI::Submit(GPUCommandList* command_list, GPUFence* fence, uint64_t value)
+    {
+        const VulkanGPUCommandList* vulkan_command_list = static_cast<const VulkanGPUCommandList*>(command_list);
+        std::vector<VkSemaphoreSubmitInfo>& wait_semaphore_infos = GetQueueWaits(vulkan_command_list->queue_flags);
+
+        VkCommandBufferSubmitInfo command_buffer_submit_info = {};
+        command_buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        command_buffer_submit_info.commandBuffer = vulkan_command_list->command_buffer_data[CURRENT_FRAME];
+
+        VkSemaphoreSubmitInfo signal_semaphore_info = {};
+        signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        signal_semaphore_info.semaphore = static_cast<const VulkanGPUFence*>(fence)->semaphore;
+        signal_semaphore_info.value = value;
+        signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+        VkSubmitInfo2 submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submit_info.commandBufferInfoCount = 1;
+        submit_info.pCommandBufferInfos = &command_buffer_submit_info;
+        submit_info.waitSemaphoreInfoCount = static_cast<uint32_t>(wait_semaphore_infos.size());
+        submit_info.pWaitSemaphoreInfos = wait_semaphore_infos.data();
+        submit_info.signalSemaphoreInfoCount = 1;
+        submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
+
+        VkResult result = RHI::vkQueueSubmit2(GetQueue(vulkan_command_list->queue_flags), 1, &submit_info, VK_NULL_HANDLE);
+        ensure(result == VK_SUCCESS);
+
+        wait_semaphore_infos.clear();
+    }
+
+    void VulkanRHI::Wait(GPUQueueFlags queue, GPUFence* fence, uint64_t value)
+    {
+        VkSemaphoreSubmitInfo wait_semaphore_info = {};
+        wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+        wait_semaphore_info.semaphore = static_cast<const VulkanGPUFence*>(fence)->semaphore;
+        wait_semaphore_info.value = value;
+        wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+        GetQueueWaits(queue).push_back(wait_semaphore_info);
     }
 
     void VulkanRHI::WaitIdle()
@@ -989,6 +1142,19 @@ namespace RHI
         buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_create_info.size = buffer_desc.size;
         buffer_create_info.usage = buffer_usage_flags;
+
+        // The transfer queue writes ranges of a buffer while the graphics queue reads
+        // the rest, as with a pool of geometry, which handing the whole buffer between
+        // them cannot express. So when the transfer queue has a family of its own,
+        // both families share every buffer.
+        const uint32_t queue_families[] = { g_graphics_family, g_transfer_family };
+
+        if (g_transfer_family != g_graphics_family)
+        {
+            buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+            buffer_create_info.queueFamilyIndexCount = 2;
+            buffer_create_info.pQueueFamilyIndices = queue_families;
+        }
 
         VmaAllocationCreateInfo memory_allocation_info = {};
         memory_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
@@ -1432,18 +1598,7 @@ namespace RHI
             VkCommandPoolCreateInfo command_pool_create_info = {};
             command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
-            switch (desc.queue_flags)
-            {
-                case GPUQueueFlag::Graphics:
-                    command_pool_create_info.queueFamilyIndex = g_graphics_family;
-                    break;
-                case GPUQueueFlag::Compute:
-                    command_pool_create_info.queueFamilyIndex = g_compute_family;
-                    break;
-                case GPUQueueFlag::Transfer:
-                    command_pool_create_info.queueFamilyIndex = g_transfer_family;
-                    break;
-            }
+            command_pool_create_info.queueFamilyIndex = GetQueueFamily(desc.queue_flags);
 
             VkResult result = RHI::vkCreateCommandPool(g_logical_device, &command_pool_create_info, nullptr, &command_list->command_pool_data[index]);
             ensure(result == VK_SUCCESS);
@@ -1458,7 +1613,28 @@ namespace RHI
             ensure(result == VK_SUCCESS);
         }
 
+        command_list->queue_flags = desc.queue_flags;
+
         return command_list;
+    }
+
+    GPUFence* VulkanRHI::CreateFence()
+    {
+        VulkanGPUFence* fence = new VulkanGPUFence();
+
+        VkSemaphoreTypeCreateInfo semaphore_type_create_info = {};
+        semaphore_type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+        semaphore_type_create_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        semaphore_type_create_info.initialValue = 0;
+
+        VkSemaphoreCreateInfo semaphore_create_info = {};
+        semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        semaphore_create_info.pNext = &semaphore_type_create_info;
+
+        VkResult result = RHI::vkCreateSemaphore(g_logical_device, &semaphore_create_info, nullptr, &fence->semaphore);
+        ensure(result == VK_SUCCESS);
+
+        return fence;
     }
     
     void VulkanRHI::SetTexture(uint32_t index, const GPUTexture* texture)
@@ -1555,6 +1731,13 @@ namespace RHI
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         RHI::vkBeginCommandBuffer(command_buffer_data[CURRENT_FRAME], &begin_info);
+
+        // A transfer queue only copies. It cannot bind descriptor sets, and the
+        // frame's queries are not its to reset.
+        if (queue_flags == GPUQueueFlag::Transfer)
+        {
+            return;
+        }
 
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_GRAPHICS, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
         RHI::vkCmdBindDescriptorSets(command_buffer_data[CURRENT_FRAME], VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_layout, 0, 1, &g_descriptor_set, 0, nullptr);
@@ -1693,11 +1876,11 @@ namespace RHI
         RHI::vkCmdCopyBuffer2(command_buffer_data[CURRENT_FRAME], &copy_info);
     }
 
-    void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer)
+    void VulkanGPUCommandList::CopyBufferToTexture(GPUBuffer* src, uint64_t src_offset, GPUTexture* dst, uint32_t width, uint32_t height, uint32_t mip, uint32_t layer)
     {
         VkBufferImageCopy2 region = {};
         region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
-        region.bufferOffset = 0;
+        region.bufferOffset = src_offset;
         region.bufferRowLength = 0;
         region.bufferImageHeight = 0;
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1746,6 +1929,7 @@ namespace RHI
     {
         VkBufferMemoryBarrier2 buffer_barrier_data[MAX_BARRIER_COUNT];
         memset(buffer_barrier_data, 0, sizeof(VkBufferMemoryBarrier2) * buffer_barrier_count);
+        uint32_t buffer_barrier_data_count = 0;
         for (uint32_t index = 0; index < buffer_barrier_count; ++index)
         {
             const VulkanGPUBuffer* native_buffer = static_cast<const VulkanGPUBuffer*>(buffer_barriers[index].buffer);
@@ -1758,18 +1942,27 @@ namespace RHI
             GetBarrierInfo(buffer_barriers[index].src_access, src_stage_flags, src_access_flags);
             GetBarrierInfo(buffer_barriers[index].dst_access, dst_stage_flags, dst_access_flags);
 
-            buffer_barrier_data[index].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-            buffer_barrier_data[index].srcStageMask = src_stage_flags;
-            buffer_barrier_data[index].srcAccessMask = src_access_flags;
-            buffer_barrier_data[index].dstStageMask = dst_stage_flags;
-            buffer_barrier_data[index].dstAccessMask = dst_access_flags;
-            buffer_barrier_data[index].buffer = native_buffer->buffer;
-            buffer_barrier_data[index].offset = 0;
-            buffer_barrier_data[index].size = VK_WHOLE_SIZE;
+            if (!GetQueueTransferInfo(queue_flags, buffer_barriers[index].src_queue, buffer_barriers[index].dst_queue, src_access_flags, dst_stage_flags, dst_access_flags))
+            {
+                continue;
+            }
+
+            VkBufferMemoryBarrier2& buffer_barrier = buffer_barrier_data[buffer_barrier_data_count++];
+            buffer_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+            buffer_barrier.srcStageMask = src_stage_flags;
+            buffer_barrier.srcAccessMask = src_access_flags;
+            buffer_barrier.dstStageMask = dst_stage_flags;
+            buffer_barrier.dstAccessMask = dst_access_flags;
+            buffer_barrier.srcQueueFamilyIndex = GetQueueFamily(buffer_barriers[index].src_queue);
+            buffer_barrier.dstQueueFamilyIndex = GetQueueFamily(buffer_barriers[index].dst_queue);
+            buffer_barrier.buffer = native_buffer->buffer;
+            buffer_barrier.offset = 0;
+            buffer_barrier.size = VK_WHOLE_SIZE;
         }
 
         VkImageMemoryBarrier2 texture_barrier_data[MAX_BARRIER_COUNT];
         memset(texture_barrier_data, 0, sizeof(VkImageMemoryBarrier2) * texture_barrier_count);
+        uint32_t texture_barrier_data_count = 0;
         for (uint32_t index = 0; index < texture_barrier_count; ++index)
         {
             const VulkanGPUTexture* native = static_cast<const VulkanGPUTexture*>(texture_barriers[index].texture);
@@ -1784,26 +1977,34 @@ namespace RHI
             GetBarrierInfo(texture_barriers[index].old_layout, old_layout, src_stage, src_access);
             GetBarrierInfo(texture_barriers[index].new_layout, new_layout, dst_stage, dst_access);
 
-            texture_barrier_data[index].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-            texture_barrier_data[index].oldLayout = old_layout;
-            texture_barrier_data[index].newLayout = new_layout;
-            texture_barrier_data[index].srcStageMask = src_stage;
-            texture_barrier_data[index].srcAccessMask = src_access;
-            texture_barrier_data[index].dstStageMask = dst_stage;
-            texture_barrier_data[index].dstAccessMask = dst_access;
-            texture_barrier_data[index].image = native->texture;
-            texture_barrier_data[index].subresourceRange.aspectMask = (old_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-            texture_barrier_data[index].subresourceRange.baseMipLevel = 0;
-            texture_barrier_data[index].subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-            texture_barrier_data[index].subresourceRange.baseArrayLayer = 0;
-            texture_barrier_data[index].subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            if (!GetQueueTransferInfo(queue_flags, texture_barriers[index].src_queue, texture_barriers[index].dst_queue, src_access, dst_stage, dst_access))
+            {
+                continue;
+            }
+
+            VkImageMemoryBarrier2& texture_barrier = texture_barrier_data[texture_barrier_data_count++];
+            texture_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+            texture_barrier.oldLayout = old_layout;
+            texture_barrier.newLayout = new_layout;
+            texture_barrier.srcStageMask = src_stage;
+            texture_barrier.srcAccessMask = src_access;
+            texture_barrier.dstStageMask = dst_stage;
+            texture_barrier.dstAccessMask = dst_access;
+            texture_barrier.srcQueueFamilyIndex = GetQueueFamily(texture_barriers[index].src_queue);
+            texture_barrier.dstQueueFamilyIndex = GetQueueFamily(texture_barriers[index].dst_queue);
+            texture_barrier.image = native->texture;
+            texture_barrier.subresourceRange.aspectMask = (old_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL || new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            texture_barrier.subresourceRange.baseMipLevel = 0;
+            texture_barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            texture_barrier.subresourceRange.baseArrayLayer = 0;
+            texture_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
         }
 
         VkDependencyInfo dependency_info = {};
         dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-        dependency_info.imageMemoryBarrierCount = texture_barrier_count;
+        dependency_info.imageMemoryBarrierCount = texture_barrier_data_count;
         dependency_info.pImageMemoryBarriers = texture_barrier_data;
-        dependency_info.bufferMemoryBarrierCount = buffer_barrier_count;
+        dependency_info.bufferMemoryBarrierCount = buffer_barrier_data_count;
         dependency_info.pBufferMemoryBarriers = buffer_barrier_data;
 
         RHI::vkCmdPipelineBarrier2(command_buffer_data[CURRENT_FRAME], &dependency_info);
