@@ -704,6 +704,7 @@ namespace RHI
         VkPhysicalDeviceFeatures request_device_features = {};
         request_device_features.shaderInt64 = VK_TRUE;
         request_device_features.samplerAnisotropy = VK_TRUE;
+        request_device_features.textureCompressionBC = VK_TRUE;
         request_device_features.multiDrawIndirect = VK_TRUE;
         request_device_features.drawIndirectFirstInstance = VK_TRUE;
         request_device_features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;

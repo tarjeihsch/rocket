@@ -34,7 +34,11 @@ namespace RHI
             case GPUFormat::RGB32_SINT:      return VK_FORMAT_R32G32B32_SINT;
             case GPUFormat::R32_UINT:        return VK_FORMAT_R32_UINT;
 
-            case GPUFormat::D16_UNORM:       return VK_FORMAT_D16_UNORM;
+            case GPUFormat::BC5_UNORM:       return VK_FORMAT_BC5_UNORM_BLOCK;
+            case GPUFormat::BC7_UNORM:       return VK_FORMAT_BC7_UNORM_BLOCK;
+            case GPUFormat::BC7_SRGB:        return VK_FORMAT_BC7_SRGB_BLOCK;
+
+            case GPUFormat::D16_UNORM:      return VK_FORMAT_D16_UNORM;
             case GPUFormat::D32_FLOAT:       return VK_FORMAT_D32_SFLOAT;
             case GPUFormat::D24_UNORM_S8:    return VK_FORMAT_D24_UNORM_S8_UINT;
             case GPUFormat::D32_FLOAT_S8:    return VK_FORMAT_D32_SFLOAT_S8_UINT;
@@ -50,7 +54,8 @@ namespace RHI
         {
             case GPUFormat::RGBA8_UNORM:     return VK_FORMAT_R8G8B8A8_SRGB;
             case GPUFormat::BGRA8_UNORM:     return VK_FORMAT_B8G8R8A8_SRGB;
-            default:                         return VK_FORMAT_UNDEFINED;
+            case GPUFormat::BC7_UNORM:       return VK_FORMAT_BC7_SRGB_BLOCK;
+            default:                        return VK_FORMAT_UNDEFINED;
         }
     }
 

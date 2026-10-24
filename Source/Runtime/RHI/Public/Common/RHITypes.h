@@ -63,6 +63,11 @@ namespace RHI
         RGB32_SINT,
         R32_UINT,
 
+        // Block compressed
+        BC5_UNORM,
+        BC7_UNORM,
+        BC7_SRGB,
+
         // Depth / Stencil
         D16_UNORM,
         D32_FLOAT,
